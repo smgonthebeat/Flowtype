@@ -2,7 +2,7 @@
 
 ## Release Status
 
-Flowtype is currently in pre-release source review. There is no approved public DMG yet. This document does not claim that a source-built app is signed, notarized, or supported as an official binary release.
+Flowtype's source is public, but there is no Developer ID signed and notarized public DMG yet. Ordinary users should not need Swift or a source checkout: wait for the official asset on [GitHub Releases](https://github.com/smgonthebeat/Flowtype/releases). This document does not claim that a source-built or locally signed app is an official trusted binary release.
 
 ## Requirements
 
@@ -10,6 +10,9 @@ Flowtype is currently in pre-release source review. There is no approved public 
 - Xcode Command Line Tools with Swift 5.9 or later.
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
 - Several gigabytes of free disk space and unified memory for Qwen3-ASR.
+
+The Xcode/Swift and `uv` requirements below apply only to developers building
+from source. The planned DMG includes the app and its managed `uv` runtime.
 
 Check the local toolchain:
 

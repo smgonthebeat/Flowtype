@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+import hashlib
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
@@ -35,8 +36,8 @@ class PublicWebsiteTests(unittest.TestCase):
         self.assertNotIn("TODO: replace", self.html)
         self.assertNotIn('href="#"', self.html)
         self.assertNotIn("xattr -cr", self.html)
-        self.assertIn("首个公开版本正在准备", self.html)
-        self.assertIn("下载尚未开放", self.html)
+        self.assertIn("DMG 等待 Developer ID 与 Apple notarization", self.html)
+        self.assertIn("DMG 待公证后开放", self.html)
 
     def test_runtime_assets_are_local_and_present(self) -> None:
         parser = AssetParser()
@@ -51,24 +52,35 @@ class PublicWebsiteTests(unittest.TestCase):
             self.assertFalse(parsed.netloc, raw_url)
             self.assertTrue((WEBSITE_ROOT / parsed.path).is_file(), raw_url)
 
-    def test_screenshot_png_contains_no_text_metadata_chunks(self) -> None:
-        data = (WEBSITE_ROOT / "assets/flowtype-home-sanitized.png").read_bytes()
+    def test_screenshot_png_matches_reviewed_metadata_contract(self) -> None:
+        data = (WEBSITE_ROOT / "assets/flowtype-home-real-usage.png").read_bytes()
         self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(
+            hashlib.sha256(data).hexdigest(),
+            "0f27e5928ac66dd1cca10f973359c77cfb1f4da9fc5b8032d255aaea5a5fe59e",
+        )
         offset = 8
         chunk_types: set[bytes] = set()
+        metadata_payloads: list[bytes] = []
         while offset < len(data):
             length = struct.unpack(">I", data[offset : offset + 4])[0]
             chunk_type = data[offset + 4 : offset + 8]
             chunk_types.add(chunk_type)
+            if chunk_type in {b"tEXt", b"zTXt", b"iTXt", b"eXIf"}:
+                metadata_payloads.append(data[offset + 8 : offset + 8 + length])
             offset += 12 + length
-        self.assertFalse(chunk_types.intersection({b"tEXt", b"zTXt", b"iTXt", b"eXIf"}))
+        self.assertFalse(chunk_types.intersection({b"tEXt", b"zTXt", b"iTXt", b"eXIf", b"tIME"}))
+        metadata = b"\n".join(metadata_payloads).lower()
+        for forbidden in (b"/users/", b"gps", b"author", b"creator", b"email"):
+            self.assertNotIn(forbidden, metadata)
 
-    def test_screenshot_copy_uses_only_synthetic_usage_statistics(self) -> None:
-        self.assertIn("synthetic demo data", self.html)
-        self.assertIn("flowtype-home-sanitized.png", self.html)
-        self.assertNotIn("flowtype-home.png", self.html)
-        private_copy = "开发者本机的" + "真实主页"
-        self.assertNotIn(private_copy, self.html)
+    def test_screenshot_copy_discloses_owner_approved_real_usage(self) -> None:
+        self.assertIn("4,680 次听写", self.html)
+        self.assertIn("60 小时 37 分钟", self.html)
+        self.assertIn("flowtype-home-real-usage.png", self.html)
+        self.assertIn("下方转写历史已作强模糊处理", self.html)
+        self.assertNotIn("synthetic demo data", self.html)
+        self.assertNotIn("flowtype-home-sanitized.png", self.html)
 
 
 if __name__ == "__main__":

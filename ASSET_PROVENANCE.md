@@ -20,14 +20,20 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/HomeCardArtwork-clock.png`
 
 The static website embeds the Flowtype logo shape and includes
-`website/assets/flowtype-home-sanitized.png`, a sanitized screenshot of the
-Flowtype app that incorporates several of the assets listed above. Transcript
-history is visually obscured, and all visible usage figures are synthetic demo
-data. The sanitized bitmap was produced with OpenAI image editing from a local
-app capture; the original capture is not included in the public projection.
-The PNG retains C2PA Content Credentials that identify `gpt-image` and OpenAI
-Media Service as the editing source; the manifest contains no project-owner
-identity, local path, or account information.
+`website/assets/flowtype-home-real-usage.png`, a macOS screenshot captured by
+the project owner from the Flowtype app. The owner explicitly selected its real
+aggregate usage figures (4,680 dictations, 15 hours 19 minutes dictated,
+246,000 characters, and 60 hours 37 minutes estimated saved) for publication as
+evidence of first-party use. Those usage cards remain unchanged from the source
+capture. The local transcript-history region is deliberately and heavily
+blurred before publication so its text cannot be read.
+
+A metadata audit found no high- or medium-risk image metadata, personal author,
+account, GPS, source URL, or local filesystem path. The published derivative
+has all ancillary PNG metadata removed and is locked by a SHA-256 contract
+test. The blur was applied deterministically to the transcript panel only; the
+entire area above that panel is pixel-identical to the source capture. No
+generated or substituted UI is present in the published screenshot.
 
 OpenAI's [Terms of Use](https://openai.com/policies/row-terms-of-use/), reviewed
 on 2026-07-21, state that, as between a user and OpenAI and to the extent

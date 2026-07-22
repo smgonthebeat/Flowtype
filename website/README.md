@@ -14,12 +14,11 @@ finished state for deterministic screenshots.
 
 ## Release Links
 
-The GitHub and download controls intentionally remain non-interactive until the
-first public repository and validated release artifact exist. Before deploying
-the site:
+The GitHub controls point to the official public repository. Download controls
+remain non-interactive until a Developer ID signed/notarized release artifact
+exists. Before enabling them:
 
-1. Replace the pending controls with the real public repository and release
-   URLs.
+1. Replace the pending DMG controls with the reviewed GitHub Release asset URL.
 2. Verify the released DMG, SHA-256, signing/notarization status, Gatekeeper
    behaviour, and installation instructions.
 3. Run the public website audit tests and inspect the rendered desktop and

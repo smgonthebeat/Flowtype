@@ -427,8 +427,8 @@
       Flowtype
     </a>
     <div class="nav-actions">
-      <span class="ghost-link pending-link">GitHub · 首次发布时开放</span>
-      <span class="btn btn-primary btn-sm btn-disabled">首个版本准备中</span>
+      <a class="ghost-link" href="https://github.com/smgonthebeat/Flowtype">GitHub</a>
+      <span class="btn btn-primary btn-sm btn-disabled">DMG 待公证</span>
     </div>
   </div>
 </header>
@@ -442,8 +442,8 @@
       <h1 aria-label="按住 Fn 说话，文字落在光标处。"><span aria-hidden="true"><span class="c" style="--i:0">按</span><span class="c" style="--i:1">住</span><span class="c" style="--i:2">&nbsp;Fn&nbsp;</span><span class="c" style="--i:3">说</span><span class="c" style="--i:4">话</span><span class="c" style="--i:5">，</span><br><span class="c" style="--i:6">文</span><span class="c" style="--i:7">字</span><span class="c" style="--i:8">落</span><span class="c" style="--i:9">在</span><span class="c accent" style="--i:10">光</span><span class="c accent" style="--i:11">标</span><span class="c accent" style="--i:12">处</span><span class="c" style="--i:13">。</span></span></h1>
       <p class="sub rise" style="--rd:0.35s">免费的 macOS 本地听写工具，为对 AI 口述而生：中英混着说、专业术语、数学符号，都接得住。</p>
       <div class="cta-row rise" style="--rd:0.45s">
-        <span class="btn btn-primary btn-lg btn-disabled">首个公开版本准备中</span>
-        <span class="btn btn-secondary btn-lg btn-disabled">GitHub 仓库即将开放</span>
+        <span class="btn btn-primary btn-lg btn-disabled">DMG 待公证后开放</span>
+        <a class="btn btn-secondary btn-lg magnet" href="https://github.com/smgonthebeat/Flowtype">查看 GitHub</a>
       </div>
     </div>
     <div class="hero-demo rise" style="--rd:0.6s">
@@ -468,15 +468,15 @@
     <div class="wrap">
       <div class="shot-head reveal">
         <h2>作者自己，每天都在用。</h2>
-        <p class="lede">这是经过隐私处理的 Flowtype 主页示例：保留真实产品布局，所有可见统计均为 synthetic demo data。</p>
+        <p class="lede">这不是 mock data。作者明确选择公开这张真实使用截图：4,680 次听写、15 小时 19 分钟口述、24.6 万字，估算节省 60 小时 37 分钟。</p>
       </div>
       <figure>
         <div class="shot-stage">
           <div class="shot-frame" id="shot-frame">
-            <img src="assets/flowtype-home-sanitized.png" alt="Flowtype 主页截图，显示 synthetic demo 使用统计，不含真实 transcript 或个人数据" width="1601" height="983">
+            <img src="assets/flowtype-home-real-usage.png" alt="Flowtype 作者的真实使用界面，显示 4,680 次听写和 60 小时 37 分钟节省时间" width="2180" height="1346">
           </div>
         </div>
-        <figcaption class="shot-caption">转写历史属于作者个人内容，已作模糊处理。</figcaption>
+        <figcaption class="shot-caption">截图中的真实累计统计由作者明确选择公开，用来证明这是一个长期自用后才发布的工具；下方转写历史已作强模糊处理以保护隐私。</figcaption>
       </figure>
     </div>
   </section>
@@ -604,9 +604,9 @@
   <section id="release-status">
     <div class="wrap">
       <div class="download-card reveal">
-        <h2>首个公开版本正在准备</h2>
-        <p class="lede" style="margin:0 auto 32px">公开源码、DMG、SHA-256 校验值和安装说明会在同一次 release 中提供。</p>
-        <span class="btn btn-primary btn-lg btn-disabled">下载尚未开放</span>
+        <h2>DMG 等待 Developer ID 与 Apple notarization</h2>
+        <p class="lede" style="margin:0 auto 32px">完整 Apple Silicon DMG 已通过本地 bundle 与 disk-image verification。为了让其他 Mac 正常信任它，正式下载会在 Developer ID signing、Apple notarization 与 Gatekeeper validation 完成后开放。</p>
+        <span class="btn btn-primary btn-lg btn-disabled">DMG 待公证后开放</span>
         <p class="req">计划支持 macOS 14 及以上的 Apple Silicon Mac。首次使用会在你确认后另外下载本地模型文件，需要预留数 GB 存储空间。</p>
       </div>
       <div class="gatekeeper reveal" id="first-open">
@@ -627,7 +627,7 @@
   <div class="wrap">
     <span class="brand"><svg aria-hidden="true"><use href="#ft-logo"/></svg>Flowtype</span>
     <nav>
-      <span class="pending-link">GitHub · 待发布</span>
+      <a href="https://github.com/smgonthebeat/Flowtype">GitHub</a>
       <a href="#release-status">发布状态</a>
       <a href="#first-open">发布验证</a>
     </nav>

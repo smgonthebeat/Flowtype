@@ -2,11 +2,15 @@
 
 English · [简体中文](README.md)
 
-> **Release status:** The first public release is in preparation. The source is under pre-publication review; no prebuilt DMG, checksum, signing, or notarization claim is active yet.
+> **Release status:** The public source and CI are live. A prebuilt DMG has passed local packaging verification, but it will not be presented as a seamless public installer until Developer ID signing and Apple notarization are available.
+
+[GitHub Repository](https://github.com/smgonthebeat/Flowtype) · [Releases](https://github.com/smgonthebeat/Flowtype/releases)
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
 
-![Flowtype home screen showing synthetic demo usage statistics and feature entry points](website/assets/flowtype-home-sanitized.png)
+![The Flowtype author's real usage screen showing 4,680 dictations, 15 hours 19 minutes dictated, 246,000 characters, and 60 hours 37 minutes saved](website/assets/flowtype-home-real-usage.png)
+
+This is not mock data. The author explicitly chose to publish this real-use capture from 2026-07-23: **4,680 dictations**, **15 hours 19 minutes** dictated, **246,000 characters** transcribed, and an estimated **60 hours 37 minutes** saved. The transcript-history rows are heavily blurred for privacy while the aggregate usage cards remain unchanged from the original capture. Flowtype was a tool used every day before it became an open-source project.
 
 ## Why Flowtype
 
@@ -26,16 +30,16 @@ General-purpose dictation often interrupts technical thought when languages, ter
 - macOS 14 or later;
 - an Apple Silicon Mac;
 - Microphone and Accessibility permissions;
-- Swift 5.9 or later for source builds;
+- Swift 5.9 or later only for developers building from source;
 - several gigabytes of free storage and unified memory for the local model and runtime.
 
 When preparing a local model for the first time, Flowtype downloads Qwen3-ASR model files from Hugging Face after explicit confirmation. Model weights are not stored in this repository or bundled with the source archive.
 
 ## Getting Started
 
-The current public candidate supports source builds only. A signed and notarized DMG is not available yet. Read [Installation & Source Builds](docs/INSTALL.md), and do not download unofficial files presented as a Flowtype release.
+Ordinary users should not need to install Swift or compile Flowtype. The prebuilt DMG will be published through the official [GitHub Releases](https://github.com/smgonthebeat/Flowtype/releases) page after Developer ID signing, Apple notarization, and Gatekeeper verification. No trusted public DMG is available yet; do not use unofficial mirrors.
 
-From the repository root, run the development checks:
+The following commands are only for developers who want to inspect or modify the source:
 
 ```bash
 swift test
@@ -65,7 +69,7 @@ See [Privacy & Local Data](docs/PRIVACY.md) for details. Never attach real recor
 - [Contributing](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
 
-The static product website lives in [`website/`](website/). It has no build step, analytics, cookies, external scripts, or runtime package dependencies. GitHub and download controls remain disabled until real release URLs pass review.
+The static product website lives in [`website/`](website/). It has no build step, analytics, cookies, external scripts, or runtime package dependencies. Its GitHub control points to the official repository; its DMG control remains disabled until a trusted release artifact is available.
 
 ## License
 

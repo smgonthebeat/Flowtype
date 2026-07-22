@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Chinese-English mixed dictation, terminology context, and spoken-math formatting.
 - Local History, retry recovery, model management, readiness checks, and diagnostics.
 - Chinese and English repository documentation plus GitHub community templates.
+- An owner-approved real-use homepage capture documenting 4,680 dictations and
+  60 hours 37 minutes of estimated time saved before the first binary release;
+  transcript-history rows are heavily blurred for privacy.
 
 ### Changed
 
@@ -27,4 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Release Gate
 
-- No public version tag, signed/notarized DMG, checksum, or installation verification has been published yet.
+- The public GitHub repository and hosted CI are live.
+- A complete Apple Silicon DMG passes local bundle and disk-image verification,
+  but no Developer ID signed/notarized binary, public version tag, checksum, or
+  installation claim has been published yet.
