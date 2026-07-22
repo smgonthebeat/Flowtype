@@ -28,9 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   metrics. Generated audio, raw transcripts, model files, and benchmark output
   remain excluded from the repository.
 
-### Release Gate
+### Preview Release
 
 - The public GitHub repository and hosted CI are live.
-- A complete Apple Silicon DMG passes local bundle and disk-image verification,
-  but no Developer ID signed/notarized binary, public version tag, checksum, or
-  installation claim has been published yet.
+- `v0.1.0-preview.1` publishes the locally verified Apple Silicon DMG and
+  SHA-256 checksum as a GitHub Pre-release.
+- The Preview uses a local development signature and is not notarized by Apple;
+  first-open instructions use macOS Privacy & Security → Open Anyway without
+  disabling Gatekeeper or removing quarantine attributes.

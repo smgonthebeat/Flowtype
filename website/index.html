@@ -428,7 +428,7 @@
     </a>
     <div class="nav-actions">
       <a class="ghost-link" href="https://github.com/smgonthebeat/Flowtype">GitHub</a>
-      <span class="btn btn-primary btn-sm btn-disabled">DMG 待公证</span>
+      <a class="btn btn-primary btn-sm" href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg">下载 DMG</a>
     </div>
   </div>
 </header>
@@ -442,7 +442,7 @@
       <h1 aria-label="按住 Fn 说话，文字落在光标处。"><span aria-hidden="true"><span class="c" style="--i:0">按</span><span class="c" style="--i:1">住</span><span class="c" style="--i:2">&nbsp;Fn&nbsp;</span><span class="c" style="--i:3">说</span><span class="c" style="--i:4">话</span><span class="c" style="--i:5">，</span><br><span class="c" style="--i:6">文</span><span class="c" style="--i:7">字</span><span class="c" style="--i:8">落</span><span class="c" style="--i:9">在</span><span class="c accent" style="--i:10">光</span><span class="c accent" style="--i:11">标</span><span class="c accent" style="--i:12">处</span><span class="c" style="--i:13">。</span></span></h1>
       <p class="sub rise" style="--rd:0.35s">免费的 macOS 本地听写工具，为对 AI 口述而生：中英混着说、专业术语、数学符号，都接得住。</p>
       <div class="cta-row rise" style="--rd:0.45s">
-        <span class="btn btn-primary btn-lg btn-disabled">DMG 待公证后开放</span>
+        <a class="btn btn-primary btn-lg magnet" href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg">下载 Preview DMG</a>
         <a class="btn btn-secondary btn-lg magnet" href="https://github.com/smgonthebeat/Flowtype">查看 GitHub</a>
       </div>
     </div>
@@ -604,18 +604,19 @@
   <section id="release-status">
     <div class="wrap">
       <div class="download-card reveal">
-        <h2>DMG 等待 Developer ID 与 Apple notarization</h2>
-        <p class="lede" style="margin:0 auto 32px">完整 Apple Silicon DMG 已通过本地 bundle 与 disk-image verification。为了让其他 Mac 正常信任它，正式下载会在 Developer ID signing、Apple notarization 与 Gatekeeper validation 完成后开放。</p>
-        <span class="btn btn-primary btn-lg btn-disabled">DMG 待公证后开放</span>
-        <p class="req">计划支持 macOS 14 及以上的 Apple Silicon Mac。首次使用会在你确认后另外下载本地模型文件，需要预留数 GB 存储空间。</p>
+        <h2>Apple Silicon Preview 已开放下载</h2>
+        <p class="lede" style="margin:0 auto 32px"><code>v0.1.0-preview.1</code> DMG 已通过真实安装与 Fn 听写测试。它使用 local development signature，未经过 Apple notarization，因此 macOS 会拦截首次启动。</p>
+        <a class="btn btn-primary btn-lg magnet" href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg">下载 Flowtype.dmg</a>
+        <p class="req"><a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256">SHA-256</a> · 支持 macOS 14 及以上 Apple Silicon Mac。首次使用会在确认后下载本地模型，需要预留数 GB 存储空间。</p>
       </div>
       <div class="gatekeeper reveal" id="first-open">
-        <h3>发布前验证清单</h3>
-        <p>安装步骤会以实际发布的 app bundle 为准；在完成签名、Gatekeeper 和干净 Mac 验证前，这里不会提供绕过系统安全检查的命令。</p>
+        <h3>首次打开：macOS 会提示无法验证开发者</h3>
+        <p>这份 Preview 没有 Apple Developer ID 与 notarization。请只从上方官方 GitHub Release 下载并核对 SHA-256；不要关闭 Gatekeeper，也不要运行 quarantine-removal 或 Gatekeeper-disabling 命令。</p>
         <ol>
-          <li>从公开 source tag 构建并运行完整 test suite。</li>
-          <li>记录签名、公证或未公证状态，并在干净环境验证 Gatekeeper 行为。</li>
-          <li>发布 DMG、SHA-256、安装说明和可复现的 source tag。</li>
+          <li>打开 DMG，把 Flowtype.app 拖进 Applications。</li>
+          <li>尝试打开一次并关闭 macOS 警告。</li>
+          <li>进入 System Settings → Privacy & Security，在 Security 区域点击 Open Anyway，再确认 Open。</li>
+          <li>参考 <a href="https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac">Apple 官方说明</a>，然后按需授权麦克风与辅助功能。</li>
         </ol>
       </div>
     </div>

@@ -2,17 +2,28 @@
 
 ## Release Status
 
-Flowtype's source is public, but there is no Developer ID signed and notarized public DMG yet. Ordinary users should not need Swift or a source checkout: wait for the official asset on [GitHub Releases](https://github.com/smgonthebeat/Flowtype/releases). This document does not claim that a source-built or locally signed app is an official trusted binary release.
+The official [`v0.1.0-preview.1` GitHub Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) contains an Apple Silicon DMG and SHA-256 file. This Preview uses a local development signature; it is not signed with an Apple Developer ID and has not been notarized by Apple. It is therefore not a seamless trusted installer, and macOS will block the first launch.
 
 ## Requirements
 
 - Apple Silicon Mac running macOS 14 or later.
-- Xcode Command Line Tools with Swift 5.9 or later.
-- [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
 - Several gigabytes of free disk space and unified memory for Qwen3-ASR.
 
-The Xcode/Swift and `uv` requirements below apply only to developers building
-from source. The planned DMG includes the app and its managed `uv` runtime.
+The Preview DMG includes the app and its managed `uv` runtime. Xcode Command
+Line Tools with Swift 5.9 or later and [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
+are required only for developers building from source.
+
+## Install The Preview DMG
+
+1. Download [`Flowtype.dmg`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg) and its [`Flowtype.dmg.sha256`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) from the official Release.
+2. Open the DMG and drag `Flowtype.app` to Applications.
+3. Try to open Flowtype once and dismiss the macOS warning.
+4. Open **System Settings → Privacy & Security**. In Security, click **Open Anyway**, then confirm **Open**.
+5. Grant Microphone and Accessibility permissions when Flowtype requests them.
+
+Apple documents this standard exception flow in [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). Only override the warning when the DMG came from this official Release and its checksum matches. Do not disable Gatekeeper or run quarantine-removal or Gatekeeper-disabling commands.
+
+## Developer Requirements
 
 Check the local toolchain:
 
@@ -62,7 +73,7 @@ make build
 make verify-package
 ```
 
-Launching the GUI, copying into `/Applications`, distribution signing, notarization, and DMG verification are separate actions. Do not bypass Gatekeeper with `xattr`, and do not disable macOS security controls to run an unverified build.
+Launching the GUI, copying into `/Applications`, distribution signing, notarization, and DMG verification are separate actions. The published Preview is intentionally unnotarized and uses the documented Privacy & Security exception flow; do not disable macOS security controls.
 
 ## Updating A Source Checkout
 

@@ -32,12 +32,15 @@ class PublicWebsiteTests(unittest.TestCase):
         self.index_path = WEBSITE_ROOT / "index.html"
         self.html = self.index_path.read_text(encoding="utf-8")
 
-    def test_release_placeholders_fail_safe(self) -> None:
+    def test_preview_release_links_and_safety_copy(self) -> None:
         self.assertNotIn("TODO: replace", self.html)
         self.assertNotIn('href="#"', self.html)
         self.assertNotIn("xattr -cr", self.html)
-        self.assertIn("DMG 等待 Developer ID 与 Apple notarization", self.html)
-        self.assertIn("DMG 待公证后开放", self.html)
+        self.assertNotIn("spctl --master-disable", self.html)
+        self.assertIn("v0.1.0-preview.1", self.html)
+        self.assertIn("releases/download/v0.1.0-preview.1/Flowtype.dmg", self.html)
+        self.assertIn("未经过 Apple notarization", self.html)
+        self.assertIn("Open Anyway", self.html)
 
     def test_runtime_assets_are_local_and_present(self) -> None:
         parser = AssetParser()
