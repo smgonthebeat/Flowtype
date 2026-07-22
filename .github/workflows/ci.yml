@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Swift, helper, scripts, and app bundle
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: |
+            Helpers/qwen-asr-helper/uv.lock
+            script/uv.lock
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          uv --version
+          python3 --version
+
+      - name: Run Swift tests
+        run: swift test
+
+      - name: Run Qwen helper tests
+        run: uv run --project Helpers/qwen-asr-helper --frozen pytest
+
+      - name: Run public script tests
+        run: uv run --project script --frozen python -B -m unittest discover -s script/tests
+
+      - name: Build development app bundle
+        run: make build
+
+      - name: Verify development app bundle
+        run: make verify-package

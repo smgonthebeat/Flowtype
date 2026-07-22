@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "short_mixed_6s",
+      "voice": "Tingting",
+      "rate": 220,
+      "target_duration_seconds": 6,
+      "strategy": "full",
+      "iterations": 3,
+      "text": "你好，这是 Flowtype 的本地语音测试。Please keep Qwen three ASR and version zero point three point five unchanged."
+    },
+    {
+      "id": "full_boundary_35s",
+      "voice": "Tingting",
+      "rate": 205,
+      "target_duration_seconds": 35,
+      "strategy": "full",
+      "iterations": 3,
+      "text": "现在进行三十五秒测试，包含中文、English、Flowtype、Qwen three ASR、command V 和数字二零二六。每一段内容都应完整出现，不应重复，也不应丢失。"
+    },
+    {
+      "id": "full_pressure_55s",
+      "voice": "Tingting",
+      "rate": 195,
+      "target_duration_seconds": 55,
+      "strategy": "full",
+      "iterations": 3,
+      "text": "现在进行五十五秒 full transcription memory pressure test。模型需要连续处理语音，同时保持文字顺序、英文术语、数字和标点稳定。测试不会使用真实用户录音。"
+    },
+    {
+      "id": "flowtype_chunked_65s",
+      "voice": "Tingting",
+      "rate": 205,
+      "target_duration_seconds": 65,
+      "strategy": "chunked",
+      "iterations": 2,
+      "text": "现在进行六十五秒 Flowtype chunked transcription regression test。每个片段之间保留短暂停顿，用来验证分段、拼接和 cache clearing 没有出现重复或遗漏。"
+    }
+  ]
+}

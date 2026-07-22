@@ -1,0 +1,9 @@
+{"id":"T01","input":"sheet 一 exercise 四","expected":"Sheet 1 Exercise 4","tags":["academic_reference","positive"]}
+{"id":"T02","input":"q 四 b and c","expected":"Q4(b) and (c)","tags":["academic_reference","subpart","positive"]}
+{"id":"T03","input":"x五的cheat sheet，c十二要背，bit一的题","expected":"X5的cheat sheet，C12要背，B1的题","tags":["letter_number","positive"]}
+{"id":"T04","input":"I need four, five, ten, twelve, thirteen, fourteen, fifty examples.","expected":"I need 4, 5, 10, 12, 13, 14, 50 examples.","tags":["english_number","positive"]}
+{"id":"T05","input":"今天讲 DEMO零零一","expected":"今天讲 DEMO零零一","tags":["course_code","negative"]}
+{"id":"T06","input":"今天我们用 api 做 asr 后处理","expected":"今天我们用 api 做 asr 后处理","tags":["mixed_script","negative"]}
+{"id":"T07","input":"B and C are variables","expected":"B and C are variables","tags":["negative","subpart_block"]}
+{"id":"T08","input":"I like sheet music","expected":"I like sheet music","tags":["negative","sheet_block"]}
+{"id":"T09","input":"请看 B cell 的定义","expected":"请看 B cell 的定义","tags":["negative","scientific_term_block"]}

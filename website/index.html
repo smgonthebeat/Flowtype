@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Flowtype — 按住 Fn，开口即文字</title>
+<meta name="description" content="免费的 macOS 本地听写工具，为对 AI 口述而生。中英混说、专业术语、数学符号，全部本地识别，零订阅。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23eb9e5f'/%3E%3Cpath d='M20 18h27v8H29v8h15v8H29v16h-9z' fill='%23221204'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #0d0b09;
+    --panel: #171310;
+    --panel-2: #1f1a13;
+    --line: rgba(255, 255, 255, 0.08);
+    --text: #f4efe6;
+    --muted: #a89f90;
+    --accent: #eb9e5f;
+    --accent-ink: #221204;
+    --accent-soft: rgba(235, 158, 95, 0.12);
+    --radius-card: 16px;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  ::selection { background: rgba(235, 158, 95, 0.3); color: var(--text); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro SC", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  code, .mono { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+  :target { scroll-margin-top: 90px; }
+
+  /* Film grain: fixed, pointer-events none */
+  .grain {
+    position: fixed; inset: -50%; z-index: 60; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- Nav ---------- */
+  header {
+    position: sticky; top: 0; z-index: 40;
+    height: 68px; display: flex; align-items: center;
+    border-bottom: 1px solid transparent;
+    transition: background 0.35s, border-color 0.35s;
+  }
+  header.scrolled {
+    background: rgba(13, 11, 9, 0.7);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-color: var(--line);
+  }
+  header .wrap { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .brand svg { width: 46px; height: 46px; color: var(--accent); }
+  .nav-actions { display: flex; align-items: center; gap: 22px; }
+  .nav-actions .ghost-link { color: var(--muted); font-size: 14px; transition: color 0.2s; }
+  .nav-actions .ghost-link:hover { color: var(--text); }
+
+  /* ---------- Buttons: pill interactive, 16px cards ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; font-weight: 600; white-space: nowrap;
+    position: relative; overflow: hidden;
+    transition: transform 0.4s var(--ease-out), background 0.2s, border-color 0.2s;
+    will-change: transform;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { background: #f2ad72; }
+  .btn-primary::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+    transform: translateX(-120%);
+  }
+  .btn-secondary { border: 1px solid var(--line); color: var(--text); }
+  .btn-secondary:hover { border-color: rgba(255, 255, 255, 0.28); }
+  .btn-disabled {
+    cursor: default; pointer-events: none; opacity: 0.68;
+    filter: saturate(0.72);
+  }
+  .pending-link { color: var(--muted); font-size: 14px; cursor: default; }
+  .btn-sm { height: 36px; padding: 0 18px; font-size: 14px; }
+  .btn-lg { height: 54px; padding: 0 34px; font-size: 16px; }
+
+  /* ---------- Hero: full viewport, kinetic type, capsule at screen bottom ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    min-height: calc(100dvh - 68px);
+    display: flex; flex-direction: column;
+    padding: 56px 0 44px;
+  }
+  .blob { position: absolute; border-radius: 50%; pointer-events: none; filter: blur(80px); opacity: 0.5; }
+  .blob-a { width: 640px; height: 640px; top: -260px; right: -160px; background: radial-gradient(circle, rgba(235, 158, 95, 0.2), transparent 65%); }
+  .blob-b { width: 520px; height: 520px; bottom: -280px; left: -180px; background: radial-gradient(circle, rgba(146, 96, 54, 0.16), transparent 65%); }
+  .hero .wrap { position: relative; width: 100%; }
+  h1 {
+    font-size: clamp(2.7rem, 6.4vw, 4.9rem);
+    line-height: 1.12; letter-spacing: -0.035em; font-weight: 800;
+    margin-bottom: 26px;
+  }
+  h1 .accent { color: var(--accent); }
+  .c { display: inline-block; }
+  .hero p.sub { color: var(--muted); font-size: 18px; max-width: 30em; margin-bottom: 36px; }
+  .hero .cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .rise { opacity: 0; transform: translateY(26px); }
+
+  /* Dictation strip: the page behaves like your screen */
+  .hero-demo { margin-top: auto; padding-top: 64px; text-align: center; }
+  .typed-line {
+    min-height: 2.6em; max-width: 640px; margin: 0 auto 26px;
+    font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--text);
+  }
+  .typed-line .caret {
+    display: inline-block; width: 2px; height: 1.15em; background: var(--accent);
+    vertical-align: -0.18em; margin-left: 2px;
+  }
+  /* Real capsule spec: 56px tall, radius 28, hudWindow grey glass, 0.5px
+     white/10 border, soft downward shadow (FloatingCapsulePanel.swift) */
+  .capsule {
+    display: inline-flex; align-items: center; gap: 14px;
+    height: 56px; min-width: 160px; padding: 0 24px;
+    background: rgba(126, 120, 113, 0.30);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 28px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .capsule { background: rgba(72, 68, 63, 0.92); }
+  }
+  /* Waveform matches the real app: 5 white rounded bars, weights .52/.78/1/.78/.52,
+     resting as low dots, rising only while listening */
+  .wave { display: flex; align-items: center; justify-content: center; gap: 3.5px; width: 44px; height: 30px; flex: none; }
+  .wave i { width: 4.5px; height: 100%; border-radius: 2.5px; background: rgba(255, 255, 255, 0.9); transform: scaleY(0.2); transform-origin: center; transition: transform 0.45s var(--ease-out); }
+  .cap-status { color: rgba(255, 255, 255, 0.92); font-size: 15px; font-weight: 500; white-space: nowrap; transition: opacity 0.16s ease; }
+  /* Width eases like the real panel (updateDuration 0.18s ease-out) */
+  .hero-demo .capsule { transition: opacity 0.45s, width 0.18s cubic-bezier(0.23, 1, 0.32, 1); }
+  #typed { transition: opacity 0.3s ease; }
+  .hero-demo.pasted .capsule { opacity: 0.45; }
+  .capsule-note { margin-top: 16px; color: var(--muted); font-size: 13.5px; }
+
+  /* ---------- Marquee: what it catches ---------- */
+  .marquee { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; padding: 22px 0; }
+  .marquee-track { display: flex; width: max-content; gap: 56px; padding-right: 56px; }
+  .marquee-track span { white-space: nowrap; font-size: 15.5px; color: var(--muted); }
+  .marquee-track span.sym { color: var(--accent); font-size: 17px; }
+
+  /* ---------- Sections ---------- */
+  section { padding: 128px 0; position: relative; }
+  section + section { border-top: 1px solid var(--line); }
+  h2 {
+    font-size: clamp(1.8rem, 3.6vw, 2.7rem);
+    letter-spacing: -0.025em; line-height: 1.2; font-weight: 780;
+    margin-bottom: 16px;
+    text-wrap: balance;
+  }
+  .lede { color: var(--muted); font-size: 16.5px; max-width: 42em; }
+
+  /* Screenshot: scrubbed 3D settle */
+  .shot-head { max-width: 660px; margin-bottom: 52px; }
+  .shot-stage { perspective: 1500px; }
+  .shot-frame {
+    border-radius: var(--radius-card); overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow: 0 50px 140px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transform-origin: center 12%;
+    will-change: transform, opacity;
+  }
+  .shot-caption { margin-top: 18px; color: var(--muted); font-size: 13.5px; }
+
+  /* Math: pinned scrub board */
+  .math .wrap { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 72px; align-items: center; }
+  .math-board {
+    background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--radius-card);
+    padding: 14px 30px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .math-row { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 18px 0; }
+  .math-row + .math-row { border-top: 1px solid var(--line); }
+  .math-row .say { color: var(--muted); font-size: 14.5px; }
+  .math-row .out { font-size: 22px; color: var(--text); white-space: nowrap; min-height: 1.4em; }
+  .math-board.latex .out { font-size: 15px; }
+  .fmt-toggle { display: flex; gap: 8px; margin-top: 26px; }
+  .fmt-toggle button {
+    border-radius: 999px; font-size: 13px; padding: 6px 16px; cursor: pointer;
+    border: 1px solid var(--line); color: var(--muted); background: none;
+    font-family: inherit; transition: all 0.25s;
+  }
+  .fmt-toggle button.on { background: var(--accent-soft); border-color: rgba(235, 158, 95, 0.4); color: var(--accent); }
+  .math-note { margin-top: 18px; color: var(--muted); font-size: 13.5px; max-width: 34em; }
+  .math-note code { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-size: 12.5px; }
+
+  /* Steps: playable storyboard */
+  .steps-flow { display: flex; align-items: stretch; margin-top: 60px; }
+  .step { flex: 1; padding-right: 44px; }
+  .step + .step { border-left: 1px solid var(--line); padding-left: 44px; }
+  .step h3 { font-size: 17.5px; margin: 18px 0 6px; letter-spacing: -0.01em; }
+  .step p { color: var(--muted); font-size: 14.5px; }
+  .keycap {
+    display: inline-flex; align-items: flex-end;
+    width: 84px; height: 84px; border-radius: 16px;
+    background: linear-gradient(180deg, #29221a, #16120d);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 24px rgba(0, 0, 0, 0.5);
+    padding: 10px 12px; font-size: 16px; color: var(--text);
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+    transition: transform 0.12s, box-shadow 0.12s, border-color 0.2s;
+    touch-action: none;
+  }
+  .keycap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .keycap.held {
+    transform: translateY(4px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 3px 8px rgba(0, 0, 0, 0.5);
+    border-color: rgba(235, 158, 95, 0.5);
+  }
+  .try-hint { margin-top: 14px; color: var(--accent); font-size: 13px; }
+  .mini-capsule {
+    display: inline-flex; align-items: center; gap: 14px; height: 56px;
+    margin: 14px 0; padding: 0 24px; border-radius: 28px;
+    background: rgba(126, 120, 113, 0.30);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    backdrop-filter: blur(24px) saturate(140%);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+    opacity: 0.45; transition: opacity 0.25s, border-color 0.25s, width 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .steps-flow.holding .mini-capsule, .steps-flow.transcribing .mini-capsule { opacity: 1; border-color: rgba(255, 255, 255, 0.2); }
+  .mini-status { font-size: 14px; }
+  .paste-field {
+    display: flex; align-items: center; min-height: 84px;
+    background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 20px;
+    font-size: 14.5px; color: var(--muted);
+    transition: border-color 0.3s, color 0.3s;
+  }
+  .paste-field.flash { border-color: rgba(235, 158, 95, 0.55); color: var(--text); }
+
+  /* Manifesto */
+  .manifesto { text-align: center; }
+  .manifesto h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin-bottom: 20px; }
+  .manifesto h2 .k { display: inline-block; }
+  .manifesto .lede { margin: 0 auto 72px; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 52px; text-align: left; max-width: 960px; margin: 0 auto; }
+  .fact { border-top: 1px solid var(--line); padding-top: 22px; }
+  .fact h3 { font-size: 16px; margin-bottom: 6px; color: var(--accent); }
+  .fact p { color: var(--muted); font-size: 14.5px; }
+
+  /* Bento: spotlight + tilt */
+  .bento-head { max-width: 660px; margin-bottom: 52px; }
+  .bento { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; perspective: 1200px; }
+  .cell {
+    background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--radius-card);
+    padding: 30px; position: relative; overflow: hidden;
+    transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--ty, 0));
+    transition: transform 0.35s var(--ease-out), border-color 0.3s;
+    will-change: transform;
+  }
+  .cell::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%), rgba(235, 158, 95, 0.1), transparent 65%);
+    opacity: 0; transition: opacity 0.35s;
+  }
+  .cell:hover { --ty: -3px; border-color: rgba(235, 158, 95, 0.28); }
+  .cell:hover::before { opacity: 1; }
+  .cell h3 { font-size: 16.5px; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .cell p { color: var(--muted); font-size: 14.5px; }
+  .cell.span2 { grid-column: span 2; }
+  .cell.span3 { grid-column: span 3; }
+  .cell.tint { background: linear-gradient(150deg, rgba(235, 158, 95, 0.15), var(--panel) 65%); border-color: rgba(235, 158, 95, 0.22); }
+  .cell.tint-2 { background: linear-gradient(150deg, rgba(255, 255, 255, 0.05), var(--panel) 60%); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chips span {
+    border-radius: 999px; padding: 4px 13px; font-size: 13px;
+    background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line); color: var(--text);
+  }
+
+  /* Story */
+  .story .inner { max-width: 700px; }
+  .story blockquote {
+    font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+    line-height: 1.6; letter-spacing: -0.01em; font-weight: 560;
+    margin: 30px 0;
+  }
+  .story blockquote.scrub-quote {
+    background: linear-gradient(105deg, var(--text) 0 45%, rgba(168, 159, 144, 0.35) 55% 100%);
+    background-size: 240% 100%; background-position: 100% 0;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .story .attr { color: var(--muted); font-size: 14.5px; }
+  .story .after { margin-top: 34px; color: var(--muted); font-size: 15.5px; max-width: 40em; }
+  .story .after strong { color: var(--text); font-weight: 650; }
+
+  /* Download */
+  .download-card {
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: var(--radius-card);
+    padding: 72px 48px; text-align: center; position: relative; overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .download-card .req { color: var(--muted); font-size: 14px; margin-top: 18px; }
+  .gatekeeper { max-width: 660px; margin: 60px auto 0; }
+  .gatekeeper h3 { font-size: 16.5px; margin-bottom: 10px; }
+  .gatekeeper > p { color: var(--muted); font-size: 14.5px; margin-bottom: 18px; }
+  .gatekeeper ol { list-style: none; counter-reset: gk; }
+  .gatekeeper li { counter-increment: gk; position: relative; padding: 14px 0 14px 44px; font-size: 15px; }
+  .gatekeeper li + li { border-top: 1px solid var(--line); }
+  .gatekeeper li::before {
+    content: counter(gk); position: absolute; left: 0; top: 12px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gatekeeper code { background: rgba(0, 0, 0, 0.4); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; font-size: 13px; }
+
+  /* Footer */
+  footer { border-top: 1px solid var(--line); padding: 46px 0; }
+  footer .wrap { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  footer .brand { font-size: 15px; }
+  footer .brand svg { width: 32px; height: 32px; }
+  footer nav { display: flex; gap: 24px; }
+  footer a, footer .fine { color: var(--muted); font-size: 13.5px; }
+  footer nav a:hover { color: var(--text); }
+
+  /* ---------- Motion ---------- */
+  .reveal { opacity: 0; transform: translateY(24px); }
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { transition: opacity 0.85s var(--ease-out), transform 0.85s var(--ease-out); transition-delay: var(--rd, 0s); }
+    .reveal.in { opacity: 1; transform: none; }
+    .rise { animation: riseup 0.9s var(--ease-out) forwards; animation-delay: var(--rd, 0s); }
+    .c { opacity: 0; transform: translateY(0.85em); animation: riseup 0.65s var(--ease-out) forwards; animation-delay: calc(0.05s + var(--i) * 0.03s); }
+    @keyframes riseup { to { opacity: 1; transform: none; } }
+    .blob-a { animation: drift-a 17s ease-in-out infinite alternate; }
+    .blob-b { animation: drift-b 21s ease-in-out infinite alternate; }
+    @keyframes drift-a { to { transform: translate(-80px, 60px) scale(1.12); } }
+    @keyframes drift-b { to { transform: translate(70px, -50px) scale(1.08); } }
+    /* Bars run only while "Listening...", exactly like the real capsule */
+    .hero-demo.listening .capsule .wave i,
+    .steps-flow.holding .mini-capsule .wave i { animation: wv 1.05s ease-in-out infinite; animation-delay: calc(var(--d) * -0.12s); }
+    @keyframes wv { 0%, 100% { transform: scaleY(0.2); } 50% { transform: scaleY(var(--h, 1)); } }
+    .typed-line .caret { animation: blink 1.05s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    #typed.pop { display: inline-block; animation: pastein 0.3s var(--ease-out); }
+    @keyframes pastein { from { opacity: 0; transform: translateY(8px); } }
+    .btn-primary:hover::after { animation: sheen 0.8s var(--ease-out); }
+    @keyframes sheen { to { transform: translateX(120%); } }
+    .marquee-track { animation: scroll-x 36s linear infinite; }
+    .marquee:hover .marquee-track { animation-play-state: paused; }
+    @keyframes scroll-x { to { transform: translateX(-50%); } }
+    .manifesto h2 .k { opacity: 0; transform: translateY(0.6em); transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out); transition-delay: calc(var(--i) * 45ms); }
+    .manifesto.in h2 .k { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .rise, .c, .manifesto h2 .k { opacity: 1; transform: none; }
+    .wave i { transform: scaleY(var(--h, 0.6)); }
+    .marquee-track { transform: none; flex-wrap: wrap; width: auto; }
+  }
+  /* ?static: force-finished state for screenshots and quick checks */
+  html.static .reveal, html.static .rise, html.static .c, html.static .manifesto h2 .k { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
+  html.static .marquee-track { animation: none !important; }
+  html.static .math-row { opacity: 1 !important; transform: none !important; }
+  html.static .hero { min-height: auto; }
+  html.static .hero-demo { padding-top: 72px; }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 900px) {
+    .hero { min-height: auto; padding: 48px 0 56px; }
+    .hero-demo { padding-top: 56px; }
+    .math .wrap { grid-template-columns: 1fr; gap: 48px; }
+    section { padding: 80px 0; }
+    .steps-flow { flex-direction: column; }
+    .step { padding-right: 0; }
+    .step + .step { border-left: none; border-top: 1px solid var(--line); padding-left: 0; padding-top: 36px; margin-top: 36px; }
+    .facts { grid-template-columns: 1fr; gap: 28px; }
+    .bento { grid-template-columns: 1fr; }
+    .cell.span2, .cell.span3 { grid-column: span 1; }
+    .download-card { padding: 48px 24px; }
+    .math-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .math-row .out { white-space: normal; }
+    .blob { display: none; }
+  }
+  @media (max-width: 600px) {
+    .wrap { padding-left: 20px; padding-right: 20px; }
+    .nav-actions .ghost-link { display: none; }
+    .nav-actions .btn-sm { height: 32px; padding: 0 13px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ft-logo" viewBox="0 0 1254 1254">
+    <g transform="translate(0,1254) scale(0.1,-0.1)" fill="currentColor" stroke="none">
+      <path d="M7593 8265 c-216 -39 -400 -147 -533 -312 -148 -183 -220 -402 -220 -668 0 -88 4 -117 18 -144 47 -88 174 -93 233 -10 21 30 24 47 30 183 4 95 13 171 24 206 55 179 182 333 335 409 150 73 130 72 1146 69 839 -3 903 -5 954 -22 167 -55 302 -167 378 -312 81 -158 77 -97 77 -1099 l0 -890 -23 -75 c-46 -147 -129 -262 -249 -344 -104 -71 -191 -97 -348 -105 -190 -10 -176 3 -312 -274 l-112 -228 -34 38 c-18 21 -107 125 -197 232 -125 147 -173 198 -204 212 -38 17 -74 19 -456 19 -467 0 -505 4 -630 67 -100 51 -212 161 -263 260 -49 94 -65 140 -82 241 -8 47 -24 96 -35 112 -25 36 -93 63 -134 54 -46 -9 -94 -50 -105 -88 -21 -78 27 -292 95 -428 87 -174 260 -335 444 -415 154 -66 156 -66 602 -72 l406 -6 250 -281 c181 -203 260 -285 283 -293 74 -26 156 -7 199 46 14 17 81 141 150 276 l125 246 40 5 c231 28 326 54 446 126 162 96 307 275 371 460 53 152 51 123 55 1040 5 1031 2 1066 -88 1258 -112 242 -304 408 -566 489 l-88 28 -955 2 c-754 1 -970 -1 -1027 -12z"/>
+      <path d="M3545 8063 c-66 -10 -174 -47 -245 -84 -231 -119 -388 -347 -420 -609 -13 -110 -13 -1000 0 -1110 19 -153 64 -264 162 -394 100 -134 275 -247 444 -287 133 -31 303 -24 434 19 221 73 402 245 488 463 57 142 57 146 57 759 0 645 2 629 -85 805 -77 158 -169 256 -319 342 -123 70 -214 95 -361 98 -69 2 -138 1 -155 -2z m277 -303 c166 -51 309 -204 347 -370 7 -28 11 -248 11 -581 0 -588 0 -583 -62 -701 -39 -73 -133 -167 -206 -206 -289 -154 -642 -2 -736 317 -23 80 -24 1096 -1 1186 42 161 170 296 335 352 87 30 221 31 312 3z"/>
+      <path d="M5875 7340 c-68 -45 -65 -1 -65 -858 0 -841 -2 -805 56 -851 58 -46 141 -35 194 25 l30 35 0 785 c0 866 3 824 -63 864 -42 26 -113 26 -152 0z"/>
+      <path d="M8243 7204 c-68 -34 -93 -126 -53 -191 39 -65 13 -63 721 -63 l641 0 39 39 c34 34 39 44 39 85 0 62 -22 101 -70 126 -38 19 -58 20 -662 20 -550 0 -627 -2 -655 -16z"/>
+      <path d="M6389 7097 c-71 -47 -69 -32 -69 -617 0 -494 2 -527 19 -567 44 -96 158 -109 231 -27 l30 35 0 552 c0 530 -1 553 -20 584 -38 64 -128 83 -191 40z"/>
+      <path d="M7421 6963 c-19 -10 -44 -31 -55 -46 -20 -27 -21 -42 -24 -420 -2 -262 0 -404 8 -429 24 -84 136 -120 209 -68 60 42 61 50 61 475 0 424 -1 433 -59 475 -44 30 -98 35 -140 13z"/>
+      <path d="M5344 6936 l-39 -34 -3 -413 c-2 -401 -2 -415 18 -447 45 -73 155 -82 219 -18 l36 36 3 405 c2 353 1 409 -13 435 -23 45 -70 70 -131 70 -43 0 -56 -5 -90 -34z"/>
+      <path d="M6939 6830 c-40 -12 -75 -38 -87 -66 -8 -17 -12 -112 -12 -293 0 -257 1 -269 21 -295 61 -77 180 -74 229 7 18 30 20 52 20 301 l0 268 -39 39 c-21 22 -48 39 -59 39 -11 0 -26 2 -34 4 -7 2 -25 1 -39 -4z"/>
+      <path d="M4816 6707 c-68 -39 -76 -67 -76 -262 0 -107 -6 -202 -15 -257 -75 -429 -385 -767 -799 -869 -106 -26 -298 -35 -406 -20 -147 22 -311 85 -440 170 -74 49 -213 183 -265 256 -116 164 -185 376 -185 572 0 62 -3 75 -26 103 -52 61 -130 78 -191 40 -63 -38 -73 -82 -63 -267 17 -312 127 -552 364 -789 210 -211 457 -339 731 -378 l80 -12 0 -170 0 -169 -245 -5 c-219 -4 -248 -7 -273 -24 -83 -56 -80 -194 5 -246 32 -19 48 -20 659 -20 l626 0 33 23 c49 33 72 82 66 136 -7 54 -27 86 -69 111 -29 18 -52 20 -269 20 l-238 0 0 170 c0 168 0 170 23 174 12 3 54 10 92 17 168 28 374 114 525 219 171 119 359 348 450 545 94 204 122 364 118 662 l-3 212 -29 30 c-29 30 -79 51 -121 51 -11 0 -38 -10 -59 -23z"/>
+      <path d="M8266 6630 c-88 -27 -126 -142 -69 -211 51 -60 34 -59 705 -59 589 0 613 1 653 20 51 24 75 65 75 124 0 36 -6 52 -31 80 -17 20 -47 40 -67 46 -45 12 -1224 12 -1266 0z"/>
+      <path d="M8255 6046 c-53 -24 -78 -60 -83 -121 -4 -53 -3 -56 36 -95 l40 -40 497 0 c442 0 500 2 525 16 89 53 76 208 -20 241 -53 18 -954 17 -995 -1z"/>
+    </g>
+  </symbol>
+</svg>
+
+<header id="nav">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Flowtype 首页">
+      <svg aria-hidden="true"><use href="#ft-logo"/></svg>
+      Flowtype
+    </a>
+    <div class="nav-actions">
+      <span class="ghost-link pending-link">GitHub · 首次发布时开放</span>
+      <span class="btn btn-primary btn-sm btn-disabled">首个版本准备中</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="hero">
+    <span class="blob blob-a" aria-hidden="true"></span>
+    <span class="blob blob-b" aria-hidden="true"></span>
+    <div class="wrap">
+      <h1 aria-label="按住 Fn 说话，文字落在光标处。"><span aria-hidden="true"><span class="c" style="--i:0">按</span><span class="c" style="--i:1">住</span><span class="c" style="--i:2">&nbsp;Fn&nbsp;</span><span class="c" style="--i:3">说</span><span class="c" style="--i:4">话</span><span class="c" style="--i:5">，</span><br><span class="c" style="--i:6">文</span><span class="c" style="--i:7">字</span><span class="c" style="--i:8">落</span><span class="c" style="--i:9">在</span><span class="c accent" style="--i:10">光</span><span class="c accent" style="--i:11">标</span><span class="c accent" style="--i:12">处</span><span class="c" style="--i:13">。</span></span></h1>
+      <p class="sub rise" style="--rd:0.35s">免费的 macOS 本地听写工具，为对 AI 口述而生：中英混着说、专业术语、数学符号，都接得住。</p>
+      <div class="cta-row rise" style="--rd:0.45s">
+        <span class="btn btn-primary btn-lg btn-disabled">首个公开版本准备中</span>
+        <span class="btn btn-secondary btn-lg btn-disabled">GitHub 仓库即将开放</span>
+      </div>
+    </div>
+    <div class="hero-demo rise" style="--rd:0.6s">
+      <p class="typed-line"><span id="typed">帮我看一下这个 SwiftUI view，为什么 onAppear 会触发两次？</span><span class="caret" aria-hidden="true"></span></p>
+      <div class="capsule">
+        <span class="wave" aria-hidden="true">
+          <i style="--d:1;--h:.52"></i><i style="--d:2;--h:.78"></i><i style="--d:3;--h:1"></i><i style="--d:4;--h:.78"></i><i style="--d:5;--h:.52"></i>
+        </span>
+        <span class="cap-status" id="cap-status">Listening...</span>
+      </div>
+      <p class="capsule-note">Flowtype 的全部界面，就这一颗胶囊。</p>
+    </div>
+  </div>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track" id="marquee-track">
+      <span>帮我 review 一下这个 PR</span><span class="sym">θ̂</span><span>把这段话翻译成 English</span><span class="sym">Var(X)</span><span>给我写三个 unit test</span><span class="sym">σ²</span><span>这个 bug 出在 onAppear</span><span class="sym">SE(β̂)</span><span>帮我把需求整理成 user story</span><span class="sym">E[Ȳ]</span><span>用 pandas 清洗这份数据</span><span class="sym">Corr(Y,Z)</span>
+    </div>
+  </div>
+
+  <section id="proof">
+    <div class="wrap">
+      <div class="shot-head reveal">
+        <h2>作者自己，每天都在用。</h2>
+        <p class="lede">这是经过隐私处理的 Flowtype 主页示例：保留真实产品布局，所有可见统计均为 synthetic demo data。</p>
+      </div>
+      <figure>
+        <div class="shot-stage">
+          <div class="shot-frame" id="shot-frame">
+            <img src="assets/flowtype-home-sanitized.png" alt="Flowtype 主页截图，显示 synthetic demo 使用统计，不含真实 transcript 或个人数据" width="1601" height="983">
+          </div>
+        </div>
+        <figcaption class="shot-caption">转写历史属于作者个人内容，已作模糊处理。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="math" id="math">
+    <div class="wrap">
+      <div class="reveal">
+        <h2>口述数学，直接落成符号。</h2>
+        <p class="lede">打开数学模式，说出符号的英文名字，落下来的就是排好的式子，Unicode 或 LaTeX 随你选。它专门处理通用听写工具容易忽略的数学表达场景。</p>
+        <div class="fmt-toggle" role="group" aria-label="输出格式切换">
+          <button type="button" class="on" data-fmt="unicode">Unicode</button>
+          <button type="button" data-fmt="latex">LaTeX</button>
+        </div>
+        <p class="math-note">下面每一组都来自 Flowtype 测试集里的真实用例。日常英语和代码不会被误改：说 <code>var x = 1</code>，落下来的还是 <code>var x = 1</code>。</p>
+      </div>
+      <div class="math-board" id="math-board">
+        <div class="math-row"><span class="say">「theta hat」</span><span class="out" data-u="θ̂" data-l="\hat{\theta}">θ̂</span></div>
+        <div class="math-row"><span class="say">「sigma squared」</span><span class="out" data-u="σ²" data-l="\sigma^2">σ²</span></div>
+        <div class="math-row"><span class="say">「variance of x」</span><span class="out" data-u="Var(X)" data-l="\mathrm{Var}(X)">Var(X)</span></div>
+        <div class="math-row"><span class="say">「variance x sub i」</span><span class="out" data-u="Var(Xᵢ)" data-l="\mathrm{Var}(X_i)">Var(Xᵢ)</span></div>
+        <div class="math-row"><span class="say">「standard error beta hat」</span><span class="out" data-u="SE(β̂)" data-l="\mathrm{SE}(\hat{\beta})">SE(β̂)</span></div>
+        <div class="math-row"><span class="say">「expected value of y bar」</span><span class="out" data-u="E[Ȳ]" data-l="E[\bar{Y}]">E[Ȳ]</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="reveal">
+        <h2>三个动作，回到心流。这一排是活的，试试。</h2>
+      </div>
+      <div class="steps-flow reveal" id="steps">
+        <div class="step">
+          <button class="keycap mono" id="fn-key" aria-label="按住体验：模拟按住 Fn 录音">fn</button>
+          <p class="try-hint" id="try-hint">用鼠标按住它</p>
+          <h3>按住</h3>
+          <p>在任何应用里，不用切窗口，不用点按钮。Fn 也不会误触系统表情面板。</p>
+        </div>
+        <div class="step">
+          <span class="mini-capsule" aria-hidden="true">
+            <span class="wave">
+              <i style="--d:1;--h:.52"></i><i style="--d:2;--h:.78"></i><i style="--d:3;--h:1"></i><i style="--d:4;--h:.78"></i><i style="--d:5;--h:.52"></i>
+            </span>
+            <span class="cap-status mini-status" id="mini-status">Listening...</span>
+          </span>
+          <h3>开口说</h3>
+          <p>想到哪说到哪。中文夹英文、蹦出来的 terminology，都是它的日常。</p>
+        </div>
+        <div class="step">
+          <div class="paste-field" id="paste-field">松开后，文字会出现在这里。</div>
+          <h3>松开</h3>
+          <p>文字已经贴进光标处，你的剪贴板和输入法原样归还。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="manifesto" id="local">
+    <div class="wrap">
+      <h2 aria-label="你的声音，不出这台 Mac。"><span class="k" style="--i:0">你</span><span class="k" style="--i:1">的</span><span class="k" style="--i:2">声</span><span class="k" style="--i:3">音</span><span class="k" style="--i:4">，</span><span class="k" style="--i:5">不</span><span class="k" style="--i:6">出</span><span class="k" style="--i:7">这</span><span class="k" style="--i:8">台</span><span class="k" style="--i:9">&nbsp;Mac</span><span class="k" style="--i:10">。</span></h2>
+      <p class="lede reveal" style="--rd:0.35s">Flowtype 使用本地 Qwen3-ASR；Apple Speech 备用路径也只在设备支持 on-device recognition 时运行。音频、转写历史和重试录音都留在这台 Mac。</p>
+      <div class="facts">
+        <div class="fact reveal" style="--rd:0.1s">
+          <h3>纯本地识别</h3>
+          <p>本地 Qwen3-ASR 模型跑在你的 Apple Silicon 上，断网照样工作。</p>
+        </div>
+        <div class="fact reveal" style="--rd:0.2s">
+          <h3>本地、可控的记录</h3>
+          <p>开启 History 时，最多保留最近 3 条本地录音用于手动重试；你可以关闭历史或在设置中清理这些数据。</p>
+        </div>
+        <div class="fact reveal" style="--rd:0.3s">
+          <h3>零订阅</h3>
+          <p>日常转写不依赖 Flowtype 自有云服务。软件免费，并以 GPL-3.0-only 开源。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="details">
+    <div class="wrap">
+      <div class="bento-head reveal">
+        <h2>细节，都被四千多次听写磨过。</h2>
+      </div>
+      <div class="bento">
+        <div class="cell span2 tint reveal" style="--rd:0s">
+          <h3>你的术语，它认识</h3>
+          <p>把常用词加进词典，热词会自动参与本地识别。人名、工具名、缩写，不再被写成别的东西。</p>
+          <div class="chips" aria-hidden="true"><span>Cursor</span><span>SwiftUI</span><span>RLHF</span><span>fixed effects</span><span>Wispr</span><span>parquet</span></div>
+        </div>
+        <div class="cell reveal" style="--rd:0.08s">
+          <h3>失败不丢话</h3>
+          <p>录音先落盘，转写失败可以恢复重试。说过的话，不会白说。</p>
+        </div>
+        <div class="cell reveal" style="--rd:0s">
+          <h3>长段口述不散架</h3>
+          <p>长听写自动分段转写、补标点，顺手清掉「嗯」「呃」这类口头语。</p>
+        </div>
+        <div class="cell tint-2 reveal" style="--rd:0.08s">
+          <h3>后备引擎</h3>
+          <p>本地模型没就绪时，Apple Speech 自动顶上，听写不中断。</p>
+        </div>
+        <div class="cell reveal" style="--rd:0.16s">
+          <h3>一键准备</h3>
+          <p>麦克风与辅助功能权限、模型下载、本地环境，首次启动一次点击全部搞定。</p>
+        </div>
+        <div class="cell span3 tint-2 reveal">
+          <h3>不打扰，是一种教养</h3>
+          <p>粘贴完成后，剪贴板内容和输入法状态自动还原；菜单栏常驻，没有 Dock 图标，不抢你的注意力。用完即走，回到你正在做的事。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story" id="story">
+    <div class="wrap">
+      <div class="inner reveal">
+        <h2>为什么会有 Flowtype</h2>
+        <blockquote>「我在英国读书，给 AI 发统计题，用中文夹着 terminology 口述我的理解。说着说着蹦出英文，又冒出数学符号。市面上的听写工具都接不住这样的话，所以我自己做了一个。」</blockquote>
+        <p class="attr">Flowtype 作者</p>
+        <p class="after">从第一行 Swift 代码到你看到的这个页面，由一个人完成。它对标的是 <strong>Wispr Flow</strong> 这样的商业产品，但免费、开源、纯本地。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="release-status">
+    <div class="wrap">
+      <div class="download-card reveal">
+        <h2>首个公开版本正在准备</h2>
+        <p class="lede" style="margin:0 auto 32px">公开源码、DMG、SHA-256 校验值和安装说明会在同一次 release 中提供。</p>
+        <span class="btn btn-primary btn-lg btn-disabled">下载尚未开放</span>
+        <p class="req">计划支持 macOS 14 及以上的 Apple Silicon Mac。首次使用会在你确认后另外下载本地模型文件，需要预留数 GB 存储空间。</p>
+      </div>
+      <div class="gatekeeper reveal" id="first-open">
+        <h3>发布前验证清单</h3>
+        <p>安装步骤会以实际发布的 app bundle 为准；在完成签名、Gatekeeper 和干净 Mac 验证前，这里不会提供绕过系统安全检查的命令。</p>
+        <ol>
+          <li>从公开 source tag 构建并运行完整 test suite。</li>
+          <li>记录签名、公证或未公证状态，并在干净环境验证 Gatekeeper 行为。</li>
+          <li>发布 DMG、SHA-256、安装说明和可复现的 source tag。</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="brand"><svg aria-hidden="true"><use href="#ft-logo"/></svg>Flowtype</span>
+    <nav>
+      <span class="pending-link">GitHub · 待发布</span>
+      <a href="#release-status">发布状态</a>
+      <a href="#first-open">发布验证</a>
+    </nav>
+    <span class="fine">以 GPL-3.0 开源，回到心流。</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var isStatic = location.search.indexOf("static") > -1;
+    if (isStatic) { document.documentElement.classList.add("static"); }
+    var noMotion = reduce || isStatic;
+    var finePointer = window.matchMedia("(pointer: fine)").matches;
+
+    /* Duplicate marquee content for a seamless loop */
+    var track = document.getElementById("marquee-track");
+    if (track && !noMotion) { track.innerHTML += track.innerHTML; }
+
+    /* Sticky nav: glassy after leaving the top */
+    var nav = document.getElementById("nav");
+    var sentinel = document.createElement("div");
+    sentinel.style.cssText = "position:absolute;top:0;height:1px;width:1px;";
+    document.body.prepend(sentinel);
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        nav.classList.toggle("scrolled", !entries[0].isIntersecting);
+      }).observe(sentinel);
+    }
+
+    /* Scroll reveal (base layer, works everywhere) */
+    var revealed = document.querySelectorAll(".reveal, .manifesto");
+    if (noMotion || !("IntersectionObserver" in window)) {
+      revealed.forEach(function (el) { el.classList.add("in"); });
+    } else {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.2 });
+      revealed.forEach(function (el) { io.observe(el); });
+    }
+
+    /* Magnetic buttons */
+    if (!noMotion && finePointer) {
+      document.querySelectorAll(".magnet").forEach(function (btn) {
+        btn.addEventListener("pointermove", function (ev) {
+          var r = btn.getBoundingClientRect();
+          var dx = (ev.clientX - r.left - r.width / 2) * 0.18;
+          var dy = (ev.clientY - r.top - r.height / 2) * 0.28;
+          btn.style.transform = "translate(" + dx + "px," + dy + "px)";
+        });
+        btn.addEventListener("pointerleave", function () { btn.style.transform = ""; });
+      });
+    }
+
+    /* Bento: cursor spotlight + gentle 3D tilt */
+    if (finePointer) {
+      document.querySelectorAll(".cell").forEach(function (cell) {
+        cell.addEventListener("pointermove", function (ev) {
+          var r = cell.getBoundingClientRect();
+          var x = ev.clientX - r.left, y = ev.clientY - r.top;
+          cell.style.setProperty("--mx", x + "px");
+          cell.style.setProperty("--my", y + "px");
+          if (!noMotion) {
+            cell.style.setProperty("--ry", ((x / r.width) - 0.5) * 5 + "deg");
+            cell.style.setProperty("--rx", (0.5 - (y / r.height)) * 5 + "deg");
+          }
+        });
+        cell.addEventListener("pointerleave", function () {
+          cell.style.setProperty("--rx", "0deg");
+          cell.style.setProperty("--ry", "0deg");
+        });
+      });
+    }
+
+    /* Unicode / LaTeX toggle */
+    var board = document.getElementById("math-board");
+    document.querySelectorAll(".fmt-toggle button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll(".fmt-toggle button").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+        var latex = b.dataset.fmt === "latex";
+        board.classList.toggle("latex", latex);
+        board.querySelectorAll(".out").forEach(function (o) {
+          o.textContent = latex ? o.dataset.l : o.dataset.u;
+          o.classList.toggle("mono", latex);
+        });
+      });
+    });
+
+    /* Playable fn key: hold = recording, release = instant paste (mirrors the real product) */
+    var fnKey = document.getElementById("fn-key");
+    var steps = document.getElementById("steps");
+    var pasteField = document.getElementById("paste-field");
+    var tryHint = document.getElementById("try-hint");
+    var pastePhrases = [
+      "帮我把这段 refactor 一下，保持 API 不变。",
+      "明天 catch up 一下这个 sprint 的 blocker。",
+      "把 λ 调到 0.1 再跑一次 regression。"
+    ];
+    var miniStatus = document.getElementById("mini-status");
+    var miniCapsule = steps ? steps.querySelector(".mini-capsule") : null;
+    var pasteIdx = 0, holding = false;
+    function setMiniStatus(text) {
+      var w0 = miniCapsule.offsetWidth;
+      miniCapsule.style.width = "auto";
+      miniStatus.textContent = text;
+      var w1 = miniCapsule.offsetWidth;
+      miniCapsule.style.width = w0 + "px";
+      void miniCapsule.offsetWidth;
+      miniCapsule.style.width = w1 + "px";
+      setTimeout(function () { miniCapsule.style.width = ""; }, 220);
+    }
+    function holdStart(ev) {
+      if (holding) { return; }
+      holding = true;
+      if (ev && ev.preventDefault) { ev.preventDefault(); }
+      fnKey.classList.add("held");
+      steps.classList.remove("transcribing");
+      steps.classList.add("holding");
+      setMiniStatus("Listening...");
+      tryHint.textContent = "在听了…松开看看";
+    }
+    function holdEnd() {
+      if (!holding) { return; }
+      holding = false;
+      fnKey.classList.remove("held");
+      var miniBars = steps.querySelectorAll(".mini-capsule .wave i");
+      miniBars.forEach(function (b) { b.style.transform = getComputedStyle(b).transform; });
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          miniBars.forEach(function (b) { b.style.transform = ""; });
+        });
+      });
+      steps.classList.remove("holding");
+      steps.classList.add("transcribing");
+      setMiniStatus("Transcribing with Qwen...");
+      setTimeout(function () {
+        steps.classList.remove("transcribing");
+        setMiniStatus("Listening...");
+        pasteField.textContent = pastePhrases[pasteIdx];
+        pasteIdx = (pasteIdx + 1) % pastePhrases.length;
+        pasteField.classList.add("flash");
+        tryHint.textContent = "松开即粘贴，就这么快";
+        setTimeout(function () { pasteField.classList.remove("flash"); }, 600);
+      }, 380);
+    }
+    if (fnKey) {
+      fnKey.addEventListener("pointerdown", holdStart);
+      fnKey.addEventListener("pointerup", holdEnd);
+      fnKey.addEventListener("pointercancel", holdEnd);
+      fnKey.addEventListener("pointerleave", function () { if (holding) { holdEnd(); } });
+      fnKey.addEventListener("keydown", function (ev) {
+        if (ev.key === " " || ev.key === "Enter") { holdStart(ev); }
+      });
+      fnKey.addEventListener("keyup", function (ev) {
+        if (ev.key === " " || ev.key === "Enter") { holdEnd(); }
+      });
+    }
+
+    /* Hero demo: the real capsule lifecycle. Listening (bars run) then
+       Transcribing with Qwen then the whole sentence pastes at once,
+       because that is exactly what the product does. */
+    var el = document.getElementById("typed");
+    var capStatus = document.getElementById("cap-status");
+    var demo = document.querySelector(".hero-demo");
+    if (el && capStatus && demo && !noMotion) {
+      var phrases = [
+        "帮我看一下这个 SwiftUI view，为什么 onAppear 会触发两次？",
+        "如果 Var(X) 已知，θ̂ 的 standard error 要怎么推？",
+        "这道题用 OLS 还是 fixed effects？帮我把 assumption 列出来。",
+        "把 σ² 换成 sample variance，再算一次 E[Ȳ]。",
+        "写一个 Python 脚本，把这些 CSV 按 user_id 合并成一个 parquet。"
+      ];
+      var capsuleEl = demo.querySelector(".capsule");
+      var heroBars = capsuleEl.querySelectorAll(".wave i");
+      var idx = 0;
+      var setPhase = function (phase) {
+        demo.classList.remove("listening", "transcribing", "pasted");
+        demo.classList.add(phase);
+      };
+      /* Bars: pin current animated height inline, drop the animation with the
+         class change, then let the transform transition ease them back to rest */
+      var settleBars = function () {
+        heroBars.forEach(function (b) { b.style.transform = getComputedStyle(b).transform; });
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            heroBars.forEach(function (b) { b.style.transform = ""; });
+          });
+        });
+      };
+      /* Status text crossfades while the capsule width eases, like the real panel */
+      var setStatus = function (text) {
+        capStatus.style.opacity = "0";
+        setTimeout(function () {
+          var w0 = capsuleEl.offsetWidth;
+          capsuleEl.style.width = "auto";
+          capStatus.textContent = text;
+          var w1 = capsuleEl.offsetWidth;
+          capsuleEl.style.width = w0 + "px";
+          void capsuleEl.offsetWidth;
+          capsuleEl.style.width = w1 + "px";
+          capStatus.style.opacity = "1";
+          setTimeout(function () { capsuleEl.style.width = ""; }, 220);
+        }, 160);
+      };
+      var loopHero = function () {
+        el.style.opacity = "0";
+        setTimeout(function () {
+          el.textContent = "";
+          el.style.opacity = "1";
+        }, 300);
+        heroBars.forEach(function (b) { b.style.transform = ""; });
+        setStatus("Listening...");
+        setPhase("listening");
+        setTimeout(function () {
+          settleBars();
+          setPhase("transcribing");
+          setStatus("Transcribing with Qwen...");
+          setTimeout(function () {
+            el.textContent = phrases[idx];
+            el.classList.remove("pop");
+            void el.offsetWidth;
+            el.classList.add("pop");
+            setPhase("pasted");
+            idx = (idx + 1) % phrases.length;
+            setTimeout(loopHero, 3200);
+          }, 1000);
+        }, 2600);
+      };
+      setTimeout(loopHero, 1400);
+    }
+
+  })();
+</script>
+
+</body>
+</html>

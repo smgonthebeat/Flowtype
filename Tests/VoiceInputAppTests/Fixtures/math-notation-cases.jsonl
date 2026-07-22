@@ -1,0 +1,31 @@
+{"id":"MATH001","input":"theta hat equals x bar and sigma squared","unicode":"θ̂ equals x̄ and σ²","latex":"\\hat{\\theta} equals \\bar{x} and \\sigma^2","tags":["existing","symbol","modifier"],"knownFailure":false}
+{"id":"MATH002","input":"variance of x","unicode":"Var(X)","latex":"\\mathrm{Var}(X)","tags":["existing","stats","var"],"knownFailure":false}
+{"id":"MATH003","input":"variance e","unicode":"Var(E)","latex":"\\mathrm{Var}(E)","tags":["current-failure","stats","var","latin-symbol"],"knownFailure":false}
+{"id":"MATH004","input":"Variance X.","unicode":"Var(X).","latex":"\\mathrm{Var}(X).","tags":["current-failure","stats","var","punctuation"],"knownFailure":false}
+{"id":"MATH005","input":"Variants of E.","unicode":"Var(E).","latex":"\\mathrm{Var}(E).","tags":["current-failure","asr-artifact","stats","var"],"knownFailure":false}
+{"id":"MATH006","input":"Variants of Y.","unicode":"Var(Y).","latex":"\\mathrm{Var}(Y).","tags":["current-failure","asr-artifact","stats","var"],"knownFailure":false}
+{"id":"MATH007","input":"Var Y","unicode":"Var(Y)","latex":"\\mathrm{Var}(Y)","tags":["current-failure","stats","var"],"knownFailure":false}
+{"id":"MATH008","input":"Var(X) bar","unicode":"Var(X̄)","latex":"\\mathrm{Var}(\\bar{X})","tags":["current-failure","existing-notation","modifier"],"knownFailure":false}
+{"id":"MATH009","input":"variance of x bar","unicode":"Var(X̄)","latex":"\\mathrm{Var}(\\bar{X})","tags":["current-failure","stats","var","modifier"],"knownFailure":false}
+{"id":"MATH010","input":"correlation xy","unicode":"Corr(X,Y)","latex":"\\mathrm{Corr}(X,Y)","tags":["current-failure","stats","corr","compact-args"],"knownFailure":false}
+{"id":"MATH011","input":"covariance of y, variance of e","unicode":"covariance of y, Var(E)","latex":"covariance of y, \\mathrm{Var}(E)","tags":["current-failure","stats","partial-transform"],"knownFailure":false}
+{"id":"MATH012","input":"corr y z","unicode":"Corr(Y,Z)","latex":"\\mathrm{Corr}(Y,Z)","tags":["stats","corr","spoken-args"],"knownFailure":false}
+{"id":"NEG001","input":"var x = 1","unicode":"var x = 1","latex":"var x = 1","tags":["negative","code-like","var"],"knownFailure":false}
+{"id":"NEG002","input":"variants of products","unicode":"variants of products","latex":"variants of products","tags":["negative","plain-english"],"knownFailure":false}
+{"id":"NEG003","input":"open https://example.com/var/x-bar today","unicode":"open https://example.com/var/x-bar today","latex":"open https://example.com/var/x-bar today","tags":["negative","url"],"knownFailure":false}
+{"id":"NEG004","input":"Use `var x` in Swift","unicode":"Use `var x` in Swift","latex":"Use `var x` in Swift","tags":["negative","inline-code"],"knownFailure":false}
+{"id":"MATH020","input":"variance rho","unicode":"Var(ρ)","latex":"\\mathrm{Var}(\\rho)","tags":["phase-2","stats","var","greek-symbol"],"knownFailure":false}
+{"id":"MATH021","input":"variance omega bar","unicode":"Var(ω̄)","latex":"\\mathrm{Var}(\\bar{\\omega})","tags":["phase-2","stats","var","greek-symbol","modifier"],"knownFailure":false}
+{"id":"MATH022","input":"corr alpha omega","unicode":"Corr(α,ω)","latex":"\\mathrm{Corr}(\\alpha,\\omega)","tags":["phase-2","stats","corr","greek-symbol"],"knownFailure":false}
+{"id":"MATH023","input":"variance x sub i","unicode":"Var(Xᵢ)","latex":"\\mathrm{Var}(X_i)","tags":["phase-2","stats","var","subscript"],"knownFailure":false}
+{"id":"MATH024","input":"variance x sub i squared","unicode":"Var(Xᵢ²)","latex":"\\mathrm{Var}(X_i^2)","tags":["phase-2","stats","var","subscript","power"],"knownFailure":false}
+{"id":"MATH025","input":"expectation x","unicode":"E[X]","latex":"E[X]","tags":["phase-2","stats","expectation","unary"],"knownFailure":false}
+{"id":"MATH026","input":"expected value of y bar","unicode":"E[Ȳ]","latex":"E[\\bar{Y}]","tags":["phase-2","stats","expectation","modifier"],"knownFailure":false}
+{"id":"MATH027","input":"standard deviation theta","unicode":"SD(θ)","latex":"\\mathrm{SD}(\\theta)","tags":["phase-2","stats","sd","greek-symbol"],"knownFailure":false}
+{"id":"MATH028","input":"standard error beta hat","unicode":"SE(β̂)","latex":"\\mathrm{SE}(\\hat{\\beta})","tags":["phase-2","stats","se","modifier"],"knownFailure":false}
+{"id":"MATH029","input":"variance x sub t","unicode":"Var(Xₜ)","latex":"\\mathrm{Var}(X_t)","tags":["phase-2","stats","var","subscript"],"knownFailure":false}
+{"id":"NEG020","input":"standard error message","unicode":"standard error message","latex":"standard error message","tags":["phase-2","negative","plain-english","se"],"knownFailure":false}
+{"id":"NEG021","input":"expectation is that x will rise","unicode":"expectation is that x will rise","latex":"expectation is that x will rise","tags":["phase-2","negative","plain-english","expectation"],"knownFailure":false}
+{"id":"NEG022","input":"Use `expectation x` in notes","unicode":"Use `expectation x` in notes","latex":"Use `expectation x` in notes","tags":["phase-2","negative","inline-code"],"knownFailure":false}
+{"id":"MATH030","input":"variant of X","unicode":"Var(X)","latex":"\\mathrm{Var}(X)","tags":["asr-artifact","stats","var"],"knownFailure":false}
+{"id":"MATH031","input":"standard error beta head","unicode":"SE(β̂)","latex":"\\mathrm{SE}(\\hat{\\beta})","tags":["asr-artifact","stats","se","modifier"],"knownFailure":false}

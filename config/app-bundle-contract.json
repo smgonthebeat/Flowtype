@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "manifestFileName": "FlowtypeBundleManifest.json",
+  "entries": [
+    {
+      "id": "app-info-plist",
+      "kind": "file",
+      "source": "Resources/Info.plist",
+      "destination": "Contents/Info.plist",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "app-binary",
+      "swiftPMResource": true
+    },
+    {
+      "id": "app-binary",
+      "kind": "input",
+      "sourceInput": "appBinary",
+      "destination": "Contents/MacOS/Flowtype",
+      "required": true,
+      "executable": true,
+      "inspectionGroup": "app-binary",
+      "swiftPMResource": false
+    },
+    {
+      "id": "flowtype-logo-svg",
+      "kind": "file",
+      "source": "Resources/Flowtype-logo.svg",
+      "destination": "Contents/Resources/Flowtype-logo.svg",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "flowtype-icon",
+      "swiftPMResource": true
+    },
+    {
+      "id": "flowtype-logo-png",
+      "kind": "file",
+      "source": "Resources/Flowtype-logo.png",
+      "destination": "Contents/Resources/Flowtype-logo.png",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "flowtype-icon",
+      "swiftPMResource": true
+    },
+    {
+      "id": "flowtype-icon",
+      "kind": "file",
+      "source": "Resources/Flowtype.icns",
+      "destination": "Contents/Resources/Flowtype.icns",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "flowtype-icon",
+      "swiftPMResource": true
+    },
+    {
+      "id": "qwen-logo",
+      "kind": "file",
+      "source": "Resources/Qwen-logo.svg",
+      "destination": "Contents/Resources/Qwen-logo.svg",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "qwen-logo",
+      "swiftPMResource": true
+    },
+    {
+      "id": "home-card-artwork-mic",
+      "kind": "file",
+      "source": "Resources/HomeCardArtwork-mic.png",
+      "destination": "Contents/Resources/HomeCardArtwork-mic.png",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "home-card-artwork",
+      "swiftPMResource": true
+    },
+    {
+      "id": "home-card-artwork-wave",
+      "kind": "file",
+      "source": "Resources/HomeCardArtwork-wave.png",
+      "destination": "Contents/Resources/HomeCardArtwork-wave.png",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "home-card-artwork",
+      "swiftPMResource": true
+    },
+    {
+      "id": "home-card-artwork-docs",
+      "kind": "file",
+      "source": "Resources/HomeCardArtwork-docs.png",
+      "destination": "Contents/Resources/HomeCardArtwork-docs.png",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "home-card-artwork",
+      "swiftPMResource": true
+    },
+    {
+      "id": "home-card-artwork-clock",
+      "kind": "file",
+      "source": "Resources/HomeCardArtwork-clock.png",
+      "destination": "Contents/Resources/HomeCardArtwork-clock.png",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "home-card-artwork",
+      "swiftPMResource": true
+    },
+    {
+      "id": "bundled-uv",
+      "kind": "input",
+      "sourceInput": "uvBinary",
+      "destination": "Contents/Resources/Tools/uv",
+      "required": true,
+      "executable": true,
+      "inspectionGroup": "bundled-uv",
+      "swiftPMResource": false
+    },
+    {
+      "id": "helper-pyproject",
+      "kind": "file",
+      "source": "Helpers/qwen-asr-helper/pyproject.toml",
+      "destination": "Contents/Resources/Helpers/qwen-asr-helper/pyproject.toml",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "bundled-qwen-helper",
+      "swiftPMResource": false
+    },
+    {
+      "id": "helper-uv-lock",
+      "kind": "file",
+      "source": "Helpers/qwen-asr-helper/uv.lock",
+      "destination": "Contents/Resources/Helpers/qwen-asr-helper/uv.lock",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "bundled-qwen-helper",
+      "swiftPMResource": false
+    },
+    {
+      "id": "helper-readme",
+      "kind": "file",
+      "source": "Helpers/qwen-asr-helper/README.md",
+      "destination": "Contents/Resources/Helpers/qwen-asr-helper/README.md",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "bundled-qwen-helper",
+      "swiftPMResource": false
+    },
+    {
+      "id": "helper-python",
+      "kind": "tree",
+      "source": "Helpers/qwen-asr-helper/qwen_asr_helper",
+      "destination": "Contents/Resources/Helpers/qwen-asr-helper/qwen_asr_helper",
+      "required": true,
+      "executable": false,
+      "include": ["*.py", "**/*.py"],
+      "exclude": ["__pycache__", "*.pyc"],
+      "inspectionGroup": "bundled-qwen-helper",
+      "swiftPMResource": false
+    },
+    {
+      "id": "helper-manifest",
+      "kind": "generated",
+      "destination": "Contents/Resources/Helpers/qwen-asr-helper/helper_manifest.json",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "helper-manifest",
+      "swiftPMResource": false
+    },
+    {
+      "id": "bundle-manifest",
+      "kind": "generated",
+      "destination": "Contents/Resources/FlowtypeBundleManifest.json",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "app-binary",
+      "swiftPMResource": false
+    }
+  ],
+  "forbiddenPatterns": [
+    {
+      "root": "Contents/Resources/Helpers/qwen-asr-helper",
+      "patterns": [".venv", "__pycache__", ".pytest_cache", "tests", "*.pyc"]
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a reproducible Flowtype problem using synthetic or redacted data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve Flowtype. Do not attach real recordings, transcripts, credentials, signing material, or unreviewed diagnostics. Security issues belong in GitHub private vulnerability reporting.
+  - type: input
+    id: version
+    attributes:
+      label: Flowtype version or source commit
+      placeholder: v0.x.y or a full commit SHA
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac chip
+      placeholder: macOS 15.x, Apple M2
+    validations:
+      required: true
+  - type: dropdown
+    id: origin
+    attributes:
+      label: Build origin
+      options:
+        - Source build
+        - Official release asset
+        - Other or unknown
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the user-visible result. Use synthetic transcript examples.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Hold Fn and say a synthetic phrase ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Reviewed diagnostic excerpt
+      description: Optional. Redact private paths, identifiers, transcripts, and secrets first.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed real audio, transcripts, credentials, private paths, and unrelated personal data.
+          required: true

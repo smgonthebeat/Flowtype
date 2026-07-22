@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose a focused improvement that preserves Flowtype's local-first boundaries.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user job and current limitation, not only a preferred implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should the user be able to do after this change?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Local-first, privacy, and resource impact
+      description: Note any network, data-retention, model, permission, memory, or packaging implications.
+    validations:
+      required: true
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data check
+      options:
+        - label: This request contains no real recording, transcript, credential, or private diagnostic data.
+          required: true

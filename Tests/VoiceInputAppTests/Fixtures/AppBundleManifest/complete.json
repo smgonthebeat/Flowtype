@@ -1,0 +1,27 @@
+{
+  "runtimeSchemaVersion": 1,
+  "authoringContractSHA256": "replaced-by-test-fixture",
+  "entries": [
+    {"artifactID":"app-info-plist","relativePath":"Contents/Info.plist","kind":"file","executable":false,"inspectionGroup":"app-binary"},
+    {"artifactID":"app-binary","relativePath":"Contents/MacOS/Flowtype","kind":"file","executable":true,"inspectionGroup":"app-binary"},
+    {"artifactID":"flowtype-logo-svg","relativePath":"Contents/Resources/Flowtype-logo.svg","kind":"file","executable":false,"inspectionGroup":"flowtype-icon"},
+    {"artifactID":"flowtype-logo-png","relativePath":"Contents/Resources/Flowtype-logo.png","kind":"file","executable":false,"inspectionGroup":"flowtype-icon"},
+    {"artifactID":"flowtype-icon","relativePath":"Contents/Resources/Flowtype.icns","kind":"file","executable":false,"inspectionGroup":"flowtype-icon"},
+    {"artifactID":"home-card-artwork-clock","relativePath":"Contents/Resources/HomeCardArtwork-clock.png","kind":"file","executable":false,"inspectionGroup":"home-card-artwork"},
+    {"artifactID":"home-card-artwork-docs","relativePath":"Contents/Resources/HomeCardArtwork-docs.png","kind":"file","executable":false,"inspectionGroup":"home-card-artwork"},
+    {"artifactID":"home-card-artwork-mic","relativePath":"Contents/Resources/HomeCardArtwork-mic.png","kind":"file","executable":false,"inspectionGroup":"home-card-artwork"},
+    {"artifactID":"home-card-artwork-wave","relativePath":"Contents/Resources/HomeCardArtwork-wave.png","kind":"file","executable":false,"inspectionGroup":"home-card-artwork"},
+    {"artifactID":"qwen-logo","relativePath":"Contents/Resources/Qwen-logo.svg","kind":"file","executable":false,"inspectionGroup":"qwen-logo"},
+    {"artifactID":"bundled-uv","relativePath":"Contents/Resources/Tools/uv","kind":"file","executable":true,"inspectionGroup":"bundled-uv"},
+    {"artifactID":"helper-pyproject","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/pyproject.toml","kind":"file","executable":false,"inspectionGroup":"bundled-qwen-helper","helperRuntimeRelativePath":"pyproject.toml"},
+    {"artifactID":"helper-uv-lock","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/uv.lock","kind":"file","executable":false,"inspectionGroup":"bundled-qwen-helper","helperRuntimeRelativePath":"uv.lock"},
+    {"artifactID":"helper-readme","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/README.md","kind":"file","executable":false,"inspectionGroup":"bundled-qwen-helper","helperRuntimeRelativePath":"README.md"},
+    {"artifactID":"helper-python:qwen_asr_helper/__init__.py","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/qwen_asr_helper/__init__.py","kind":"file","executable":false,"inspectionGroup":"bundled-qwen-helper","helperRuntimeRelativePath":"qwen_asr_helper/__init__.py"},
+    {"artifactID":"helper-python:qwen_asr_helper/schemas.py","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/qwen_asr_helper/schemas.py","kind":"file","executable":false,"inspectionGroup":"bundled-qwen-helper","helperRuntimeRelativePath":"qwen_asr_helper/schemas.py"},
+    {"artifactID":"helper-python:qwen_asr_helper/server.py","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/qwen_asr_helper/server.py","kind":"file","executable":false,"inspectionGroup":"bundled-qwen-helper","helperRuntimeRelativePath":"qwen_asr_helper/server.py"},
+    {"artifactID":"helper-manifest","relativePath":"Contents/Resources/Helpers/qwen-asr-helper/helper_manifest.json","kind":"file","executable":false,"inspectionGroup":"helper-manifest","helperRuntimeRelativePath":"helper_manifest.json"}
+  ],
+  "forbiddenContent": [
+    {"root":"Contents/Resources/Helpers/qwen-asr-helper","patterns":["*.pyc",".pytest_cache",".venv","__pycache__","tests"]}
+  ]
+}

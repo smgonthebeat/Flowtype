@@ -1,0 +1,36 @@
+.build/
+dist/
+DerivedData/
+*.xcuserstate
+*.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.swiftpm/
+xcuserdata/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.key
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+*.provisionprofile
+
+# User recordings, logs, and local databases
+*.aif
+*.aiff
+*.caf
+*.m4a
+*.mp3
+*.wav
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+local.mk
