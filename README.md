@@ -12,6 +12,10 @@
 
 Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开后完成本地转写，并把结果粘贴到刚才使用的 App 中。它重点处理中文、English、technical terms 与 spoken mathematics 混合出现的真实口述场景。
 
+![Flowtype 工作流：按住 Fn，说话，本地转写并把文字送到光标处](website/assets/flowtype-workflow.gif)
+
+[▶ 观看有声 MP4](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype-GitHub-Promo.mp4)
+
 ![Flowtype 作者的真实使用界面，展示 4,680 次听写、15 小时 19 分钟口述、24.6 万字和节省 60 小时 37 分钟](website/assets/flowtype-home-real-usage.png)
 
 这不是 mock data。作者明确选择公开这张 2026-07-23 的真实使用截图：Flowtype 已完成 **4,680 次听写**、累计 **15 小时 19 分钟**口述、转写 **24.6 万字**，估算节省 **60 小时 37 分钟**。为保护隐私，下方转写历史已作强模糊处理；上方累计统计保持原始画面。它首先是作者每天在用的工具，然后才成为一个开源项目。

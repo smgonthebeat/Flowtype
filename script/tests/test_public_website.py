@@ -85,6 +85,16 @@ class PublicWebsiteTests(unittest.TestCase):
         self.assertNotIn("synthetic demo data", self.html)
         self.assertNotIn("flowtype-home-sanitized.png", self.html)
 
+    def test_workflow_gif_matches_reviewed_binary_contract(self) -> None:
+        data = (WEBSITE_ROOT / "assets/flowtype-workflow.gif").read_bytes()
+        self.assertIn(data[:6], {b"GIF87a", b"GIF89a"})
+        self.assertEqual(struct.unpack("<HH", data[6:10]), (1200, 675))
+        self.assertLess(len(data), 8 * 1024 * 1024)
+        self.assertEqual(
+            hashlib.sha256(data).hexdigest(),
+            "51e5d663c53c022d97849075cb88f850802cfdb2b644886e056e9ad2c90490d2",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
