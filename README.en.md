@@ -16,6 +16,8 @@ Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to
 
 [▶ Watch with sound](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype-GitHub-Promo.mp4)
 
+The Codex `New chat` view is a synthetic third-party input scene used only to demonstrate ordinary text pasting. It contains no real conversation, and its procedural soundtrack contains no real recording. It does not imply integration, affiliation, sponsorship, or endorsement by OpenAI.
+
 ![The Flowtype author's real usage screen showing 4,680 dictations, 15 hours 19 minutes dictated, 246,000 characters, and 60 hours 37 minutes saved](website/assets/flowtype-home-real-usage.png)
 
 This is not mock data. The author explicitly chose to publish this real-use capture from 2026-07-23: **4,680 dictations**, **15 hours 19 minutes** dictated, **246,000 characters** transcribed, and an estimated **60 hours 37 minutes** saved. The transcript-history rows are heavily blurred for privacy while the aggregate usage cards remain unchanged from the original capture. Flowtype was a tool used every day before it became an open-source project.

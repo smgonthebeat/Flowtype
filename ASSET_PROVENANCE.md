@@ -58,28 +58,33 @@ analytics, user data, or personal metadata.
 
 `website/assets/flowtype-workflow.gif` is a deterministic 1200×675, 15fps
 derivative of a local HTML animation created for the Flowtype GitHub README. It
-uses the project logo, a synthetic demonstration sentence, and the already
-reviewed, SHA-locked real-use screenshot described above. The screenshot's
-transcript-history panel remains heavily blurred. The animation does not use
-real History text, Hotwords, recordings, account identifiers, or local
-filesystem paths. Its reviewed SHA-256 is
-`51e5d663c53c022d97849075cb88f850802cfdb2b644886e056e9ad2c90490d2`.
+uses a fully synthetic recreation of the public Codex `New chat` empty state as
+an ordinary third-party text target, a synthetic demonstration sentence, and a
+Flowtype-branded closing frame. It does not embed a screenshot, real
+conversation, History text, Hotwords, recording, account identifier, or local
+filesystem path. The Codex name and product mark identify the demonstrated
+target app only; they do not imply an OpenAI integration, affiliation,
+sponsorship, or endorsement. The GIF is 150 frames, 9.99 seconds, and 164,218
+bytes. Its reviewed SHA-256 is
+`c1a3340cc527f3777fdc362505d8c1a767d3b9afb05620f8ea4b69ddcca68cb4`.
 
 The sound-on `Flowtype-GitHub-Promo.mp4` is published only as a GitHub Release
 asset and is intentionally excluded from the source projection. It is a
-10-second 1920×1080, native-60fps H.264/AAC rendering of the same reviewed
+10-second 1920×1080, native-60fps H.264/AAC rendering of the same reviewed v4
 visual source. Its soundtrack is generated procedurally from deterministic
-FFmpeg sine and seeded pink-noise sources; it contains no imported music,
-recording, or third-party SFX file. Input metadata is stripped from the final
-container. The reviewed MP4 SHA-256 is
-`0b4181e23b433de96c0d7071b40198a70c269ec269f2cd570810f0088fd5797c`.
+FFmpeg sine and seeded pink-noise sources, with cues aligned to the `Fn` press,
+local-transcription release, atomic paste, and closing resolve. It contains no
+imported music, recording, or third-party SFX file. Input metadata and chapters
+are stripped from the final container. The MP4 is 428,354 bytes. Its reviewed
+SHA-256 is
+`fbf146b9ac67a50ede0822f92dc2a1a3616bc400a74ea8925d6e294ec0377eac`.
 
 The motion-design workflow and deterministic seek-render approach were adapted
 from [Huashu Design](https://github.com/alchaincyf/huashu-design), distributed
 under the MIT License. The visual includes a small `Created by Huashu-Design`
-attribution. Huashu source code, Node/Python environments, browser binaries,
-FFmpeg binaries, music, and SFX are not included in the public repository or
-the Flowtype app bundle.
+attribution after the completed workflow. Huashu source code, Node/Python
+environments, browser binaries, FFmpeg binaries, music, and SFX are not included
+in the public repository or the Flowtype app bundle.
 
 OpenAI's [Terms of Use](https://openai.com/policies/row-terms-of-use/), reviewed
 on 2026-07-21, state that, as between a user and OpenAI and to the extent
