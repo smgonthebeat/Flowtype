@@ -54,7 +54,11 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         window?.backgroundColor = theme.usesSystemMaterials ? .windowBackgroundColor : NSColor(theme.surface)
         window?.appearance = theme.usesSystemMaterials ? nil : NSAppearance(named: .darkAqua)
         window?.contentView = NSHostingView(
-            rootView: OnboardingView(copy: copy, actions: actions)
+            rootView: OnboardingView(
+                copy: copy,
+                model: VoiceInputModel.model(for: settingsStore.selectedModelID),
+                actions: actions
+            )
                 .flowtypeTheme(theme)
         )
         showWindow(nil)

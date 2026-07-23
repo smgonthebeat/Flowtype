@@ -26,6 +26,7 @@ struct OnboardingActions {
     var openAccessibilitySettings: () -> Void
     var prepareFlowtype: (
         PreparationIntent,
+        String,
         @escaping (PreparationSnapshot) -> Void
     ) async -> ReadinessSetupResult
     var requestClose: () -> Void
@@ -38,8 +39,9 @@ struct OnboardingActions {
         openAccessibilitySettings: @escaping () -> Void = {},
         prepareFlowtype: @escaping (
             PreparationIntent,
+            String,
             @escaping (PreparationSnapshot) -> Void
-        ) async -> ReadinessSetupResult = { _, _ in
+        ) async -> ReadinessSetupResult = { _, _, _ in
             ReadinessSetupResult(
                 outcome: .failed("Setup is unavailable."),
                 report: ReadinessReport(generatedAt: Date(), checks: [])
@@ -66,6 +68,10 @@ enum OnboardingPrepareState: Equatable {
     var isRunning: Bool {
         if case .running = self { return true }
         return false
+    }
+
+    var isReady: Bool {
+        self == .ready
     }
 
     static func state(for outcome: ReadinessSetupResult.Outcome) -> OnboardingPrepareState {

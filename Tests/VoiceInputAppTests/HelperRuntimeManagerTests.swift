@@ -564,6 +564,11 @@ private struct HelperRuntimeFixture {
     ) throws {
         var entries: [[String: Any]] = [
             entry(id: "app-binary", path: "Contents/MacOS/Flowtype", group: "app-binary"),
+            entry(
+                id: "dmg-background",
+                path: "Contents/Resources/DMGBackground.tiff",
+                group: "dmg-background"
+            ),
             entry(id: "flowtype-icon", path: "Contents/Resources/Flowtype.icns", group: "flowtype-icon"),
             entry(
                 id: "home-card-artwork-mic",

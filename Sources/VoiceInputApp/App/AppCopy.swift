@@ -416,7 +416,7 @@ enum AppCopy {
                 case .grantMicrophone, .grantAccessibility, .grantSpeechRecognition:
                     return "先完成必要的 macOS 授权，然后即可继续准备。"
                 case .installSelectedModel:
-                    return "当前 Qwen 模型尚未安装；继续准备时会先征求下载同意。"
+                    return "当前 Qwen 模型尚未安装；点击一键准备后会自动开始下载。"
                 case .prepareSelectedModel:
                     return "当前 Qwen 模型需要重新准备。"
                 case .repairLocalRuntime:
@@ -429,7 +429,7 @@ enum AppCopy {
             case .grantMicrophone, .grantAccessibility, .grantSpeechRecognition:
                 return "Grant the required macOS permissions, then continue setup."
             case .installSelectedModel:
-                return "The selected Qwen model is not installed. Flowtype will ask before downloading it."
+                return "The selected Qwen model is not installed. One-click setup will download it automatically."
             case .prepareSelectedModel:
                 return "The selected Qwen model needs to be prepared again."
             case .repairLocalRuntime:
@@ -551,7 +551,10 @@ enum AppCopy {
             case .grantSpeechRecognition:
                 return chinese ? "只在使用 Apple Speech 时需要。" : "Required only when using Apple Speech."
             case .installSelectedModel:
-                return chinese ? "下载前 Flowtype 会单独询问你的同意。" : "Flowtype will ask for consent before downloading."
+                let model = VoiceInputModel.model(for: context.selectedModelID)
+                return chinese
+                    ? "点击“一键准备 Flowtype”即确认下载当前所选的 \(model.displayName) 本地模型。"
+                    : "Clicking Prepare Flowtype confirms the download of the selected \(model.displayName) local model."
             case .prepareSelectedModel:
                 return chinese ? "模型已安装，但当前 Helper 无法确认它已就绪。" : "The model is installed, but the helper cannot confirm it is ready."
             case .repairLocalRuntime:

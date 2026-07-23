@@ -29,6 +29,7 @@ struct PackageFixture {
         let files: [(String, String, Bool)] = [
             ("Contents/Info.plist", "plist", false),
             ("Contents/MacOS/Flowtype", "binary", true),
+            ("Contents/Resources/DMGBackground.tiff", "background", false),
             ("Contents/Resources/Flowtype-logo.svg", "logo", false),
             ("Contents/Resources/Flowtype-logo.png", "logo", false),
             ("Contents/Resources/Flowtype.icns", "icon", false),

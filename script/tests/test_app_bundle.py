@@ -459,6 +459,7 @@ class AssemblyTests(_BundleFixture):
             if path.is_file()
         }
         self.assertEqual(actual, expected)
+        self.assertEqual(self.app.stat().st_mode & 0o777, 0o755)
         self.assertTrue(os.access(self.app / "Contents/MacOS/Flowtype", os.X_OK))
         self.assertTrue(os.access(self.app / "Contents/Resources/Tools/uv", os.X_OK))
 
@@ -683,6 +684,15 @@ class VerificationTests(_BundleFixture):
             while parent != helper and not any(parent.iterdir()):
                 parent.rmdir()
                 parent = parent.parent
+
+    def test_verify_rejects_nonstandard_app_bundle_permissions(self) -> None:
+        self.app.chmod(0o700)
+
+        with self.assertRaises(self.module._ContractError) as context:
+            self.verify()
+
+        self.assertEqual(context.exception.code, "bundle-incomplete")
+        self.assertIn("permissions must be 755", str(context.exception))
 
     def test_deleting_each_required_artifact_reports_stable_identity(self) -> None:
         manifest = self.runtime_manifest()

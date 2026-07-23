@@ -7,6 +7,7 @@ struct AppBundleManifest: Decodable {
         "app-binary",
         "bundled-uv",
         "bundled-qwen-helper",
+        "dmg-background",
         "helper-manifest",
         "flowtype-icon",
         "home-card-artwork",

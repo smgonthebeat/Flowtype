@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+@testable import VoiceInputApp
 
 final class AppBundleContractParityTests: XCTestCase {
     func testSwiftPMResourcesExactlyMatchAuthoringContract() throws {
@@ -10,6 +11,20 @@ final class AppBundleContractParityTests: XCTestCase {
         let report = try appBundleContractParityReport(repositoryRoot: repositoryRoot)
 
         XCTAssertTrue(report.isExactMatch, report.diagnostic)
+    }
+
+    func testRuntimeInspectionGroupsExactlyMatchAuthoringContract() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let contract = try authoringContract(repositoryRoot: repositoryRoot)
+
+        XCTAssertEqual(
+            AppBundleManifest.requiredInspectionGroups,
+            Set(contract.entries.map(\.inspectionGroup)),
+            "Swift runtime inspection groups must stay in sync with config/app-bundle-contract.json."
+        )
     }
 
     func testParityDiagnosticNamesMissingExtraAndDuplicatePaths() throws {
@@ -99,6 +114,7 @@ private struct AuthoringContract: Decodable {
     struct Entry: Decodable {
         let source: String?
         let swiftPMResource: Bool
+        let inspectionGroup: String
     }
 }
 
@@ -133,11 +149,7 @@ private struct AppBundleContractParityReport {
 private func appBundleContractParityReport(
     repositoryRoot: URL
 ) throws -> AppBundleContractParityReport {
-    let contractURL = repositoryRoot.appendingPathComponent("config/app-bundle-contract.json")
-    let contract = try JSONDecoder().decode(
-        AuthoringContract.self,
-        from: Data(contentsOf: contractURL)
-    )
+    let contract = try authoringContract(repositoryRoot: repositoryRoot)
     let contractSources: [String] = try contract.entries.compactMap { entry in
         guard entry.swiftPMResource else { return nil }
         guard let source = entry.source else {
@@ -156,6 +168,14 @@ private func appBundleContractParityReport(
     return appBundleContractParityReport(
         contractSources: contractSources,
         packageSources: packageSources
+    )
+}
+
+private func authoringContract(repositoryRoot: URL) throws -> AuthoringContract {
+    let contractURL = repositoryRoot.appendingPathComponent("config/app-bundle-contract.json")
+    return try JSONDecoder().decode(
+        AuthoringContract.self,
+        from: Data(contentsOf: contractURL)
     )
 }
 

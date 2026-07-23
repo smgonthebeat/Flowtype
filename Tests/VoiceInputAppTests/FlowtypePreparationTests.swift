@@ -2,6 +2,38 @@ import XCTest
 @testable import VoiceInputApp
 
 final class FlowtypePreparationTests: XCTestCase {
+    func testAbsentModelPreparationNeverClaimsDownloadHasCompleted() {
+        let preparingDownload = QwenModelStatus(
+            installed: false,
+            loaded: false,
+            loading: true,
+            downloading: false,
+            progress: nil,
+            modelId: VoiceInputModel.qwen3ASR06B.modelID,
+            modelPath: nil,
+            phase: .loading
+        )
+        let loadingInstalledModel = QwenModelStatus(
+            installed: true,
+            loaded: false,
+            loading: true,
+            downloading: false,
+            progress: 1,
+            modelId: VoiceInputModel.qwen3ASR06B.modelID,
+            modelPath: nil,
+            phase: .loading
+        )
+
+        XCTAssertEqual(
+            ModelPreparationStageResolver.stage(for: preparingDownload),
+            .downloadingModel
+        )
+        XCTAssertEqual(
+            ModelPreparationStageResolver.stage(for: loadingInstalledModel),
+            .loadingModel
+        )
+    }
+
     func testConcurrentSessionsForSameConfigurationShareOneMachineJob() async {
         let driver = PreparationDriverFake(
             evidences: [.qwenReadyForMachineWork, .qwenFullyReady, .qwenFullyReady]
@@ -37,6 +69,38 @@ final class FlowtypePreparationTests: XCTestCase {
 
         XCTAssertEqual(result.outcome, .awaitingUserAction(.accessibility))
         XCTAssertEqual(driver.requestedPermissions, [.accessibility])
+        XCTAssertEqual(driver.recordConsentCount, 0)
+        XCTAssertEqual(driver.prepareSelectedModelCount, 0)
+    }
+
+    func testInteractiveSetupFinishesPermissionsBeforeConsentRuntimeAndModelWork() async {
+        let driver = PreparationDriverFake(
+            evidences: [
+                .qwenMissingPermissionsAndModel,
+                .qwenMissingAccessibilityAndModel,
+                .qwenModelAbsentNeedsRuntimeRepair,
+                .qwenFullyReady,
+            ]
+        )
+        driver.hasConsent = false
+        let module = FlowtypePreparation(driver: driver)
+
+        let session = await module.begin(
+            PreparationRequest(intent: .interactiveSetup, configuration: .qwen06B)
+        )
+        let result = await session.result.value
+
+        XCTAssertTrue(result.isReady)
+        XCTAssertEqual(
+            driver.lifecycleEvents,
+            [
+                "permission.microphone",
+                "permission.accessibility",
+                "consent.record",
+                "runtime",
+                "model",
+            ]
+        )
     }
 
     func testApplePreparationNeverTouchesQwenRuntime() async {
@@ -67,10 +131,9 @@ final class FlowtypePreparationTests: XCTestCase {
         XCTAssertEqual(driver.prepareSelectedModelCount, 0)
     }
 
-    func testDeclinedDownloadConsentDoesNotStartModelJobOrRecordConsent() async {
-        let driver = PreparationDriverFake(evidences: [.qwenModelAbsent])
+    func testInteractiveSetupTreatsOneClickActionAsDownloadConsent() async {
+        let driver = PreparationDriverFake(evidences: [.qwenModelAbsent, .qwenFullyReady])
         driver.hasConsent = false
-        driver.consentDecision = false
         let module = FlowtypePreparation(driver: driver)
 
         let session = await module.begin(
@@ -78,10 +141,39 @@ final class FlowtypePreparationTests: XCTestCase {
         )
         let result = await session.result.value
 
-        XCTAssertEqual(result.outcome, .awaitingUserAction(.modelDownloadConsent))
-        XCTAssertEqual(driver.consentRequestCount, 1)
-        XCTAssertEqual(driver.recordConsentCount, 0)
-        XCTAssertEqual(driver.prepareSelectedModelCount, 0)
+        XCTAssertTrue(result.isReady)
+        XCTAssertEqual(driver.recordConsentCount, 1)
+        XCTAssertEqual(driver.prepareSelectedModelCount, 1)
+    }
+
+    func testPermissionReturnResumesOriginalOneClickIntoAutomaticDownload() async {
+        let driver = PreparationDriverFake(
+            evidences: [
+                .qwenMissingAccessibilityAndModel,
+                .qwenMissingAccessibilityAndModel,
+                .qwenModelAbsent,
+                .qwenFullyReady,
+            ]
+        )
+        driver.hasConsent = false
+        let module = FlowtypePreparation(driver: driver)
+
+        let initialSession = await module.begin(
+            PreparationRequest(intent: .interactiveSetup, configuration: .qwen06B)
+        )
+        let initialResult = await initialSession.result.value
+        XCTAssertEqual(initialResult.outcome, .awaitingUserAction(.accessibility))
+
+        let resumedSession = await module.begin(
+            PreparationRequest(intent: .resumeAfterUserAction, configuration: .qwen06B)
+        )
+        let resumedResult = await resumedSession.result.value
+
+        XCTAssertTrue(resumedResult.isReady)
+        XCTAssertEqual(
+            driver.lifecycleEvents,
+            ["permission.accessibility", "consent.record", "model"]
+        )
     }
 
     func testRuntimeRepairPrecedesModelPreparation() async {
@@ -182,7 +274,7 @@ final class FlowtypePreparationTests: XCTestCase {
 
         XCTAssertEqual(result.outcome, .awaitingUserAction(.modelDownloadConsent))
         XCTAssertEqual(driver.prepareSelectedModelCount, 0)
-        XCTAssertEqual(driver.consentRequestCount, 0)
+        XCTAssertEqual(driver.recordConsentCount, 0)
     }
 
     func testForcedModelRepairRunsInsidePreparationJob() async {
@@ -314,6 +406,36 @@ private extension PreparationEvidence {
         helperHealthy: false
     )
 
+    static let qwenMissingPermissionsAndModel = PreparationEvidence(
+        report: ReadinessReport(generatedAt: Date(), checks: []),
+        appBundleReady: true,
+        runtimeAction: .repairHelper,
+        missingPermissions: [.microphone, .accessibility],
+        selectedModelInstalled: false,
+        selectedModelLoaded: false,
+        helperHealthy: false
+    )
+
+    static let qwenMissingAccessibilityAndModel = PreparationEvidence(
+        report: ReadinessReport(generatedAt: Date(), checks: []),
+        appBundleReady: true,
+        runtimeAction: .repairHelper,
+        missingPermissions: [.accessibility],
+        selectedModelInstalled: false,
+        selectedModelLoaded: false,
+        helperHealthy: false
+    )
+
+    static let qwenModelAbsentNeedsRuntimeRepair = PreparationEvidence(
+        report: ReadinessReport(generatedAt: Date(), checks: []),
+        appBundleReady: true,
+        runtimeAction: .repairHelper,
+        missingPermissions: [],
+        selectedModelInstalled: false,
+        selectedModelLoaded: false,
+        helperHealthy: false
+    )
+
     static let qwenNeedsRuntimeRepair = PreparationEvidence(
         report: ReadinessReport(generatedAt: Date(), checks: []),
         appBundleReady: true,
@@ -355,11 +477,10 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
     private var _prepareRuntimeCount = 0
     private var _requestedPermissions: [PreparationPermission] = []
     private var _hasConsent = true
-    private var _consentDecision = true
-    private var _consentRequestCount = 0
     private var _recordConsentCount = 0
     private var _repairSelectedModelStorageCount = 0
     private var _machineEvents: [String] = []
+    private var _lifecycleEvents: [String] = []
 
     var suspendMachinePreparation: Bool {
         get { queue.sync { _suspendMachinePreparation } }
@@ -373,14 +494,10 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
         get { queue.sync { _hasConsent } }
         set { queue.sync { _hasConsent = newValue } }
     }
-    var consentRequestCount: Int { queue.sync { _consentRequestCount } }
-    var consentDecision: Bool {
-        get { queue.sync { _consentDecision } }
-        set { queue.sync { _consentDecision = newValue } }
-    }
     var recordConsentCount: Int { queue.sync { _recordConsentCount } }
     var repairSelectedModelStorageCount: Int { queue.sync { _repairSelectedModelStorageCount } }
     var machineEvents: [String] { queue.sync { _machineEvents } }
+    var lifecycleEvents: [String] { queue.sync { _lifecycleEvents } }
 
     init(evidences: [PreparationEvidence]) {
         self.evidences = evidences
@@ -399,20 +516,27 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
         queue.sync {
             _prepareRuntimeCount += 1
             _machineEvents.append("runtime")
+            _lifecycleEvents.append("runtime")
         }
     }
 
     func requestPermission(_ permission: PreparationPermission) async {
-        queue.sync { _requestedPermissions.append(permission) }
+        queue.sync {
+            _requestedPermissions.append(permission)
+            switch permission {
+            case .microphone: _lifecycleEvents.append("permission.microphone")
+            case .accessibility: _lifecycleEvents.append("permission.accessibility")
+            case .speechRecognition: _lifecycleEvents.append("permission.speechRecognition")
+            }
+        }
     }
 
     func hasDownloadConsent(modelID: String) async -> Bool { queue.sync { _hasConsent } }
-    func requestDownloadConsent(modelID: String) async -> Bool {
-        queue.sync { _consentRequestCount += 1 }
-        return queue.sync { _consentDecision }
-    }
     func recordDownloadConsent(modelID: String) async {
-        queue.sync { _recordConsentCount += 1 }
+        queue.sync {
+            _recordConsentCount += 1
+            _lifecycleEvents.append("consent.record")
+        }
     }
     func repairSelectedModelStorage(configuration: PreparationConfiguration) async throws {
         queue.sync { _repairSelectedModelStorageCount += 1 }
@@ -426,6 +550,7 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
         queue.sync {
             _prepareSelectedModelCount += 1
             _machineEvents.append("model")
+            _lifecycleEvents.append("model")
         }
         await machineStarted.open()
         if queue.sync(execute: { _suspendMachinePreparation }) {

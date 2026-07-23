@@ -4,6 +4,7 @@
   "entries": [
     {"artifactID":"app-info-plist","relativePath":"Contents/Info.plist","kind":"file","executable":false,"inspectionGroup":"app-binary"},
     {"artifactID":"app-binary","relativePath":"Contents/MacOS/Flowtype","kind":"file","executable":true,"inspectionGroup":"app-binary"},
+    {"artifactID":"dmg-background","relativePath":"Contents/Resources/DMGBackground.tiff","kind":"file","executable":false,"inspectionGroup":"dmg-background"},
     {"artifactID":"flowtype-logo-svg","relativePath":"Contents/Resources/Flowtype-logo.svg","kind":"file","executable":false,"inspectionGroup":"flowtype-icon"},
     {"artifactID":"flowtype-logo-png","relativePath":"Contents/Resources/Flowtype-logo.png","kind":"file","executable":false,"inspectionGroup":"flowtype-icon"},
     {"artifactID":"flowtype-icon","relativePath":"Contents/Resources/Flowtype.icns","kind":"file","executable":false,"inspectionGroup":"flowtype-icon"},

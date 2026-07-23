@@ -35,5 +35,7 @@ final class OnboardingFlowTests: XCTestCase {
 
         XCTAssertTrue(OnboardingPrepareState.running(.downloadingModel, 0.5).isRunning)
         XCTAssertFalse(OnboardingPrepareState.ready.isRunning)
+        XCTAssertTrue(OnboardingPrepareState.ready.isReady)
+        XCTAssertFalse(OnboardingPrepareState.running(.loadingModel, 1).isReady)
     }
 }

@@ -59,6 +59,25 @@ enum PreparationStage: Equatable {
     case failed
 }
 
+enum ModelPreparationStageResolver {
+    static func stage(for status: QwenModelStatus) -> PreparationStage {
+        switch status.phase {
+        case .downloading, .absent:
+            return .downloadingModel
+        case .loading:
+            // The helper reports `loading` while its background preparation
+            // job is starting, before an absent model has begun downloading.
+            return status.installed ? .loadingModel : .downloadingModel
+        case .installed:
+            return .loadingModel
+        case .ready:
+            return .verifying
+        case .failed:
+            return .failed
+        }
+    }
+}
+
 enum PreparationFailure: Error, Equatable {
     case appBundleInvalid
     case consentRequired
@@ -137,7 +156,6 @@ protocol FlowtypePreparationDriving: AnyObject {
     func prepareRuntime(action: ReadinessActionKind) async throws
     func requestPermission(_ permission: PreparationPermission) async
     func hasDownloadConsent(modelID: String) async -> Bool
-    func requestDownloadConsent(modelID: String) async -> Bool
     func recordDownloadConsent(modelID: String) async
     func repairSelectedModelStorage(configuration: PreparationConfiguration) async throws
     func prepareSelectedModel(
@@ -281,17 +299,33 @@ actor FlowtypePreparation {
             return PreparationResult(outcome: .blocked, report: evidence.report, runtime: nil)
         }
 
+        for permission in evidence.missingPermissions {
+            guard request.intent == .interactiveSetup else {
+                return awaiting(userAction(for: permission), evidence: evidence, configuration: configuration)
+            }
+            publish(
+                key: key,
+                configuration: configuration,
+                stage: .awaitingUserAction(userAction(for: permission))
+            )
+            await driver.requestPermission(permission)
+            evidence = await driver.inspect(configuration: configuration, live: false)
+            guard !evidence.missingPermissions.contains(permission) else {
+                return awaiting(userAction(for: permission), evidence: evidence, configuration: configuration)
+            }
+        }
+
         if configuration.engine == .qwenLocal,
            !evidence.selectedModelInstalled,
            let modelID = configuration.modelID {
             let hasConsent = await driver.hasDownloadConsent(modelID: modelID)
             if !hasConsent {
-                guard request.intent == .interactiveSetup else {
+                guard request.intent == .interactiveSetup || request.intent == .resumeAfterUserAction else {
                     return awaiting(.modelDownloadConsent, evidence: evidence, configuration: configuration)
                 }
-                guard await driver.requestDownloadConsent(modelID: modelID) else {
-                    return awaiting(.modelDownloadConsent, evidence: evidence, configuration: configuration)
-                }
+                // The one-click setup action is presented beside the selected
+                // model identity and download disclosure. Tapping it is the
+                // user's explicit consent; do not require a second click.
                 await driver.recordDownloadConsent(modelID: modelID)
             }
         }
@@ -305,17 +339,6 @@ actor FlowtypePreparation {
             )
         } else {
             selectedMachineJob = nil
-        }
-
-        for permission in evidence.missingPermissions {
-            guard request.intent == .interactiveSetup else {
-                return awaiting(userAction(for: permission), evidence: evidence, configuration: configuration)
-            }
-            await driver.requestPermission(permission)
-            evidence = await driver.inspect(configuration: configuration, live: false)
-            guard !evidence.missingPermissions.contains(permission) else {
-                return awaiting(userAction(for: permission), evidence: evidence, configuration: configuration)
-            }
         }
 
         let runtime: PreparedRuntimeIdentity

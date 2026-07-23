@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.3` makes clean-install preparation a visible one-click flow:
+  the first **Prepare Flowtype** action requests the required permissions,
+  automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B
+  model, and shows download/preparation progress.
 - `v0.1.0-preview.2` keeps the same app functionality as Preview 1 while adding
   a compact Retina Finder installer with 144-point icons, a centred drag arrow,
   and clear bilingual drag-to-Applications guidance.

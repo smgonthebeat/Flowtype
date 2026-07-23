@@ -37,10 +37,13 @@ class PublicWebsiteTests(unittest.TestCase):
         self.assertNotIn('href="#"', self.html)
         self.assertNotIn("xattr -cr", self.html)
         self.assertNotIn("spctl --master-disable", self.html)
-        self.assertIn("v0.1.0-preview.2", self.html)
-        self.assertIn("releases/download/v0.1.0-preview.2/Flowtype.dmg", self.html)
+        self.assertIn("v0.1.0-preview.3", self.html)
+        self.assertIn("releases/download/v0.1.0-preview.3/Flowtype.dmg", self.html)
+        self.assertNotIn("releases/download/v0.1.0-preview.2/Flowtype.dmg", self.html)
         self.assertIn("未经过 Apple notarization", self.html)
         self.assertIn("Open Anyway", self.html)
+        self.assertIn("自动下载约 1.9 GB 的默认模型", self.html)
+        self.assertIn("显示下载与准备进度", self.html)
 
     def test_runtime_assets_are_local_and_present(self) -> None:
         parser = AssetParser()

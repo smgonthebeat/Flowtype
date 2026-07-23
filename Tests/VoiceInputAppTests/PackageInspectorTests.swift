@@ -2,7 +2,7 @@ import XCTest
 @testable import VoiceInputApp
 
 final class PackageInspectorTests: XCTestCase {
-    func testCompleteManifestWithArtworkPreservesSixReadinessChecks() throws {
+    func testProductionShapedManifestWithDMGBackgroundPreservesSixReadinessChecks() throws {
         let fixture = try PackageFixture.makeComplete()
 
         let checks = PackageInspector().inspect(bundleURL: fixture.appURL, resourceURL: fixture.resourcesURL)
@@ -37,6 +37,18 @@ final class PackageInspectorTests: XCTestCase {
         XCTAssertEqual(checks.map(\.locationTarget), [
             .appBundle, .appResources, .appResources, .appResources, .appResources, .appResources
         ])
+    }
+
+    func testMissingPackagingOnlyDMGBackgroundDoesNotBlockRuntimeReadiness() throws {
+        let fixture = try PackageFixture.makeComplete()
+        try FileManager.default.removeItem(
+            at: fixture.appURL.appendingPathComponent("Contents/Resources/DMGBackground.tiff")
+        )
+
+        let checks = PackageInspector().inspect(bundleURL: fixture.appURL, resourceURL: fixture.resourcesURL)
+
+        XCTAssertEqual(checks.count, 6)
+        XCTAssertTrue(checks.allSatisfy { $0.status == .ready })
     }
 
     func testMissingFilesFailTheirExistingInspectionGroupAndRepairAction() throws {
@@ -121,6 +133,11 @@ final class PackageInspectorTests: XCTestCase {
             ("missing inspection group", { manifest in
                 var entries = manifest["entries"] as! [[String: Any]]
                 entries.removeAll { $0["inspectionGroup"] as? String == "qwen-logo" }
+                manifest["entries"] = entries
+            }),
+            ("missing packaging-only inspection group", { manifest in
+                var entries = manifest["entries"] as! [[String: Any]]
+                entries.removeAll { $0["inspectionGroup"] as? String == "dmg-background" }
                 manifest["entries"] = entries
             }),
             ("unknown inspection group", { manifest in

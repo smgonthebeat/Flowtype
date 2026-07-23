@@ -1571,30 +1571,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     }
 
     @MainActor
-    private func confirmModelDownloadOnMainActor(modelID: String) -> Bool {
-        NSApp.activate(ignoringOtherApps: true)
-        let copy = AppCopy.texts(for: settingsStore.uiLanguage)
-        let model = VoiceInputModel.all.first(where: { $0.modelID == modelID }) ?? .qwen3ASR06B
-        let alert = NSAlert()
-        alert.messageText = copy.readinessDefaultModelConsentTitle
-        if model == .qwen3ASR06B {
-            alert.informativeText = copy.readinessDefaultModelConsentMessage
-        } else if settingsStore.uiLanguage == .chinese {
-            alert.informativeText = "Flowtype 需要下载并准备 \(model.displayName)，才能使用本地离线听写。是否现在继续？"
-        } else {
-            alert.informativeText = "Flowtype needs to download and prepare \(model.displayName) for local offline dictation. Continue now?"
-        }
-        alert.alertStyle = .informational
-        alert.addButton(
-            withTitle: model == .qwen3ASR06B
-                ? copy.readinessDownloadDefaultModelTitle
-                : copy.modelDownloadTitle
-        )
-        alert.addButton(withTitle: copy.cancel)
-        return alert.runModal() == .alertFirstButtonReturn
-    }
-
-    @MainActor
     private func openReadinessLocation(_ target: ReadinessLocationTarget) {
         if target == .diagnostics {
             AppLogger.diagnostics.info("diagnostics_folder_open_requested")
@@ -1779,21 +1755,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             openAccessibilitySettings: { [weak self] in
                 self?.permissionManager.openAccessibilitySettings()
             },
-            prepareFlowtype: { [weak self] intent, onUpdate in
+            prepareFlowtype: { [weak self] intent, disclosedModelID, onUpdate in
                 guard let self else {
                     return ReadinessSetupResult(
                         outcome: .failed("Flowtype setup is unavailable."),
                         report: ReadinessReport(generatedAt: Date(), checks: [])
                     )
                 }
-                // The prepare button copy discloses the model download, so
-                // tapping it is the user's consent — record it like the
-                // readiness page's default-model action does.
                 await MainActor.run {
-                    self.settingsStore.recordModelDownloadConsent(
-                        modelID: self.selectedModel.modelID,
-                        disclosureVersion: ModelDownloadConsent.currentDisclosureVersion
-                    )
+                    if let disclosedModel = VoiceInputModel.all.first(where: {
+                        $0.modelID == disclosedModelID
+                    }) {
+                        self.settingsStore.selectedModelID = disclosedModel.id
+                    }
                 }
                 return await self.prepareFlowtypeThroughLifecycle(intent: intent, onUpdate: onUpdate)
             }
@@ -2225,12 +2199,6 @@ extension AppDelegate: FlowtypePreparationDriving {
         }
     }
 
-    func requestDownloadConsent(modelID: String) async -> Bool {
-        await MainActor.run {
-            confirmModelDownloadOnMainActor(modelID: modelID)
-        }
-    }
-
     func recordDownloadConsent(modelID: String) async {
         await MainActor.run {
             settingsStore.recordModelDownloadConsent(
@@ -2282,16 +2250,7 @@ extension AppDelegate: FlowtypePreparationDriving {
                     status.errorCode ?? "model_preparation_failed"
                 )
             }
-            switch status.phase {
-            case .downloading:
-                await progress(.downloadingModel, status.progress)
-            case .loading, .installed, .absent:
-                await progress(.loadingModel, status.progress)
-            case .ready:
-                break
-            case .failed:
-                break
-            }
+            await progress(ModelPreparationStageResolver.stage(for: status), status.progress)
             guard Date() < deadline else {
                 throw PreparationFailure.modelPreparationFailed("model_preparation_timed_out")
             }

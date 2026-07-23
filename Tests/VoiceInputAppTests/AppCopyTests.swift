@@ -455,4 +455,21 @@ final class AppCopyTests: XCTestCase {
         XCTAssertEqual(english.onboardingHowToHoldTitle, "Hold Fn and talk")
         XCTAssertEqual(english.onboardingFinishTitle, "Start Using Flowtype")
     }
+
+    func testSelectedModelDownloadDisclosureDoesNotClaimDefaultModelSizeForPrecisionModel() {
+        let chinese = AppCopy.texts(for: .chinese)
+        let english = AppCopy.texts(for: .english)
+        let context = ReadinessContext(
+            engine: .qwenLocal,
+            selectedModelID: VoiceInputModel.qwen3ASR17B.id
+        )
+
+        let chineseDetail = chinese.readinessTaskDetail(.installSelectedModel, context: context)
+        let englishDetail = english.readinessTaskDetail(.installSelectedModel, context: context)
+
+        XCTAssertTrue(chineseDetail.contains("Qwen3-ASR 1.7B"))
+        XCTAssertTrue(englishDetail.contains("Qwen3-ASR 1.7B"))
+        XCTAssertFalse(chineseDetail.contains("1.9 GB"))
+        XCTAssertFalse(englishDetail.contains("1.9 GB"))
+    }
 }

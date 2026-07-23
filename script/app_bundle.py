@@ -13,6 +13,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -27,6 +28,7 @@ _ENTRY_KINDS = frozenset({"file", "tree", "input", "generated"})
 _SUPPORTED_RUNTIME_SCHEMA_VERSION = 1
 _HELPER_ROOT = PurePosixPath("Contents/Resources/Helpers/qwen-asr-helper")
 _BUNDLE_MANIFEST_ID = "bundle-manifest"
+_APP_BUNDLE_MODE = 0o755
 
 
 @dataclass(frozen=True)
@@ -655,6 +657,15 @@ def _inspect_helper_manifest(bundle: Path) -> None:
 def _inspect_bundle(bundle: Path, contract: _Contract, expected: dict[str, Any]) -> _Inspection:
     if bundle.is_symlink() or not bundle.is_dir():
         raise _error("destination-unsafe", "app destination must be a real directory")
+    try:
+        bundle_mode = stat.S_IMODE(bundle.stat().st_mode)
+    except OSError as error:
+        raise _error("bundle-incomplete", "app bundle permissions could not be inspected") from error
+    if bundle_mode != _APP_BUNDLE_MODE:
+        raise _error(
+            "bundle-incomplete",
+            f"app bundle permissions must be {_APP_BUNDLE_MODE:o}",
+        )
     actual = _load_runtime_manifest(bundle, contract)
     _require_exact_manifest(actual, expected)
     for raw_entry in expected["entries"]:
@@ -736,6 +747,10 @@ def assemble(
     except OSError as error:
         raise _error("copy-failed", "staging directory could not be created") from error
     try:
+        try:
+            staging.chmod(_APP_BUNDLE_MODE)
+        except OSError as error:
+            raise _error("copy-failed", "staging directory permissions could not be normalized") from error
         _materialize(
             staging,
             contract,

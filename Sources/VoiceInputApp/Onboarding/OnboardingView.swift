@@ -5,6 +5,7 @@ struct OnboardingView: View {
     @Environment(\.appTheme) private var theme
 
     let copy: AppCopy.Texts
+    let model: VoiceInputModel
     let actions: OnboardingActions
 
     @State private var step: OnboardingStep = .welcome
@@ -87,7 +88,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 18) {
             stepHeader(
                 title: copy.onboardingPrepareTitle,
-                body: copy.onboardingPrepareBody
+                body: onboardingPrepareBody
             )
 
             VStack(alignment: .leading, spacing: 0) {
@@ -134,9 +135,21 @@ struct OnboardingView: View {
                     Text(stageTitle(stage))
                         .font(.callout.weight(.medium))
                         .foregroundStyle(theme.ink)
+                    Spacer(minLength: 8)
+                    if let progress {
+                        Text(progressPercentage(progress))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(theme.secondaryInk)
+                    }
                 }
                 if let progress {
                     ProgressView(value: min(max(progress, 0), 1))
+                }
+                if let detail = stageDetail(stage) {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(theme.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -336,6 +349,7 @@ struct OnboardingView: View {
             }
             .buttonStyle(.borderedProminent)
             .keyboardShortcut(.defaultAction)
+            .disabled(step == .prepare && !prepareState.isReady)
         }
     }
 
@@ -373,7 +387,7 @@ struct OnboardingView: View {
         prepareState = .running(.inspecting, nil)
 
         Task { @MainActor in
-            let result = await actions.prepareFlowtype(intent) { snapshot in
+            let result = await actions.prepareFlowtype(intent, model.modelID) { snapshot in
                 prepareState = .running(snapshot.stage, snapshot.progress)
                 refreshPermissions()
             }
@@ -404,5 +418,46 @@ struct OnboardingView: View {
         case .ready: return copy.readinessSetupCompleteTitle
         case .failed: return copy.readinessFailedTitle
         }
+    }
+
+    private func stageDetail(_ stage: PreparationStage) -> String? {
+        let usesChinese = copy.timesUnit == "次"
+        switch stage {
+        case .preparingRuntime, .startingHelper:
+            return usesChinese
+                ? "正在准备首次使用所需的本地组件。"
+                : "Preparing the local components required for first use."
+        case .downloadingModel:
+            if model == .qwen3ASR06B {
+                return usesChinese
+                    ? "正在下载约 1.9 GB 的默认模型，仅首次需要。下载完成后即可使用。"
+                    : "Downloading the default model (about 1.9 GB). This is only required once."
+            }
+            return usesChinese
+                ? "正在下载当前所选的 \(model.displayName) 模型，仅首次需要。下载完成后即可使用。"
+                : "Downloading the selected \(model.displayName) model. This is only required once."
+        case .loadingModel:
+            return usesChinese
+                ? "下载已完成，正在加载并验证本地模型。"
+                : "Download complete. Loading and verifying the local model."
+        case .verifying:
+            return usesChinese
+                ? "最后确认 Helper、模型和权限均已准备好。"
+                : "Confirming that the Helper, model, and permissions are ready."
+        case .inspecting, .awaitingUserAction, .ready, .failed:
+            return nil
+        }
+    }
+
+    private func progressPercentage(_ progress: Double) -> String {
+        "\(Int((min(max(progress, 0), 1) * 100).rounded()))%"
+    }
+
+    private var onboardingPrepareBody: String {
+        guard model != .qwen3ASR06B else { return copy.onboardingPrepareBody }
+        if copy.timesUnit == "次" {
+            return "一键完成全部准备：开启麦克风与辅助功能权限，并下载当前所选的 \(model.displayName) 本地模型（仅首次需要，也可以稍后在“准备状态”页完成）。"
+        }
+        return "One click does everything: grants Microphone and Accessibility permissions and downloads the selected \(model.displayName) local model (first run only — you can also do this later from Setup & Status)."
     }
 }
