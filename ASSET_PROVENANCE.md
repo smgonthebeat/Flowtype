@@ -14,6 +14,10 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/Flowtype-logo.svg`
 - `Resources/Flowtype-logo.png`
 - `Resources/Flowtype.icns`
+- `Resources/DMGBackground.svg`
+- `Resources/DMGBackground.png`
+- `Resources/DMGBackground@2x.png`
+- `Resources/DMGBackground.tiff`
 - `Resources/HomeCardArtwork-mic.png`
 - `Resources/HomeCardArtwork-wave.png`
 - `Resources/HomeCardArtwork-docs.png`
@@ -43,6 +47,12 @@ the surrounding README link supplies the official GitHub Release DMG URL. The
 Apple name and symbol are used only to identify the supported Apple Silicon
 platform and do not imply endorsement, as described in
 [TRADEMARKS.md](TRADEMARKS.md).
+
+`Resources/DMGBackground.svg`, its exact 1×/2× rendered PNGs, and the combined
+multi-resolution TIFF provide the Finder background for the
+drag-to-Applications disk image. They contain only local project-created vector
+shapes and bilingual installation text, with no script, remote content,
+analytics, user data, or personal metadata.
 
 OpenAI's [Terms of Use](https://openai.com/policies/row-terms-of-use/), reviewed
 on 2026-07-21, state that, as between a user and OpenAI and to the extent

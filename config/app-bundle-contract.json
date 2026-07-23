@@ -53,6 +53,16 @@
       "swiftPMResource": true
     },
     {
+      "id": "dmg-background",
+      "kind": "file",
+      "source": "Resources/DMGBackground.tiff",
+      "destination": "Contents/Resources/DMGBackground.tiff",
+      "required": true,
+      "executable": false,
+      "inspectionGroup": "dmg-background",
+      "swiftPMResource": false
+    },
+    {
       "id": "qwen-logo",
       "kind": "file",
       "source": "Resources/Qwen-logo.svg",

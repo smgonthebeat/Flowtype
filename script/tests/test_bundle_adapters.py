@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import re
+import struct
 import subprocess
 import sys
 import tempfile
@@ -20,6 +22,7 @@ class BundleAdapterTests(unittest.TestCase):
         cls.verify_script = (cls.repo_root / "script/verify_package.sh").read_text(
             encoding="utf-8"
         )
+        cls.dmg_script_path = cls.repo_root / "script/create_dmg.sh"
 
     @staticmethod
     def _logical_lines(source: str) -> str:
@@ -107,6 +110,58 @@ class BundleAdapterTests(unittest.TestCase):
             "__pycache__",
         ):
             self.assertNotIn(duplicate_detail, self.verify_script)
+
+    def test_dmg_adapter_uses_a_reviewed_compact_finder_layout(self) -> None:
+        self.assertTrue(self.dmg_script_path.is_file())
+        dmg_script = self.dmg_script_path.read_text(encoding="utf-8")
+        logical_makefile = self._logical_lines(self.makefile)
+
+        self.assertIn(
+            './script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)"',
+            logical_makefile,
+        )
+        for expected in (
+            'VOLUME_NAME="Flowtype Installer"',
+            'ICON_SIZE="144"',
+            'WINDOW_WIDTH="660"',
+            'WINDOW_HEIGHT="435"',
+            'set position of item "Flowtype.app"',
+            'set position of item "Applications"',
+            'set backgroundFile to file "Flowtype.app:Contents:Resources:DMGBackground.tiff"',
+            "set background picture to backgroundFile",
+            'mv "$generatedItem" "$archivePath"',
+            'hdiutil convert',
+            '-format UDZO',
+        ):
+            self.assertIn(expected, dmg_script)
+        self.assertNotIn("rm -rf", dmg_script)
+
+        background = self.repo_root / "Resources/DMGBackground.png"
+        background_2x = self.repo_root / "Resources/DMGBackground@2x.png"
+        background_tiff = self.repo_root / "Resources/DMGBackground.tiff"
+        source = self.repo_root / "Resources/DMGBackground.svg"
+        self.assertTrue(background.is_file())
+        self.assertTrue(background_2x.is_file())
+        self.assertTrue(background_tiff.is_file())
+        self.assertTrue(source.is_file())
+        png = background.read_bytes()
+        png_2x = background_2x.read_bytes()
+        self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(png_2x[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(struct.unpack(">II", png[16:24]), (660, 400))
+        self.assertEqual(struct.unpack(">II", png_2x[16:24]), (1320, 800))
+        self.assertEqual(
+            hashlib.sha256(png).hexdigest(),
+            "55c861a734b1456733e3545e334e2b1c82f5d6e4b6392fd7153e18dfde4c480c",
+        )
+        self.assertEqual(
+            hashlib.sha256(png_2x).hexdigest(),
+            "11b06ca9f82e2424ddb54aac5aca732c5588e04a5ddda4a75881ca690d9209a6",
+        )
+        self.assertEqual(
+            hashlib.sha256(background_tiff.read_bytes()).hexdigest(),
+            "e85a9753f3aa13f392a730444c58e24432ec60ee1ed846b028be4ea8ff0aa9ac",
+        )
 
     def test_build_only_executes_compile_and_assembly_without_outer_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

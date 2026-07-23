@@ -38,11 +38,7 @@ install: build
 	cp -R "$(APP_DIR)" /Applications/
 
 dmg: build
-	rm -rf "$(DMG_STAGING_DIR)"
-	mkdir -p "$(DIST_DIR)" "$(DMG_STAGING_DIR)"
-	cp -R "$(APP_DIR)" "$(DMG_STAGING_DIR)/"
-	ln -s /Applications "$(DMG_STAGING_DIR)/Applications"
-	hdiutil create -volname "$(APP_NAME)" -srcfolder "$(DMG_STAGING_DIR)" -ov -format UDZO "$(DMG_PATH)"
+	./script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)"
 	./script/verify_package.sh "$(APP_DIR)" "$(DMG_PATH)"
 
 verify-package:

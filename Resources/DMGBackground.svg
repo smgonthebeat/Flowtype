@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400" role="img" aria-labelledby="title description">
+  <title id="title">Flowtype drag-to-Applications installer background</title>
+  <desc id="description">A light installer background with bilingual drag instructions and a centered right-pointing arrow.</desc>
+  <defs>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#faf9f7"/>
+      <stop offset="0.55" stop-color="#f3f0ec"/>
+      <stop offset="1" stop-color="#ebe7e2"/>
+    </linearGradient>
+    <radialGradient id="warmGlow" cx="50%" cy="48%" r="55%">
+      <stop offset="0" stop-color="#ff9a71" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ff9a71" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="660" height="400" fill="url(#surface)"/>
+  <rect width="660" height="400" fill="url(#warmGlow)"/>
+  <path d="M0 1H660" stroke="#25272d" stroke-opacity="0.08"/>
+  <text x="330" y="48" text-anchor="middle" fill="#202228" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="23" font-weight="750">Drag Flowtype to Applications</text>
+  <text x="330" y="76" text-anchor="middle" fill="#666a73" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" font-size="15" font-weight="550">将 Flowtype 拖到 Applications 文件夹</text>
+  <circle cx="330" cy="170" r="53" fill="#ffffff" fill-opacity="0.42" stroke="#c9c3bd" stroke-opacity="0.45"/>
+  <path d="M300 170H354" stroke="#ff8068" stroke-width="8" stroke-linecap="round"/>
+  <path d="M340 154L360 170L340 186" fill="none" stroke="#ff8068" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="330" y="362" text-anchor="middle" fill="#686b72" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" font-size="12" font-weight="550">安装完成后，请从 Applications 文件夹打开 Flowtype</text>
+</svg>

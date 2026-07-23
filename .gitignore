@@ -1,4 +1,5 @@
 .build/
+.trash/
 dist/
 DerivedData/
 *.xcuserstate

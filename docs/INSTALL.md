@@ -2,7 +2,7 @@
 
 ## Release Status
 
-The official [`v0.1.0-preview.1` GitHub Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) contains an Apple Silicon DMG and SHA-256 file. This Preview uses a local development signature; it is not signed with an Apple Developer ID and has not been notarized by Apple. It is therefore not a seamless trusted installer, and macOS will block the first launch.
+The official [`v0.1.0-preview.2` GitHub Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.2) contains an Apple Silicon DMG and SHA-256 file. This Preview uses a local development signature; it is not signed with an Apple Developer ID and has not been notarized by Apple. It is therefore not a seamless trusted installer, and macOS will block the first launch.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ are required only for developers building from source.
 
 ## Install The Preview DMG
 
-1. Download [`Flowtype.dmg`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg) and its [`Flowtype.dmg.sha256`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) from the official Release.
+1. Download [`Flowtype.dmg`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype.dmg) and its [`Flowtype.dmg.sha256`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype.dmg.sha256) from the official Release.
 2. Open the DMG and drag `Flowtype.app` to Applications.
 3. Try to open Flowtype once and dismiss the macOS warning.
 4. Open **System Settings → Privacy & Security**. In Security, click **Open Anyway**, then confirm **Open**.

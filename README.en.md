@@ -2,13 +2,13 @@
 
 English · [简体中文](README.md)
 
-> **Release status:** The [`v0.1.0-preview.1`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
+> **Release status:** The [`v0.1.0-preview.2`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.2) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
 
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 
-[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
+[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.2) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
 
@@ -41,7 +41,7 @@ When preparing a local model for the first time, Flowtype downloads Qwen3-ASR mo
 
 ## Getting Started
 
-Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.1` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1), open it, and drag `Flowtype.app` to Applications.
+Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.2` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.2), open it, and follow the arrow to drag `Flowtype.app` to Applications.
 
 This is an explicitly labelled **unnotarized Preview**. macOS will block the first double-click because it cannot verify the developer. Try to open Flowtype once and dismiss the warning, then open **System Settings → Privacy & Security**, choose **Open Anyway** in the Security section, and confirm Open. See Apple's official guide, [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). Do not disable Gatekeeper or run quarantine-removal or Gatekeeper-disabling commands.
 

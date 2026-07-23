@@ -31,6 +31,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.2` keeps the same app functionality as Preview 1 while adding
+  a compact Retina Finder installer with 144-point icons, a centred drag arrow,
+  and clear bilingual drag-to-Applications guidance.
 - `v0.1.0-preview.1` publishes the locally verified Apple Silicon DMG and
   SHA-256 checksum as a GitHub Pre-release.
 - The Preview uses a local development signature and is not notarized by Apple;

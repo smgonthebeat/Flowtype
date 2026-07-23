@@ -37,8 +37,8 @@ class PublicWebsiteTests(unittest.TestCase):
         self.assertNotIn('href="#"', self.html)
         self.assertNotIn("xattr -cr", self.html)
         self.assertNotIn("spctl --master-disable", self.html)
-        self.assertIn("v0.1.0-preview.1", self.html)
-        self.assertIn("releases/download/v0.1.0-preview.1/Flowtype.dmg", self.html)
+        self.assertIn("v0.1.0-preview.2", self.html)
+        self.assertIn("releases/download/v0.1.0-preview.2/Flowtype.dmg", self.html)
         self.assertIn("未经过 Apple notarization", self.html)
         self.assertIn("Open Anyway", self.html)
 
