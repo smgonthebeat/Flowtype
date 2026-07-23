@@ -18,6 +18,7 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/HomeCardArtwork-wave.png`
 - `Resources/HomeCardArtwork-docs.png`
 - `Resources/HomeCardArtwork-clock.png`
+- `website/assets/download-apple-silicon.svg`
 
 The static website embeds the Flowtype logo shape and includes
 `website/assets/flowtype-home-real-usage.png`, a macOS screenshot captured by
@@ -34,6 +35,14 @@ has all ancillary PNG metadata removed and is locked by a SHA-256 contract
 test. The blur was applied deterministically to the transcript panel only; the
 entire area above that panel is pixel-identical to the source capture. No
 generated or substituted UI is present in the published screenshot.
+
+`website/assets/download-apple-silicon.svg` is a project-created static README
+download control. It contains only local vector shapes and text, has no script,
+remote image, analytics, or runtime dependency, and links to nothing by itself;
+the surrounding README link supplies the official GitHub Release DMG URL. The
+Apple name and symbol are used only to identify the supported Apple Silicon
+platform and do not imply endorsement, as described in
+[TRADEMARKS.md](TRADEMARKS.md).
 
 OpenAI's [Terms of Use](https://openai.com/policies/row-terms-of-use/), reviewed
 on 2026-07-21, state that, as between a user and OpenAI and to the extent

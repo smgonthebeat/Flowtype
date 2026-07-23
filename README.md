@@ -4,7 +4,11 @@
 
 > **Release status:** [`v0.1.0-preview.1`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) Apple Silicon DMG 已开放下载。它使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**；macOS 会拦截首次启动，需要用户在 System Settings → Privacy & Security 中明确选择 Open Anyway。
 
-[下载 DMG](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg) · [SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype) · [Releases](https://github.com/smgonthebeat/Flowtype/releases)
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg">
+  <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
+</a>
+
+[校验 SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) · [查看 Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开后完成本地转写，并把结果粘贴到刚才使用的 App 中。它重点处理中文、English、technical terms 与 spoken mathematics 混合出现的真实口述场景。
 

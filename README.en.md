@@ -4,7 +4,11 @@ English · [简体中文](README.md)
 
 > **Release status:** The [`v0.1.0-preview.1`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
 
-[Download DMG](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg) · [SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype) · [Releases](https://github.com/smgonthebeat/Flowtype/releases)
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg">
+  <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
+</a>
+
+[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.1/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.1) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
 
