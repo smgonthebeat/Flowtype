@@ -255,6 +255,8 @@
   .fact { border-top: 1px solid var(--line); padding-top: 22px; }
   .fact h3 { font-size: 16px; margin-bottom: 6px; color: var(--accent); }
   .fact p { color: var(--muted); font-size: 14.5px; }
+  .privacy-note { color: var(--muted); font-size: 14.5px; max-width: 760px; margin: 42px auto 0; }
+  .privacy-note a { color: var(--accent); }
 
   /* Bento: spotlight + tilt */
   .bento-head { max-width: 660px; margin-bottom: 52px; }
@@ -537,21 +539,22 @@
   <section class="manifesto" id="local">
     <div class="wrap">
       <h2 aria-label="你的声音，不出这台 Mac。"><span class="k" style="--i:0">你</span><span class="k" style="--i:1">的</span><span class="k" style="--i:2">声</span><span class="k" style="--i:3">音</span><span class="k" style="--i:4">，</span><span class="k" style="--i:5">不</span><span class="k" style="--i:6">出</span><span class="k" style="--i:7">这</span><span class="k" style="--i:8">台</span><span class="k" style="--i:9">&nbsp;Mac</span><span class="k" style="--i:10">。</span></h2>
-      <p class="lede reveal" style="--rd:0.35s">Flowtype 使用本地 Qwen3-ASR；Apple Speech 备用路径也只在设备支持 on-device recognition 时运行。音频、转写历史和重试录音都留在这台 Mac。</p>
+      <p class="lede reveal" style="--rd:0.35s">Flowtype 使用本地 Qwen3-ASR。模型安装完成后，日常转写不必把录音发送到云端 ASR；Apple Speech 备用路径也只在设备支持 on-device recognition 时运行。</p>
       <div class="facts">
         <div class="fact reveal" style="--rd:0.1s">
           <h3>纯本地识别</h3>
           <p>本地 Qwen3-ASR 模型跑在你的 Apple Silicon 上，断网照样工作。</p>
         </div>
         <div class="fact reveal" style="--rd:0.2s">
-          <h3>本地、可控的记录</h3>
-          <p>开启 History 时，最多保留最近 3 条本地录音用于手动重试；你可以关闭历史或在设置中清理这些数据。</p>
+          <h3>本地临时录音，转写即删</h3>
+          <p>普通临时 WAV 在转写任务结束后删除；开启 History 时，仅为手动重试在本机滚动保留最近最多 3 条录音。</p>
         </div>
         <div class="fact reveal" style="--rd:0.3s">
-          <h3>零订阅</h3>
-          <p>日常转写不依赖 Flowtype 自有云服务。软件免费，并以 GPL-3.0-only 开源。</p>
+          <h3>本地、可控的历史</h3>
+          <p>转写文本只保存在这台 Mac；History 可以关闭、限制数量或清空，清空时也会删除本地重试录音。</p>
         </div>
       </div>
+      <p class="privacy-note reveal">许多主流语音输入工具会在部分或主要转写路径中把语音发送至云端，再通过加密、即时删除或 zero-retention controls 降低风险。Flowtype 选择从一开始就避免日常转写的上传步骤。<a href="https://github.com/smgonthebeat/Flowtype/blob/main/docs/PRIVACY-COMPARISON.md">查看带日期和证据边界的比较</a>。</p>
     </div>
   </section>
 

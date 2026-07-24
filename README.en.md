@@ -61,20 +61,25 @@ make build
 
 `make build` creates a locally ad-hoc-signed development bundle at `.build/Flowtype.app`; it is not an official distribution build.
 
-## Privacy, With Concrete Boundaries
+## Your Voice Stays On This Mac
 
-- Qwen3-ASR transcription uses a local helper bound to `127.0.0.1` and protected by a per-session token.
-- Apple Speech fallback runs only when on-device recognition is supported and sets `requiresOnDeviceRecognition`.
-- Transcript History is stored locally, enabled by default, and defaults to 100 entries; it can be disabled or adjusted in Settings.
-- With History enabled, up to three recent recordings are retained locally for manual retry; clearing History also clears those retry recordings.
-- Model download is an explicit network operation. The website, source build, and routine local transcription have different network boundaries.
+Flowtype does not rely on an “upload, then delete” promise for routine dictation. It keeps that path out of cloud ASR processing in the first place:
 
-See [Privacy & Local Data](docs/PRIVACY.md) for details. Never attach real recordings, transcripts, credentials, or private diagnostics to an issue.
+- **Local transcription:** Qwen3-ASR runs on Apple Silicon through a session-token-protected helper bound only to `127.0.0.1`. Once the model is installed, routine dictation does not upload the recording.
+- **Temporary local audio, deleted after transcription:** each dictation uses a temporary WAV that is removed when the transcription task ends. With History enabled, only the three most recent recordings are retained locally for manual retry; newer recordings displace older ones, and clearing History also clears these retry recordings.
+- **History under your control:** transcript text is stored only in Flowtype History on this Mac. History is enabled by default with a 100-entry limit and can be disabled, resized, or cleared.
+- **On-device fallback:** Apple Speech runs only when on-device recognition is supported and sets `requiresOnDeviceRecognition`.
+- **Explicit network boundary:** initial model download or repair is a network operation. The website, source build, model download, and routine local transcription are separate data paths.
+
+Mainstream dictation products including Wispr Flow, Typeless, Qianwen IME, and Doubao IME send audio to cloud services in some or all reviewed transcription paths. Some provide encryption, immediate deletion, Privacy Mode, or zero-retention controls; those are meaningful privacy measures. Flowtype's distinction is avoiding the routine transcription upload, not alleging that another product uploads every keystroke. Local-capable products such as Shandianshuo are not cloud-only comparisons.
+
+See [Privacy & Local Data](docs/PRIVACY.md) for Flowtype's boundaries and [Local And Cloud Dictation Comparison](docs/PRIVACY-COMPARISON.md) for the dated, versioned evidence notes. Never attach real recordings, transcripts, credentials, or private diagnostics to an issue.
 
 ## Documentation
 
 - [Installation & Source Builds](docs/INSTALL.md)
 - [Privacy & Local Data](docs/PRIVACY.md)
+- [Local And Cloud Dictation Comparison](docs/PRIVACY-COMPARISON.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Changelog](CHANGELOG.md)

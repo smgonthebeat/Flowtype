@@ -44,6 +44,9 @@ class PublicWebsiteTests(unittest.TestCase):
         self.assertIn("Open Anyway", self.html)
         self.assertIn("自动下载约 1.9 GB 的默认模型", self.html)
         self.assertIn("显示下载与准备进度", self.html)
+        self.assertIn("本地临时录音，转写即删", self.html)
+        self.assertIn("日常转写不必把录音发送到云端 ASR", self.html)
+        self.assertIn("docs/PRIVACY-COMPARISON.md", self.html)
 
     def test_runtime_assets_are_local_and_present(self) -> None:
         parser = AssetParser()

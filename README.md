@@ -31,7 +31,7 @@ Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开�
 - **按住即说，松开即贴：** 在当前 App 中使用 `Fn` 完成录音、转写和粘贴。
 - **中英混合与专业词汇：** local Qwen3-ASR 配合可自定义的 terminology context。
 - **口述数学：** 可把数学表达转换成 Unicode 或 LaTeX。
-- **local-first：** 主引擎在 Apple Silicon 本机运行；不要求 cloud ASR subscription。
+- **local-first：** 主引擎在 Apple Silicon 本机运行；不要求云端 ASR 订阅。
 - **失败可恢复：** History、最多三条本地 retry recordings、模型状态和 diagnostics 帮助定位问题。
 - **原生 macOS 体验：** menu bar、recording capsule、permissions onboarding 与 model management。
 
@@ -61,20 +61,25 @@ make build
 
 `make build` 会在 `.build/Flowtype.app` 生成本地 ad-hoc signed development bundle；它不等同于官方 distribution build。
 
-## Privacy，不只是一句宣传语
+## 语音留在这台 Mac
 
-- Qwen3-ASR transcription 通过仅监听 `127.0.0.1` 且带 session token 的本地 helper 完成。
-- Apple Speech fallback 只有在设备支持 on-device recognition 时才会运行，并强制 `requiresOnDeviceRecognition`。
-- Transcript History 默认在本机保存，默认上限为 100 条，可在 Settings 中关闭或调整。
-- 启用 History 时，最近最多三条录音会保留在本机，供手动 retry；清空 History 同时清理这些 retry recordings。
-- Model download 是明确的 network operation；website、source build 和日常 local transcription 不是同一件事。
+Flowtype 选择的不是“上传后尽快删除”，而是让日常转写从一开始就不必进入云端 ASR 处理链路：
 
-完整说明见 [Privacy & Local Data](docs/PRIVACY.md)。提交 issue 时不要附上真实录音、transcript、credential 或 private diagnostics。
+- **纯本地转写：** Qwen3-ASR 通过仅监听 `127.0.0.1`、带 session token 的本地 helper 在 Apple Silicon 上运行；模型安装完成后，日常转写不需要上传录音。
+- **本地临时录音，转写即删：** 每次听写生成的临时 WAV 会在转写任务结束后删除。开启 History 时，仅为手动重试在本机滚动保留最近最多 3 条录音；新录音会淘汰旧录音，清空 History 也会清除这些重试录音。
+- **历史记录由你控制：** 转写文本只保存在这台 Mac 的 Flowtype History 中。History 默认开启、默认上限为 100 条，可以关闭、调整数量或随时清空。
+- **备用路径仍在本机：** Apple Speech fallback 只有在设备支持 on-device recognition 时才会运行，并强制 `requiresOnDeviceRecognition`。
+- **网络边界明确：** 首次 model download/repair 是明确的网络操作；website、source build、模型下载与日常本地转写不是同一条数据路径。
+
+Wispr Flow、Typeless、千问输入法和豆包输入法等主流语音输入工具，会在其部分或主要转写路径中把语音发送至云端处理。部分产品提供加密传输、即时删除、Privacy Mode 或 zero-retention 设置，这些都是有价值的隐私措施。Flowtype 的区别是避免日常转写的上传步骤，而不是指责其他产品会上传所有键入内容。闪电说等提供可选本地识别路径的产品不属于“只能云端转写”这一类。
+
+完整边界见 [Privacy & Local Data](docs/PRIVACY.md)，带日期、版本和证据说明的比较见 [Local And Cloud Dictation Comparison](docs/PRIVACY-COMPARISON.md)。提交 issue 时不要附上真实录音、transcript、credential 或 private diagnostics。
 
 ## 文档
 
 - [安装与源码构建](docs/INSTALL.md)
 - [Privacy 与本地数据](docs/PRIVACY.md)
+- [本地与云端转写比较](docs/PRIVACY-COMPARISON.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Changelog](CHANGELOG.md)

@@ -17,3 +17,8 @@ and marks belong to their respective owners. Their appearance does not imply
 endorsement of Flowtype. The synthetic Codex scene in the workflow preview
 identifies an ordinary third-party text target only; it does not imply
 integration, affiliation, sponsorship, or endorsement by OpenAI.
+
+Wispr Flow, Typeless, Qianwen, Doubao, Shandianshuo, and other products named in
+privacy comparisons are referenced only for truthful identification. Those
+references do not imply affiliation, sponsorship, or endorsement in either
+direction.

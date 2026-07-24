@@ -47,10 +47,10 @@ Flowtype stores application data under the user's Application Support directory 
 
 - Transcript History is enabled by default.
 - The default history limit is 100 entries and can be changed from 1 to 500.
-- With History enabled, Flowtype may retain recordings associated with recent successful or recoverable failed attempts.
-- The retained-recording store prunes to at most three recordings for manual retry.
-- The ordinary temporary recording is removed after each transcription task finishes.
-- Clearing History also prunes all retained retry recordings.
+- The ordinary temporary WAV is removed after every transcription task finishes, whether the task succeeds or fails.
+- With History enabled, Flowtype copies only the most recent recordings needed for manual retry into a separate local retained-recording store.
+- That store is continuously pruned to at most three recordings. A newer retained recording displaces an older one.
+- Clearing History also removes all retained retry recordings.
 - Debug recording capture is disabled by default; when enabled, the newest debug recording replaces the previous one.
 
 Disabling future History storage does not by itself claim to erase every existing data class. Use the in-app clear controls and inspect the storage locations shown in Settings.
@@ -70,3 +70,5 @@ Never attach any of the following to a public issue:
 - model caches or helper environments;
 - unrelated Application Support data;
 - diagnostics that have not been inspected and redacted.
+
+For a dated comparison of processing location and retention claims across several dictation products, see [Local And Cloud Dictation Comparison](PRIVACY-COMPARISON.md). The comparison distinguishes cloud processing from cloud retention and does not claim that another input method uploads every keystroke.
