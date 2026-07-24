@@ -75,6 +75,12 @@ final class ModelManager {
             .appendingPathComponent(cacheName, isDirectory: true)
     }
 
+    var modelScopeSnapshotsDirectory: URL {
+        modelDirectory
+            .appendingPathComponent("modelscope", isDirectory: true)
+            .appendingPathComponent("snapshots", isDirectory: true)
+    }
+
     var markerFile: URL {
         modelDirectory.appendingPathComponent(".voiceinput-ready")
     }
@@ -88,7 +94,15 @@ final class ModelManager {
     }
 
     private var hasCachedModelSnapshot: Bool {
-        let snapshotsDirectory = huggingFaceHubModelDirectory.appendingPathComponent("snapshots", isDirectory: true)
+        let huggingFaceSnapshots = huggingFaceHubModelDirectory.appendingPathComponent("snapshots", isDirectory: true)
+        return containsValidSnapshot(in: huggingFaceSnapshots, requiresVerificationMarker: false) ||
+            containsValidSnapshot(in: modelScopeSnapshotsDirectory, requiresVerificationMarker: true)
+    }
+
+    private func containsValidSnapshot(
+        in snapshotsDirectory: URL,
+        requiresVerificationMarker: Bool
+    ) -> Bool {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: snapshotsDirectory.path, isDirectory: &isDirectory),
               isDirectory.boolValue else {
@@ -104,6 +118,12 @@ final class ModelManager {
         return snapshotURLs.contains { url in
             guard (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true else {
                 return false
+            }
+            if requiresVerificationMarker {
+                let marker = url.appendingPathComponent(".flowtype-verified.json")
+                guard FileManager.default.fileExists(atPath: marker.path) else {
+                    return false
+                }
             }
             return Self.isValidSnapshotDirectory(url)
         }

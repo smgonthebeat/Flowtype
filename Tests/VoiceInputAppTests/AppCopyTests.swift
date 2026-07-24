@@ -418,6 +418,10 @@ final class AppCopyTests: XCTestCase {
         XCTAssertTrue(chinese.modelRoleDescription(for: .qwen3ASR17B).contains("更慢"))
         XCTAssertTrue(chinese.modelProvenance(for: .qwen3ASR06B).contains("Qwen3-ASR 0.6B"))
         XCTAssertEqual(chinese.modelStorageUsage("1.2 GB"), "已占用 1.2 GB")
+        XCTAssertEqual(
+            chinese.modelDownloadUsage("820 MB", total: "1.9 GB", source: "ModelScope"),
+            "已下载 820 MB / 1.9 GB · ModelScope"
+        )
         XCTAssertTrue(
             chinese.modelDeleteConfirmMessage(for: .qwen3ASR17B, formattedSize: "3.4 GB")
                 .contains("Qwen3-ASR 1.7B（3.4 GB）")

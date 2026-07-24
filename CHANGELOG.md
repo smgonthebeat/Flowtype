@@ -31,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.4` prevents Flowtype's internal ASR context and Hotword lists
+  from being committed as transcripts, including truncated and Unicode-variant
+  echoes. Model preparation now reports live byte-based progress, prefers the
+  pinned ModelScope mirror for fresh downloads, resumes partial transfers,
+  verifies every artifact, and retains Hugging Face fallback.
 - `v0.1.0-preview.3` makes clean-install preparation a visible one-click flow:
   the first **Prepare Flowtype** action requests the required permissions,
   automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B

@@ -11,7 +11,7 @@ final class HotwordContextBuilderTests: XCTestCase {
 
         let context = HotwordContextBuilder.context(for: words)
 
-        XCTAssertEqual(context, "Important terms to preserve exactly: Cursor, Claude Code.")
+        XCTAssertEqual(context, "Cursor Claude Code")
     }
 
     func testLimitsContextLength() {
@@ -20,7 +20,7 @@ final class HotwordContextBuilderTests: XCTestCase {
         let context = HotwordContextBuilder.context(for: words, maxCharacters: 80)
 
         XCTAssertLessThanOrEqual(context.count, 80)
-        XCTAssertTrue(context.hasPrefix("Important terms to preserve exactly:"))
+        XCTAssertFalse(context.contains("Important terms to preserve exactly:"))
     }
 
     func testSkipsOversizedHotwordAndKeepsLaterFittingHotwords() {
@@ -31,7 +31,7 @@ final class HotwordContextBuilderTests: XCTestCase {
 
         let context = HotwordContextBuilder.context(for: words, maxCharacters: 60)
 
-        XCTAssertEqual(context, "Important terms to preserve exactly: Cursor.")
+        XCTAssertEqual(context, "Cursor")
     }
 
     func testTrimsHotwordsAndIgnoresWhitespaceOnlyTerms() {
@@ -43,7 +43,7 @@ final class HotwordContextBuilderTests: XCTestCase {
 
         let context = HotwordContextBuilder.context(for: words)
 
-        XCTAssertEqual(context, "Important terms to preserve exactly: Cursor, Claude Code.")
+        XCTAssertEqual(context, "Cursor Claude Code")
     }
 
     func testReturnsEmptyStringWhenNoEnabledWords() {

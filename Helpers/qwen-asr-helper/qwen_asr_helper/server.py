@@ -1,3 +1,8 @@
+import asyncio
+import errno
+import gc
+import hashlib
+import json
 import os
 import secrets
 import sys
@@ -5,16 +10,17 @@ import time
 import uuid
 import wave
 from array import array
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from fnmatch import fnmatch
-import gc
 from functools import partial
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Lock
 from typing import Any
+from urllib.error import URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 import uvicorn
@@ -30,6 +36,10 @@ DEFAULT_MODEL_ID = "Qwen/Qwen3-ASR-0.6B"
 MODEL_REVISIONS = {
     "Qwen/Qwen3-ASR-0.6B": "5eb144179a02acc5e5ba31e748d22b0cf3e303b0",
     "Qwen/Qwen3-ASR-1.7B": "7278e1e70fe206f11671096ffdd38061171dd6e5",
+}
+MODELSCOPE_REVISIONS = {
+    "Qwen/Qwen3-ASR-0.6B": "3b885f72b1733a6a50dc17a597fb4135c3d656a0",
+    "Qwen/Qwen3-ASR-1.7B": "d69410f1c275f2b0fa60cbb9960edfcdb0ae0aec",
 }
 MODEL_ALLOW_PATTERNS = ["*.json", "*.safetensors", "*.txt", "*.model"]
 CHUNKED_TRANSCRIPTION_MIN_SECONDS = 12.0
@@ -51,6 +61,39 @@ _mlx_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="flowtype-m
 Session: Any | None = None
 
 
+@dataclass(frozen=True)
+class ModelArtifact:
+    path: str
+    size: int
+    sha256: str
+
+
+MODEL_ARTIFACTS = {
+    "Qwen/Qwen3-ASR-0.6B": (
+        ModelArtifact("chat_template.json", 1_161, "75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff"),
+        ModelArtifact("config.json", 6_193, "76d3ae4601ce939830b2517f4a6cadb86cc51316c3900af6b020b051c21a478c"),
+        ModelArtifact("generation_config.json", 142, "1da527824d81e07118facff437e03f2e24a23311e3bdeb2368973fe77e5f275c"),
+        ModelArtifact("merges.txt", 1_671_853, "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"),
+        ModelArtifact("model.safetensors", 1_876_091_704, "79d6cbd4c98c7bbffe9db2edac07f56cd6637d0d5944b27f6c2b8353840323ea"),
+        ModelArtifact("preprocessor_config.json", 330, "45e120a4eda2c20c5d7f2ea9354e63536bf35e27aa573fb7cdf78017b378770d"),
+        ModelArtifact("tokenizer_config.json", 12_487, "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c"),
+        ModelArtifact("vocab.json", 2_776_833, "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"),
+    ),
+    "Qwen/Qwen3-ASR-1.7B": (
+        ModelArtifact("chat_template.json", 1_161, "75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff"),
+        ModelArtifact("config.json", 6_194, "2e74a751548b8ad7d7526d29365ad8144c345d8b412b1152d25dc6698452712f"),
+        ModelArtifact("generation_config.json", 142, "1da527824d81e07118facff437e03f2e24a23311e3bdeb2368973fe77e5f275c"),
+        ModelArtifact("merges.txt", 1_671_853, "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"),
+        ModelArtifact("model-00001-of-00002.safetensors", 4_220_320_824, "a4cd1f1a04d90b757dc7f7dd26254e69a013b19e80efe590a83c6a3bde8608d6"),
+        ModelArtifact("model-00002-of-00002.safetensors", 478_200_688, "6e0b9d9e09e2e0238e7ef3cc8a484ab387e91b90f1900bedf88bc92d7929ccfc"),
+        ModelArtifact("model.safetensors.index.json", 64_821, "f994739fe38e5210b9e3e8ce6c6307315e2ceac3cb630e7b7414d69dce520f60"),
+        ModelArtifact("preprocessor_config.json", 330, "45e120a4eda2c20c5d7f2ea9354e63536bf35e27aa573fb7cdf78017b378770d"),
+        ModelArtifact("tokenizer_config.json", 12_487, "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c"),
+        ModelArtifact("vocab.json", 2_776_833, "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"),
+    ),
+}
+
+
 @dataclass
 class DownloadState:
     preparing: bool = False
@@ -62,6 +105,7 @@ class DownloadState:
     operation_id: str | None = None
     updated_at: float = 0.0
     snapshot_path: str | None = None
+    source: str | None = None
 
 
 _model_downloads: dict[str, DownloadState] = {}
@@ -135,10 +179,42 @@ def cached_model_directory(model_id: str | None = None) -> Path:
 
 def cached_snapshot_directory(model_id: str | None = None) -> Path | None:
     effective_model_id = requested_model_id(model_id)
+    modelscope_snapshot = cached_modelscope_snapshot_directory(effective_model_id)
+    if modelscope_snapshot is not None:
+        return modelscope_snapshot
     snapshot_dir = cached_model_directory(effective_model_id) / "snapshots" / model_revision(effective_model_id)
     if not snapshot_dir.is_dir() or not is_valid_snapshot_directory(snapshot_dir):
         return None
     return snapshot_dir
+
+
+def modelscope_snapshot_directory(model_id: str) -> Path:
+    return model_root(model_id) / "modelscope" / "snapshots" / MODELSCOPE_REVISIONS[model_id]
+
+
+def modelscope_verification_marker(model_id: str) -> Path:
+    return modelscope_snapshot_directory(model_id) / ".flowtype-verified.json"
+
+
+def cached_modelscope_snapshot_directory(model_id: str) -> Path | None:
+    snapshot_dir = modelscope_snapshot_directory(model_id)
+    marker = modelscope_verification_marker(model_id)
+    if not snapshot_dir.is_dir() or not marker.is_file():
+        return None
+    try:
+        marker_data = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if marker_data.get("revision") != MODELSCOPE_REVISIONS[model_id]:
+        return None
+    for artifact in MODEL_ARTIFACTS[model_id]:
+        path = snapshot_dir / artifact.path
+        try:
+            if not path.is_file() or path.stat().st_size != artifact.size:
+                return None
+        except OSError:
+            return None
+    return snapshot_dir if is_valid_snapshot_directory(snapshot_dir) else None
 
 
 def is_cached_model_installed(model_id: str | None = None) -> bool:
@@ -185,40 +261,41 @@ def is_allowed_model_file(path: str) -> bool:
     return any(fnmatch(path, pattern) for pattern in MODEL_ALLOW_PATTERNS)
 
 
-def expected_model_bytes(model_id: str) -> int | None:
-    try:
-        from huggingface_hub import HfApi
-
-        info = HfApi().model_info(
-            model_id,
-            revision=model_revision(model_id),
-            files_metadata=True,
-        )
-    except Exception:
-        return None
-
-    total = 0
-    for sibling in getattr(info, "siblings", []):
-        filename = getattr(sibling, "rfilename", "")
-        size = getattr(sibling, "size", None)
-        if size is not None and is_allowed_model_file(filename):
-            total += int(size)
-    return total or None
+def expected_model_bytes(model_id: str) -> int:
+    return sum(artifact.size for artifact in MODEL_ARTIFACTS[model_id])
 
 
-def cached_model_bytes(model_id: str) -> int:
+def cached_huggingface_bytes(model_id: str) -> int:
     blobs_dir = cached_model_directory(model_id) / "blobs"
-    if not blobs_dir.is_dir():
-        return 0
-
     total = 0
-    for path in blobs_dir.rglob("*"):
+    if blobs_dir.is_dir():
+        for path in blobs_dir.rglob("*"):
+            try:
+                if path.is_file() and not path.is_symlink():
+                    total += path.stat().st_size
+            except OSError:
+                continue
+    return total
+
+
+def cached_modelscope_bytes(model_id: str) -> int:
+    total = 0
+    snapshot_dir = modelscope_snapshot_directory(model_id)
+    for artifact in MODEL_ARTIFACTS[model_id]:
+        completed = snapshot_dir / artifact.path
+        partial = completed.with_name(f"{completed.name}.part")
         try:
-            if path.is_file() and not path.is_symlink():
-                total += path.stat().st_size
+            if completed.is_file():
+                total += min(completed.stat().st_size, artifact.size)
+            elif partial.is_file():
+                total += min(partial.stat().st_size, artifact.size)
         except OSError:
             continue
     return total
+
+
+def cached_model_bytes(model_id: str) -> int:
+    return max(cached_huggingface_bytes(model_id), cached_modelscope_bytes(model_id))
 
 
 def download_state(model_id: str) -> DownloadState:
@@ -238,7 +315,10 @@ def download_progress(model_id: str, installed: bool, loaded: bool) -> float | N
     if state.total_bytes is None:
         return None
 
-    downloaded = max(state.downloaded_bytes, cached_model_bytes(model_id))
+    downloaded = state.downloaded_bytes if state.downloading else max(
+        state.downloaded_bytes,
+        cached_model_bytes(model_id),
+    )
     if downloaded <= 0:
         return 0.0
 
@@ -279,62 +359,213 @@ def download_progress_tqdm_class(model_id: str, state: DownloadState):
             if not getattr(self, "_flowtype_track_bytes", False):
                 return
 
-            total = getattr(self, "total", None)
-            current = getattr(self, "n", 0) or 0
-            cached = cached_model_bytes(model_id)
+            cached = cached_huggingface_bytes(model_id)
             with _download_lock:
-                if total and state.total_bytes is None:
-                    state.total_bytes = cached + int(total)
-                state.downloaded_bytes = max(state.downloaded_bytes, cached + int(current))
+                state.total_bytes = expected_model_bytes(model_id)
+                state.downloaded_bytes = cached
                 state.updated_at = time.time()
 
     DownloadProgressTqdm.__name__ = f"DownloadProgressTqdm_{model_directory_name(model_id)}"
     return DownloadProgressTqdm
 
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(4 * 1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def modelscope_download_url(model_id: str, artifact_path: str) -> str:
+    revision = MODELSCOPE_REVISIONS[model_id]
+    return (
+        "https://www.modelscope.cn/models/"
+        f"{quote(model_id, safe='/')}/resolve/{revision}/{quote(artifact_path, safe='/')}"
+    )
+
+
+def archive_invalid_download(path: Path) -> None:
+    if not path.exists():
+        return
+    archived = path.with_name(f"{path.name}.invalid-{int(time.time())}-{uuid.uuid4().hex[:8]}")
+    path.replace(archived)
+
+
+def download_modelscope_file(model_id: str, artifact: ModelArtifact, state: DownloadState) -> None:
+    destination = modelscope_snapshot_directory(model_id) / artifact.path
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.is_file() and destination.stat().st_size == artifact.size:
+        if file_sha256(destination) == artifact.sha256:
+            with _download_lock:
+                state.downloaded_bytes = cached_modelscope_bytes(model_id)
+                state.updated_at = time.time()
+            return
+        archive_invalid_download(destination)
+
+    partial = destination.with_name(f"{destination.name}.part")
+    if partial.exists() and partial.stat().st_size > artifact.size:
+        archive_invalid_download(partial)
+    if partial.exists() and partial.stat().st_size == artifact.size:
+        if file_sha256(partial) == artifact.sha256:
+            partial.replace(destination)
+            with _download_lock:
+                state.downloaded_bytes = cached_modelscope_bytes(model_id)
+                state.updated_at = time.time()
+            return
+        archive_invalid_download(partial)
+    offset = partial.stat().st_size if partial.exists() else 0
+    other_downloaded_bytes = max(cached_modelscope_bytes(model_id) - offset, 0)
+    request = Request(modelscope_download_url(model_id, artifact.path))
+    request.add_header("User-Agent", "Flowtype/0.1 model-downloader")
+    if offset:
+        request.add_header("Range", f"bytes={offset}-")
+
+    try:
+        with urlopen(request, timeout=30) as response:
+            response_status = getattr(response, "status", 200)
+            append = offset > 0 and response_status == 206
+            if not append:
+                offset = 0
+            with partial.open("ab" if append else "wb") as handle:
+                downloaded = offset
+                while chunk := response.read(1024 * 1024):
+                    handle.write(chunk)
+                    downloaded += len(chunk)
+                    with _download_lock:
+                        state.downloaded_bytes = min(
+                            expected_model_bytes(model_id),
+                            other_downloaded_bytes + downloaded,
+                        )
+                        state.updated_at = time.time()
+    except OSError as exc:
+        if exc.errno == errno.ENOSPC:
+            raise
+        raise ConnectionError(f"ModelScope download failed for {artifact.path}: {exc}") from exc
+    except (URLError, TimeoutError) as exc:
+        raise ConnectionError(f"ModelScope download failed for {artifact.path}: {exc}") from exc
+
+    if partial.stat().st_size != artifact.size:
+        raise ConnectionError(
+            f"ModelScope returned {partial.stat().st_size} bytes for {artifact.path}; expected {artifact.size}"
+        )
+    if file_sha256(partial) != artifact.sha256:
+        archive_invalid_download(partial)
+        raise ValueError(f"ModelScope SHA-256 verification failed for {artifact.path}")
+    partial.replace(destination)
+    with _download_lock:
+        state.downloaded_bytes = cached_modelscope_bytes(model_id)
+        state.updated_at = time.time()
+
+
+def download_modelscope_snapshot(model_id: str, state: DownloadState) -> Path:
+    snapshot_dir = modelscope_snapshot_directory(model_id)
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    with _download_lock:
+        state.source = "modelscope"
+        state.downloaded_bytes = cached_modelscope_bytes(model_id)
+        state.updated_at = time.time()
+    for artifact in MODEL_ARTIFACTS[model_id]:
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                download_modelscope_file(model_id, artifact, state)
+                last_error = None
+                break
+            except Exception as exc:
+                last_error = exc
+                if preparation_error_code(exc) == "insufficient_disk_space":
+                    raise
+                if attempt < 2:
+                    time.sleep(1 << attempt)
+        if last_error is not None:
+            raise last_error
+
+    marker = modelscope_verification_marker(model_id)
+    marker.write_text(
+        json.dumps({"revision": MODELSCOPE_REVISIONS[model_id], "verified_at": time.time()}),
+        encoding="utf-8",
+    )
+    return snapshot_dir
+
+
+def download_huggingface_snapshot(model_id: str, state: DownloadState) -> Path:
+    configure_model_environment(model_id)
+    cache_dir = model_cache_dir(model_id)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    with _download_lock:
+        state.source = "huggingface"
+        state.downloaded_bytes = cached_huggingface_bytes(model_id)
+        state.updated_at = time.time()
+
+    from huggingface_hub import snapshot_download
+
+    return Path(snapshot_download(
+        repo_id=model_id,
+        revision=model_revision(model_id),
+        cache_dir=str(cache_dir),
+        allow_patterns=MODEL_ALLOW_PATTERNS,
+        tqdm_class=download_progress_tqdm_class(model_id, state),
+    ))
+
+
+def download_source_order(model_id: str) -> tuple[str, ...]:
+    preference = os.environ.get("VOICEINPUT_MODEL_DOWNLOAD_SOURCE", "auto").strip().lower()
+    if preference == "huggingface":
+        return ("huggingface",)
+    if preference == "modelscope":
+        return ("modelscope",)
+    if cached_huggingface_bytes(model_id) > cached_modelscope_bytes(model_id):
+        return ("huggingface", "modelscope")
+    return ("modelscope", "huggingface")
+
+
 def download_model_snapshot(model_id: str) -> Path:
     state = download_state(model_id)
     with _download_lock:
-        if state.total_bytes is None:
-            state.total_bytes = expected_model_bytes(model_id)
-        state.downloaded_bytes = min(cached_model_bytes(model_id), state.total_bytes or 0)
+        state.total_bytes = expected_model_bytes(model_id)
+        state.downloaded_bytes = min(cached_model_bytes(model_id), state.total_bytes)
         state.downloading = True
         state.error = None
         state.error_code = None
         state.updated_at = time.time()
 
-    try:
-        configure_model_environment(model_id)
-        cache_dir = model_cache_dir(model_id)
-        cache_dir.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
+    for source in download_source_order(model_id):
+        try:
+            if source == "modelscope":
+                path = download_modelscope_snapshot(model_id, state)
+            else:
+                path = download_huggingface_snapshot(model_id, state)
+            with _download_lock:
+                state.snapshot_path = str(path)
+                state.downloaded_bytes = state.total_bytes
+                state.downloading = False
+                state.updated_at = time.time()
+            return path
+        except Exception as exc:
+            if preparation_error_code(exc) == "insufficient_disk_space":
+                with _download_lock:
+                    state.downloading = False
+                    state.error = str(exc)
+                    state.error_code = "insufficient_disk_space"
+                    state.updated_at = time.time()
+                raise
+            errors.append(f"{source}: {exc}")
 
-        from huggingface_hub import snapshot_download
-
-        path = snapshot_download(
-            repo_id=model_id,
-            revision=model_revision(model_id),
-            cache_dir=str(cache_dir),
-            allow_patterns=MODEL_ALLOW_PATTERNS,
-            tqdm_class=download_progress_tqdm_class(model_id, state),
-        )
-        with _download_lock:
-            state.snapshot_path = str(path)
-            state.downloading = False
-            state.updated_at = time.time()
-        return Path(path)
-    except Exception as exc:
-        with _download_lock:
-            state.downloading = False
-            state.error = str(exc)
-            state.error_code = preparation_error_code(exc)
-            state.updated_at = time.time()
-        raise
+    failure = ConnectionError("; ".join(errors) or "No model download source is available")
+    with _download_lock:
+        state.downloading = False
+        state.error = str(failure)
+        state.error_code = preparation_error_code(failure)
+        state.updated_at = time.time()
+    raise failure
 
 
 def preparation_error_code(error: Exception) -> str:
     if isinstance(error, ConnectionError):
         return "network_unavailable"
-    if isinstance(error, OSError) and getattr(error, "errno", None) == 28:
+    if isinstance(error, OSError) and getattr(error, "errno", None) == errno.ENOSPC:
         return "insufficient_disk_space"
     return "model_preparation_failed"
 
@@ -656,12 +887,19 @@ def models_status(model_id: str = Query(default=DEFAULT_MODEL_ID)) -> ModelStatu
     is_installed = is_loaded or is_cached_model_installed(model_id)
     is_loading = _session_loading and _session_loading_model_id == model_id
     state = download_state(model_id)
+    progress = download_progress(model_id, installed=is_installed, loaded=is_loaded)
     with _download_lock:
         operation_id = state.operation_id
         updated_at = state.updated_at or time.time()
         error_code = state.error_code
         is_preparing = state.preparing
         is_downloading = state.downloading
+        total_bytes = state.total_bytes or expected_model_bytes(model_id)
+        downloaded_bytes = state.downloaded_bytes if is_downloading else max(
+            state.downloaded_bytes,
+            cached_model_bytes(model_id),
+        )
+        download_source = state.source
 
     if is_loaded:
         phase = "ready"
@@ -681,11 +919,14 @@ def models_status(model_id: str = Query(default=DEFAULT_MODEL_ID)) -> ModelStatu
         loaded=is_loaded,
         loading=is_loading,
         downloading=is_downloading,
-        progress=download_progress(model_id, installed=is_installed, loaded=is_loaded),
+        progress=progress,
         phase=phase,
         error_code=error_code,
         operation_id=operation_id,
         updated_at=updated_at,
+        downloaded_bytes=total_bytes if is_installed else min(downloaded_bytes, total_bytes),
+        total_bytes=total_bytes,
+        download_source=download_source,
         model_id=model_id,
         model_path=str(model_root(model_id)),
     )

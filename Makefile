@@ -34,8 +34,19 @@ open:
 run: build open
 
 install: build
-	rm -rf "/Applications/$(APP_NAME).app"
-	cp -R "$(APP_DIR)" /Applications/
+	@if [ -e "/Applications/$(APP_NAME).app" ]; then \
+		archive_root="$(CURDIR)/.trash"; \
+		mkdir -p "$$archive_root"; \
+		archive_path="$$archive_root/$$(date +%F)_$(APP_NAME).app"; \
+		counter=1; \
+		while [ -e "$$archive_path" ]; do \
+			archive_path="$$archive_root/$$(date +%F)_$(APP_NAME)_$$counter.app"; \
+			counter=$$((counter + 1)); \
+		done; \
+		mv "/Applications/$(APP_NAME).app" "$$archive_path"; \
+		echo "Archived previous app at $$archive_path"; \
+	fi
+	ditto "$(APP_DIR)" "/Applications/$(APP_NAME).app"
 
 dmg: build
 	./script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)"

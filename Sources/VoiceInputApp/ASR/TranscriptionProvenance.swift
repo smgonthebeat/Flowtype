@@ -97,6 +97,7 @@ struct TranscriptionProvenance: Codable, Equatable, Identifiable {
     let appleFallbackStartedAt: Date?
     let appleFallbackReason: String?
     let fallbackReason: String?
+    let contextEchoRecovery: String?
     let sessionStateAtCompletion: String?
     let commitOutcome: String?
     let ignoredInputReason: String?
@@ -125,6 +126,7 @@ struct TranscriptionProvenance: Codable, Equatable, Identifiable {
         appleFallbackStartedAt: Date? = nil,
         appleFallbackReason: String? = nil,
         fallbackReason: String? = nil,
+        contextEchoRecovery: String? = nil,
         sessionStateAtCompletion: String? = nil,
         commitOutcome: String? = nil,
         ignoredInputReason: String? = nil,
@@ -152,6 +154,7 @@ struct TranscriptionProvenance: Codable, Equatable, Identifiable {
         self.appleFallbackStartedAt = appleFallbackStartedAt
         self.appleFallbackReason = appleFallbackReason
         self.fallbackReason = fallbackReason
+        self.contextEchoRecovery = contextEchoRecovery
         self.sessionStateAtCompletion = sessionStateAtCompletion
         self.commitOutcome = commitOutcome
         self.ignoredInputReason = ignoredInputReason

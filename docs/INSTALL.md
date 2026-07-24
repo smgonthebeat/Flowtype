@@ -2,7 +2,7 @@
 
 ## Release Status
 
-The official [`v0.1.0-preview.3` GitHub Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.3) contains an Apple Silicon DMG and SHA-256 file. This Preview uses a local development signature; it is not signed with an Apple Developer ID and has not been notarized by Apple. It is therefore not a seamless trusted installer, and macOS will block the first launch.
+The official [`v0.1.0-preview.4` GitHub Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4) contains an Apple Silicon DMG and SHA-256 file. This Preview uses a local development signature; it is not signed with an Apple Developer ID and has not been notarized by Apple. It is therefore not a seamless trusted installer, and macOS will block the first launch.
 
 ## Requirements
 
@@ -15,11 +15,11 @@ are required only for developers building from source.
 
 ## Install The Preview DMG
 
-1. Download [`Flowtype.dmg`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.3/Flowtype.dmg) and its [`Flowtype.dmg.sha256`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.3/Flowtype.dmg.sha256) from the official Release.
+1. Download [`Flowtype.dmg`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.4/Flowtype.dmg) and its [`Flowtype.dmg.sha256`](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.4/Flowtype.dmg.sha256) from the official Release.
 2. Open the DMG and drag `Flowtype.app` to Applications.
 3. Try to open Flowtype once and dismiss the macOS warning.
 4. Open **System Settings → Privacy & Security**. In Security, click **Open Anyway**, then confirm **Open**.
-5. In Flowtype, click **Prepare Flowtype** once. This requests Microphone and Accessibility permissions, automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows download/preparation progress.
+5. In Flowtype, click **Prepare Flowtype** once. This requests Microphone and Accessibility permissions, automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows live download/preparation progress. Fresh downloads prefer ModelScope with resumable transfer and retain Hugging Face fallback.
 6. Complete any macOS permission prompt or System Settings step, then return to Flowtype; preparation continues automatically.
 
 Apple documents this standard exception flow in [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). Only override the warning when the DMG came from this official Release and its checksum matches. Do not disable Gatekeeper or run quarantine-removal or Gatekeeper-disabling commands.

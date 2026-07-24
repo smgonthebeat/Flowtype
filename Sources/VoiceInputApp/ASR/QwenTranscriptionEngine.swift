@@ -6,7 +6,7 @@ final class QwenTranscriptionEngine: TranscriptionEngine {
 
     private let client: QwenTranscriptionClient
     private let modelID: String
-    private let context: String
+    private let context: QwenPromptContext
     private let strategy: QwenTranscriptionStrategy
     private let recordingDuration: (URL) -> TimeInterval?
     private let onDecodeTiming: ((Int) -> Void)?
@@ -14,7 +14,7 @@ final class QwenTranscriptionEngine: TranscriptionEngine {
     init(
         client: QwenTranscriptionClient = QwenHelperClient(),
         modelID: String,
-        context: String = "",
+        context: QwenPromptContext = .empty,
         strategy: QwenTranscriptionStrategy = .full,
         recordingDuration: @escaping (URL) -> TimeInterval? = QwenContextEchoDetector.recordingDuration,
         onDecodeTiming: ((Int) -> Void)? = nil
@@ -34,34 +34,40 @@ final class QwenTranscriptionEngine: TranscriptionEngine {
         let text = try await client.transcribe(
             wavURL: fileURL,
             modelID: modelID,
-            context: context,
+            context: context.payload,
             strategy: effectiveStrategy
         )
-        if let cleanedText = QwenContextEchoDetector.transcriptByRemovingContextEchoTail(text, context: context),
-           PasteInjector.isPasteable(cleanedText) {
-            onDecodeTiming?(Self.milliseconds(since: decodeStartedAt))
-            return result(text: cleanedText, effectiveStrategy: effectiveStrategy)
-        }
 
         let echoDetectionDuration = duration ?? 0
-        if QwenContextEchoDetector.isLikelyEcho(text, context: context, recordingDuration: echoDetectionDuration) {
+        if containsContextLeak(
+            text,
+            context: context,
+            recordingDuration: echoDetectionDuration,
+            knownTermPolicy: .all
+        ) {
             let retriedText = try await client.transcribe(
                 wavURL: fileURL,
                 modelID: modelID,
                 context: "",
                 strategy: effectiveStrategy
             )
-            let acceptedRetryText = QwenContextEchoDetector.transcriptByRemovingContextEchoTail(retriedText, context: context) ?? retriedText
-            guard PasteInjector.isPasteable(acceptedRetryText),
-                  !QwenContextEchoDetector.isLikelyEcho(
-                    acceptedRetryText,
-                    context: context,
-                    recordingDuration: echoDetectionDuration
-                  ) else {
+            guard !containsContextLeak(
+                retriedText,
+                context: context,
+                recordingDuration: echoDetectionDuration,
+                knownTermPolicy: .listOnly
+            ) else {
+                throw TranscriptionError.contextLeakDetected
+            }
+            guard PasteInjector.isPasteable(retriedText) else {
                 throw TranscriptionError.emptyResult
             }
             onDecodeTiming?(Self.milliseconds(since: decodeStartedAt))
-            return result(text: acceptedRetryText, effectiveStrategy: effectiveStrategy)
+            return result(
+                text: retriedText,
+                effectiveStrategy: effectiveStrategy,
+                contextEchoRecovery: .retriedWithoutContext
+            )
         }
 
         guard PasteInjector.isPasteable(text) else {
@@ -80,13 +86,33 @@ final class QwenTranscriptionEngine: TranscriptionEngine {
         return .chunked
     }
 
-    private func result(text: String, effectiveStrategy: QwenTranscriptionStrategy) -> TranscriptionResult {
+    private func containsContextLeak(
+        _ text: String,
+        context: QwenPromptContext,
+        recordingDuration: TimeInterval,
+        knownTermPolicy: QwenKnownTermEchoPolicy
+    ) -> Bool {
+        QwenContextEchoDetector.containsInternalContextEchoTail(text, context: context)
+            || QwenContextEchoDetector.isLikelyEcho(
+                text,
+                context: context,
+                recordingDuration: recordingDuration,
+                knownTermPolicy: knownTermPolicy
+            )
+    }
+
+    private func result(
+        text: String,
+        effectiveStrategy: QwenTranscriptionStrategy,
+        contextEchoRecovery: QwenContextEchoRecovery? = nil
+    ) -> TranscriptionResult {
         TranscriptionResult(
             text: text,
             engine: .qwenLocal,
             requestedModelID: modelID,
             requestedStrategy: strategy.rawValue,
-            effectiveStrategy: effectiveStrategy.rawValue
+            effectiveStrategy: effectiveStrategy.rawValue,
+            contextEchoRecovery: contextEchoRecovery
         )
     }
 

@@ -11,6 +11,7 @@ enum QwenFailureKind: String, Codable, Equatable {
     case helperBusyTimedOut
     case transcriptionTimedOut
     case transcriptionFailed
+    case contextLeakDetected
     case emptyAudio
     case permissionMissing
     case cancelled
@@ -29,7 +30,8 @@ struct QwenFallbackPolicy {
              .modelLoadTimedOut,
              .helperBusyTimedOut,
              .transcriptionTimedOut,
-             .transcriptionFailed:
+             .transcriptionFailed,
+             .contextLeakDetected:
             return true
         case .modelNotInstalled,
              .modelLoading,
@@ -72,6 +74,8 @@ struct QwenFallbackPolicy {
                 return .emptyAudio
             case .timedOut:
                 return .transcriptionTimedOut
+            case .contextLeakDetected:
+                return .contextLeakDetected
             }
         }
 

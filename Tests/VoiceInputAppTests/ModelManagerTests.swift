@@ -39,6 +39,38 @@ final class ModelManagerTests: XCTestCase {
         XCTAssertTrue(manager.isModelInstalled)
     }
 
+    func testVerifiedModelScopeSnapshotCountsAsInstalled() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
+        let manager = ModelManager(applicationSupportRoot: root)
+        let snapshotDirectory = manager.modelScopeSnapshotsDirectory
+            .appendingPathComponent("pinned-revision", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: snapshotDirectory, withIntermediateDirectories: true)
+        try "{}".write(to: snapshotDirectory.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        try Data("weights".utf8).write(to: snapshotDirectory.appendingPathComponent("model.safetensors"))
+        try "{}".write(
+            to: snapshotDirectory.appendingPathComponent(".flowtype-verified.json"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        XCTAssertTrue(manager.isModelInstalled)
+    }
+
+    func testUnverifiedModelScopeSnapshotNeedsRepair() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
+        let manager = ModelManager(applicationSupportRoot: root)
+        let snapshotDirectory = manager.modelScopeSnapshotsDirectory
+            .appendingPathComponent("unverified-revision", isDirectory: true)
+
+        try FileManager.default.createDirectory(at: snapshotDirectory, withIntermediateDirectories: true)
+        try "{}".write(to: snapshotDirectory.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
+        try Data("weights".utf8).write(to: snapshotDirectory.appendingPathComponent("model.safetensors"))
+
+        XCTAssertFalse(manager.isModelInstalled)
+        XCTAssertTrue(manager.needsRepair)
+    }
+
     func testPartialHuggingFaceSnapshotNeedsRepair() throws {
         let root = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(UUID().uuidString)
         let manager = ModelManager(applicationSupportRoot: root)

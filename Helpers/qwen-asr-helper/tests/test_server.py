@@ -1,5 +1,9 @@
 from pathlib import Path
 from types import SimpleNamespace
+import errno
+import hashlib
+import io
+import json
 import math
 import struct
 import threading
@@ -70,6 +74,9 @@ def test_models_status_reports_real_helper_unloaded(monkeypatch, tmp_path):
     assert response.json()["error_code"] is None
     assert response.json()["operation_id"] is None
     assert isinstance(response.json()["updated_at"], float)
+    assert response.json()["downloaded_bytes"] == 0
+    assert response.json()["total_bytes"] == 1_880_560_703
+    assert response.json()["download_source"] is None
     assert response.json()["model_id"] == "Qwen/Qwen3-ASR-0.6B"
     assert response.json()["model_path"] == str(tmp_path / "qwen3-asr-0.6b")
 
@@ -233,6 +240,8 @@ def test_models_status_reports_download_progress(monkeypatch, tmp_path):
     server._model_downloads["Qwen/Qwen3-ASR-1.7B"] = server.DownloadState(
         downloading=True,
         total_bytes=100,
+        downloaded_bytes=25,
+        source="huggingface",
     )
     monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
     client = authenticated_client()
@@ -246,6 +255,12 @@ def test_models_status_reports_download_progress(monkeypatch, tmp_path):
 
 def test_download_progress_tqdm_updates_state(monkeypatch, tmp_path):
     model_id = "Qwen/Qwen3-ASR-1.7B"
+    monkeypatch.setitem(
+        server.MODEL_ARTIFACTS,
+        model_id,
+        (server.ModelArtifact("model.safetensors", 100, "unused"),),
+    )
+    monkeypatch.setattr(server, "cached_huggingface_bytes", lambda _: 40)
     state = server.download_state(model_id)
     progress_class = server.download_progress_tqdm_class(model_id, state)
     monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
@@ -253,23 +268,19 @@ def test_download_progress_tqdm_updates_state(monkeypatch, tmp_path):
     with progress_class(total=100, unit="B") as progress:
         progress.update(40)
 
-    assert state.total_bytes == 100
+    assert state.total_bytes == server.expected_model_bytes(model_id)
     assert state.downloaded_bytes == 40
     assert server.download_progress(model_id, installed=False, loaded=False) == 0.4
 
 
-def test_download_progress_tqdm_combines_cached_bytes_with_active_file(monkeypatch, tmp_path):
+def test_download_progress_tqdm_does_not_double_count_active_file(monkeypatch, tmp_path):
     model_id = "Qwen/Qwen3-ASR-1.7B"
-    blobs_dir = (
-        tmp_path
-        / "qwen3-asr-1.7b"
-        / "huggingface"
-        / "hub"
-        / "models--Qwen--Qwen3-ASR-1.7B"
-        / "blobs"
+    monkeypatch.setitem(
+        server.MODEL_ARTIFACTS,
+        model_id,
+        (server.ModelArtifact("model.safetensors", 100, "unused"),),
     )
-    blobs_dir.mkdir(parents=True)
-    (blobs_dir / "completed").write_bytes(b"x" * 30)
+    monkeypatch.setattr(server, "cached_huggingface_bytes", lambda _: 30)
     state = server.download_state(model_id)
     state.total_bytes = 100
     progress_class = server.download_progress_tqdm_class(model_id, state)
@@ -278,8 +289,8 @@ def test_download_progress_tqdm_combines_cached_bytes_with_active_file(monkeypat
     with progress_class(total=100, unit="B") as progress:
         progress.update(40)
 
-    assert state.downloaded_bytes == 70
-    assert server.download_progress(model_id, installed=False, loaded=False) == 0.7
+    assert state.downloaded_bytes == 30
+    assert server.download_progress(model_id, installed=False, loaded=False) == 0.3
 
 
 def test_download_snapshot_uses_pinned_revision_and_requested_model_cache_dir(monkeypatch, tmp_path):
@@ -296,6 +307,7 @@ def test_download_snapshot_uses_pinned_revision_and_requested_model_cache_dir(mo
         return str(snapshot_dir)
 
     monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+    monkeypatch.setenv("VOICEINPUT_MODEL_DOWNLOAD_SOURCE", "huggingface")
     monkeypatch.setattr(server, "expected_model_bytes", lambda model_id: 100)
     monkeypatch.setattr("huggingface_hub.snapshot_download", fake_snapshot_download)
 
@@ -307,6 +319,224 @@ def test_download_snapshot_uses_pinned_revision_and_requested_model_cache_dir(mo
     assert captured["cache_dir"] == str(tmp_path / "qwen3-asr-1.7b" / "huggingface" / "hub")
     assert captured["allow_patterns"] == server.MODEL_ALLOW_PATTERNS
     assert captured["tqdm_class"].__name__ == "DownloadProgressTqdm_qwen3-asr-1.7b"
+
+
+def test_expected_model_bytes_uses_pinned_whole_model_manifest():
+    assert server.expected_model_bytes("Qwen/Qwen3-ASR-0.6B") == 1_880_560_703
+    assert server.expected_model_bytes("Qwen/Qwen3-ASR-1.7B") == 4_703_055_333
+
+
+def test_modelscope_download_url_uses_pinned_revision():
+    url = server.modelscope_download_url("Qwen/Qwen3-ASR-0.6B", "model.safetensors")
+
+    assert "Qwen/Qwen3-ASR-0.6B/resolve/3b885f72b1733a6a50dc17a597fb4135c3d656a0/" in url
+    assert url.endswith("model.safetensors")
+
+
+def test_auto_download_resumes_existing_huggingface_cache(monkeypatch):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    monkeypatch.delenv("VOICEINPUT_MODEL_DOWNLOAD_SOURCE", raising=False)
+    monkeypatch.setattr(server, "cached_huggingface_bytes", lambda _: 100)
+    monkeypatch.setattr(server, "cached_modelscope_bytes", lambda _: 0)
+
+    assert server.download_source_order(model_id) == ("huggingface", "modelscope")
+
+
+def test_modelscope_file_download_resumes_and_verifies_sha(monkeypatch, tmp_path):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    contents = b"abcd"
+    artifact = server.ModelArtifact(
+        "model.safetensors",
+        len(contents),
+        hashlib.sha256(contents).hexdigest(),
+    )
+    monkeypatch.setitem(server.MODEL_ARTIFACTS, model_id, (artifact,))
+    monkeypatch.setitem(server.MODELSCOPE_REVISIONS, model_id, "pinned-revision")
+    monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+
+    destination = server.modelscope_snapshot_directory(model_id) / artifact.path
+    destination.parent.mkdir(parents=True)
+    destination.with_name(f"{destination.name}.part").write_bytes(b"ab")
+    seen = {}
+
+    class FakeResponse:
+        status = 206
+
+        def __init__(self):
+            self.buffer = io.BytesIO(b"cd")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self, size):
+            return self.buffer.read(size)
+
+    def fake_urlopen(request, timeout):
+        seen["range"] = request.get_header("Range")
+        seen["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(server, "urlopen", fake_urlopen)
+    state = server.DownloadState(downloading=True, total_bytes=len(contents), source="modelscope")
+
+    server.download_modelscope_file(model_id, artifact, state)
+
+    assert seen == {"range": "bytes=2-", "timeout": 30}
+    assert destination.read_bytes() == contents
+    assert state.downloaded_bytes == len(contents)
+
+
+def test_modelscope_file_download_preserves_disk_full_error(monkeypatch, tmp_path):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    contents = b"abcd"
+    artifact = server.ModelArtifact(
+        "model.safetensors",
+        len(contents),
+        hashlib.sha256(contents).hexdigest(),
+    )
+    monkeypatch.setitem(server.MODEL_ARTIFACTS, model_id, (artifact,))
+    monkeypatch.setitem(server.MODELSCOPE_REVISIONS, model_id, "pinned-revision")
+    monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self, size):
+            return contents
+
+    real_open = Path.open
+
+    def fail_partial_open(path, *args, **kwargs):
+        if path.name.endswith(".part"):
+            raise OSError(errno.ENOSPC, "No space left on device")
+        return real_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(server, "urlopen", lambda request, timeout: FakeResponse())
+    monkeypatch.setattr(Path, "open", fail_partial_open)
+    state = server.DownloadState(downloading=True, total_bytes=len(contents), source="modelscope")
+
+    with pytest.raises(OSError) as raised:
+        server.download_modelscope_file(model_id, artifact, state)
+
+    assert raised.value.errno == errno.ENOSPC
+
+
+def test_modelscope_snapshot_does_not_retry_disk_full_error(monkeypatch, tmp_path):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    artifact = server.ModelArtifact("model.safetensors", 4, "unused")
+    monkeypatch.setitem(server.MODEL_ARTIFACTS, model_id, (artifact,))
+    monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+    attempts = 0
+
+    def fail_download(_, selected_artifact, state):
+        nonlocal attempts
+        attempts += 1
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(server, "download_modelscope_file", fail_download)
+
+    with pytest.raises(OSError) as raised:
+        server.download_modelscope_snapshot(
+            model_id,
+            server.DownloadState(downloading=True, total_bytes=4),
+        )
+
+    assert raised.value.errno == errno.ENOSPC
+    assert attempts == 1
+
+
+def test_modelscope_snapshot_writes_verified_marker(monkeypatch, tmp_path):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    contents = b"weights"
+    artifact = server.ModelArtifact(
+        "model.safetensors",
+        len(contents),
+        hashlib.sha256(contents).hexdigest(),
+    )
+    monkeypatch.setitem(server.MODEL_ARTIFACTS, model_id, (artifact,))
+    monkeypatch.setitem(server.MODELSCOPE_REVISIONS, model_id, "pinned-revision")
+    monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+
+    def fake_download(_, selected_artifact, state):
+        path = server.modelscope_snapshot_directory(model_id) / selected_artifact.path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(contents)
+        state.downloaded_bytes = len(contents)
+
+    monkeypatch.setattr(server, "download_modelscope_file", fake_download)
+    state = server.DownloadState(downloading=True, total_bytes=len(contents))
+
+    path = server.download_modelscope_snapshot(model_id, state)
+
+    marker = json.loads(server.modelscope_verification_marker(model_id).read_text())
+    assert path == server.modelscope_snapshot_directory(model_id)
+    assert marker["revision"] == "pinned-revision"
+    assert state.source == "modelscope"
+
+
+def test_download_falls_back_from_modelscope_to_huggingface(monkeypatch, tmp_path):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    artifact = server.ModelArtifact("model.safetensors", 4, "unused")
+    monkeypatch.setitem(server.MODEL_ARTIFACTS, model_id, (artifact,))
+    monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+    monkeypatch.delenv("VOICEINPUT_MODEL_DOWNLOAD_SOURCE", raising=False)
+    fallback_path = tmp_path / "huggingface-snapshot"
+
+    def fail_modelscope(_, state):
+        state.source = "modelscope"
+        raise ConnectionError("modelscope unavailable")
+
+    def succeed_huggingface(_, state):
+        state.source = "huggingface"
+        return fallback_path
+
+    monkeypatch.setattr(server, "download_modelscope_snapshot", fail_modelscope)
+    monkeypatch.setattr(server, "download_huggingface_snapshot", succeed_huggingface)
+
+    assert server.download_model_snapshot(model_id) == fallback_path
+    state = server.download_state(model_id)
+    assert state.source == "huggingface"
+    assert state.downloaded_bytes == 4
+    assert state.downloading is False
+
+
+def test_download_does_not_retry_or_fallback_when_disk_is_full(monkeypatch, tmp_path):
+    model_id = "Qwen/Qwen3-ASR-0.6B"
+    monkeypatch.setenv("VOICEINPUT_MODELS_ROOT", str(tmp_path))
+    monkeypatch.delenv("VOICEINPUT_MODEL_DOWNLOAD_SOURCE", raising=False)
+    monkeypatch.setattr(server, "download_source_order", lambda _: ("modelscope", "huggingface"))
+    attempts = {"modelscope": 0, "huggingface": 0}
+
+    def fail_modelscope(_, state):
+        attempts["modelscope"] += 1
+        state.source = "modelscope"
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    def unexpected_huggingface(_, state):
+        attempts["huggingface"] += 1
+        state.source = "huggingface"
+        return tmp_path / "unexpected"
+
+    monkeypatch.setattr(server, "download_modelscope_snapshot", fail_modelscope)
+    monkeypatch.setattr(server, "download_huggingface_snapshot", unexpected_huggingface)
+
+    with pytest.raises(OSError) as raised:
+        server.download_model_snapshot(model_id)
+
+    assert raised.value.errno == errno.ENOSPC
+    assert attempts == {"modelscope": 1, "huggingface": 0}
+    state = server.download_state(model_id)
+    assert state.downloading is False
+    assert state.error_code == "insufficient_disk_space"
 
 
 def test_models_status_rejects_unsupported_model_id():
@@ -484,13 +714,13 @@ def test_transcribe_passes_context_to_session(monkeypatch, tmp_path):
             files={"audio": ("audio.wav", handle, "audio/wav")},
             data={
                 "model_id": "Qwen/Qwen3-ASR-1.7B",
-                "context": "Important terms to preserve exactly: Claude Code."
+                "context": "Claude Code Qwen3-ASR"
             },
         )
 
     assert response.status_code == 200
     assert response.json() == {"text": "Claude Code"}
-    assert captured["context"] == "Important terms to preserve exactly: Claude Code."
+    assert captured["context"] == "Claude Code Qwen3-ASR"
 
 
 def test_transcribe_passes_strategy_to_helper(monkeypatch, tmp_path):

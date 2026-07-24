@@ -24,6 +24,9 @@ struct QwenModelStatus: Decodable {
     let errorCode: String?
     let operationId: String?
     let updatedAt: TimeInterval?
+    let downloadedBytes: Int64?
+    let totalBytes: Int64?
+    let downloadSource: String?
     let modelId: String
     let modelPath: String?
 
@@ -37,6 +40,9 @@ struct QwenModelStatus: Decodable {
         case errorCode = "error_code"
         case operationId = "operation_id"
         case updatedAt = "updated_at"
+        case downloadedBytes = "downloaded_bytes"
+        case totalBytes = "total_bytes"
+        case downloadSource = "download_source"
         case modelId = "model_id"
         case modelPath = "model_path"
     }
@@ -52,7 +58,10 @@ struct QwenModelStatus: Decodable {
         phase: QwenModelPreparationPhase? = nil,
         errorCode: String? = nil,
         operationId: String? = nil,
-        updatedAt: TimeInterval? = nil
+        updatedAt: TimeInterval? = nil,
+        downloadedBytes: Int64? = nil,
+        totalBytes: Int64? = nil,
+        downloadSource: String? = nil
     ) {
         self.installed = installed
         self.loaded = loaded
@@ -68,6 +77,9 @@ struct QwenModelStatus: Decodable {
         self.errorCode = errorCode
         self.operationId = operationId
         self.updatedAt = updatedAt
+        self.downloadedBytes = downloadedBytes
+        self.totalBytes = totalBytes
+        self.downloadSource = downloadSource
         self.modelId = modelId
         self.modelPath = modelPath
     }
@@ -89,7 +101,10 @@ struct QwenModelStatus: Decodable {
             phase: try container.decodeIfPresent(QwenModelPreparationPhase.self, forKey: .phase),
             errorCode: try container.decodeIfPresent(String.self, forKey: .errorCode),
             operationId: try container.decodeIfPresent(String.self, forKey: .operationId),
-            updatedAt: try container.decodeIfPresent(TimeInterval.self, forKey: .updatedAt)
+            updatedAt: try container.decodeIfPresent(TimeInterval.self, forKey: .updatedAt),
+            downloadedBytes: try container.decodeIfPresent(Int64.self, forKey: .downloadedBytes),
+            totalBytes: try container.decodeIfPresent(Int64.self, forKey: .totalBytes),
+            downloadSource: try container.decodeIfPresent(String.self, forKey: .downloadSource)
         )
     }
 

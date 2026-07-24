@@ -126,6 +126,9 @@ struct DiagnosticsExporter {
             if let qwenErrorKind = provenance.qwenErrorKind {
                 lines.append("- qwen_error_kind: \(sanitize(qwenErrorKind))")
             }
+            if let contextEchoRecovery = provenance.contextEchoRecovery {
+                lines.append("- context_echo_recovery: \(sanitize(contextEchoRecovery))")
+            }
             if let sessionStateAtCompletion = provenance.sessionStateAtCompletion {
                 lines.append("- session_state_at_completion: \(sanitize(sessionStateAtCompletion))")
             }

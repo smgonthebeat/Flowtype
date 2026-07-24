@@ -76,6 +76,7 @@ final class TranscriptionProvenanceStoreTests: XCTestCase {
             qwenErrorKind: QwenFailureKind.modelLoadTimedOut.rawValue,
             appleFallbackStartedAt: fallbackStartedAt,
             appleFallbackReason: QwenFailureKind.modelLoadTimedOut.rawValue,
+            contextEchoRecovery: QwenContextEchoRecovery.retriedWithoutContext.rawValue,
             sessionStateAtCompletion: "transcribing",
             commitOutcome: "ignored",
             ignoredInputReason: "transcription_in_flight",
@@ -95,6 +96,7 @@ final class TranscriptionProvenanceStoreTests: XCTestCase {
         XCTAssertEqual(decoded.modelStatusBefore?.modelID, VoiceInputModel.qwen3ASR06B.modelID)
         XCTAssertEqual(decoded.qwenErrorKind, QwenFailureKind.modelLoadTimedOut.rawValue)
         XCTAssertEqual(decoded.appleFallbackReason, QwenFailureKind.modelLoadTimedOut.rawValue)
+        XCTAssertEqual(decoded.contextEchoRecovery, QwenContextEchoRecovery.retriedWithoutContext.rawValue)
         XCTAssertEqual(decoded.sessionStateAtCompletion, "transcribing")
         XCTAssertEqual(decoded.commitOutcome, "ignored")
         XCTAssertEqual(decoded.ignoredInputReason, "transcription_in_flight")
@@ -120,6 +122,7 @@ final class TranscriptionProvenanceStoreTests: XCTestCase {
         XCTAssertNil(decoded.sessionStateAtCompletion)
         XCTAssertNil(decoded.commitOutcome)
         XCTAssertNil(decoded.ignoredInputReason)
+        XCTAssertNil(decoded.contextEchoRecovery)
     }
 
     func testStoreWritesUnderDiagnosticsTranscriptionsDirectory() throws {

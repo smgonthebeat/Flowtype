@@ -290,6 +290,13 @@ enum AppCopy {
                 : "Uses \(formattedSize) on disk"
         }
 
+        func modelDownloadUsage(_ downloaded: String, total: String, source: String?) -> String {
+            let sourceSuffix = source.map { " · \($0)" } ?? ""
+            return usesChineseReadinessCopy
+                ? "已下载 \(downloaded) / \(total)\(sourceSuffix)"
+                : "Downloaded \(downloaded) / \(total)\(sourceSuffix)"
+        }
+
         func modelDeleteConfirmMessage(for model: VoiceInputModel, formattedSize: String?) -> String {
             if usesChineseReadinessCopy {
                 let sizeNote = formattedSize.map { "（\($0)）" } ?? ""

@@ -1,5 +1,9 @@
 import Foundation
 
+enum QwenContextEchoRecovery: String, Codable, Equatable {
+    case retriedWithoutContext
+}
+
 struct TranscriptionResult: Equatable {
     let text: String
     let engine: TranscriptionEngineKind
@@ -8,6 +12,7 @@ struct TranscriptionResult: Equatable {
     let requestedStrategy: String?
     let effectiveStrategy: String?
     let fallbackReason: String?
+    let contextEchoRecovery: QwenContextEchoRecovery?
 
     init(
         text: String,
@@ -16,7 +21,8 @@ struct TranscriptionResult: Equatable {
         requestedModelID: String? = nil,
         requestedStrategy: String? = nil,
         effectiveStrategy: String? = nil,
-        fallbackReason: String? = nil
+        fallbackReason: String? = nil,
+        contextEchoRecovery: QwenContextEchoRecovery? = nil
     ) {
         self.text = text
         self.engine = engine
@@ -25,6 +31,7 @@ struct TranscriptionResult: Equatable {
         self.requestedStrategy = requestedStrategy
         self.effectiveStrategy = effectiveStrategy
         self.fallbackReason = fallbackReason
+        self.contextEchoRecovery = contextEchoRecovery
     }
 }
 
@@ -36,4 +43,5 @@ enum TranscriptionError: Error, Equatable {
     case unavailable
     case emptyResult
     case timedOut
+    case contextLeakDetected
 }

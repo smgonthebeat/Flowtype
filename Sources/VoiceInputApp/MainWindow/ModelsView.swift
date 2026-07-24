@@ -10,7 +10,9 @@ struct ModelsView: View {
     let actions: MainWindowActions
 
     @State private var downloadStates: [String: ModelDownloadState] = [:]
+    @State private var liveStatuses: [String: QwenModelStatus] = [:]
     @State private var refreshingModelIDs: Set<String> = []
+    @State private var statusRequestsInFlight: Set<String> = []
     @State private var isShowingError = false
     @State private var errorMessage = ""
     @State private var suitabilityAlert: ModelSuitabilityAlert?
@@ -47,12 +49,12 @@ struct ModelsView: View {
             loadHardwareSummaryIfNeeded()
             reloadLocalState()
             reloadStorageSizes()
-            Task { await refreshAllStatuses() }
         }
+        .task { await monitorModelStatuses() }
         .onChange(of: state.refreshID) {
             reloadLocalState()
             reloadStorageSizes()
-            Task { await refreshAllStatuses() }
+            Task { await refreshAllStatuses(indicateActivity: false) }
         }
         .confirmationDialog(
             copy.modelDeleteConfirmTitle,
@@ -173,8 +175,14 @@ struct ModelsView: View {
                 .help(copy.modelRefreshTitle)
             }
 
-            progressArea(for: state, copy: copy)
-            modelFooter(model: model, manager: manager, state: state, isSelected: isSelected, copy: copy)
+            progressArea(for: state, status: liveStatuses[model.id], copy: copy)
+            modelFooter(
+                model: model,
+                manager: manager,
+                state: state,
+                isSelected: isSelected,
+                copy: copy
+            )
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -204,7 +212,11 @@ struct ModelsView: View {
     }
 
     @ViewBuilder
-    private func progressArea(for state: ModelDownloadState, copy: AppCopy.Texts) -> some View {
+    private func progressArea(
+        for state: ModelDownloadState,
+        status: QwenModelStatus?,
+        copy: AppCopy.Texts
+    ) -> some View {
         switch state {
         case .downloading(let progress):
             VStack(alignment: .leading, spacing: 8) {
@@ -216,6 +228,18 @@ struct ModelsView: View {
                 Text(progressText(progress, copy: copy))
                     .font(.caption)
                     .foregroundStyle(theme.secondaryInk)
+                if let status,
+                   let downloadedBytes = status.downloadedBytes,
+                   let totalBytes = status.totalBytes,
+                   totalBytes > 0 {
+                    Text(copy.modelDownloadUsage(
+                        formattedSize(downloadedBytes),
+                        total: formattedSize(totalBytes),
+                        source: downloadSourceTitle(status.downloadSource)
+                    ))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(theme.secondaryInk)
+                }
             }
         case .repairNeeded:
             Text(copy.modelRepairMessage)
@@ -267,7 +291,7 @@ struct ModelsView: View {
                 .help(needsRepair ? copy.modelRepairHelp : copy.modelDownloadHelp)
             }
 
-            if let bytes = storageSizes[model.id] {
+            if !isDownloading(state), let bytes = storageSizes[model.id] {
                 Text(copy.modelStorageUsage(formattedSize(bytes)))
                     .font(.caption)
                     .foregroundStyle(theme.secondaryInk)
@@ -494,23 +518,50 @@ struct ModelsView: View {
         }
     }
 
-    private func refreshAllStatuses() async {
-        for model in models {
-            await refreshStatus(for: model)
+    private func monitorModelStatuses() async {
+        while !Task.isCancelled {
+            await refreshAllStatuses(indicateActivity: false)
+            let hasActivePreparation = downloadStates.values.contains(where: isDownloading)
+            do {
+                try await Task.sleep(
+                    nanoseconds: ModelStatusRefreshPolicy.intervalNanoseconds(
+                        hasActivePreparation: hasActivePreparation
+                    )
+                )
+            } catch {
+                return
+            }
         }
     }
 
-    private func refreshStatus(for model: VoiceInputModel) async {
-        guard !isRefreshing(model) else { return }
-        refreshingModelIDs.insert(model.id)
-        defer { refreshingModelIDs.remove(model.id) }
+    private func refreshAllStatuses(indicateActivity: Bool = true) async {
+        for model in models {
+            await refreshStatus(for: model, indicateActivity: indicateActivity)
+        }
+    }
+
+    private func refreshStatus(for model: VoiceInputModel, indicateActivity: Bool = true) async {
+        guard !statusRequestsInFlight.contains(model.id) else { return }
+        statusRequestsInFlight.insert(model.id)
+        if indicateActivity {
+            refreshingModelIDs.insert(model.id)
+        }
+        defer {
+            statusRequestsInFlight.remove(model.id)
+            if indicateActivity {
+                refreshingModelIDs.remove(model.id)
+            }
+        }
 
         do {
             let status = try await actions.refreshModelStatus(model.modelID)
             apply(status: status, to: model)
         } catch {
             let copy = AppCopy.texts(for: settingsStore.uiLanguage)
-            downloadStates[model.id] = localState(for: manager(for: model), copy: copy)
+            downloadStates[model.id] = ModelStatusRefreshPolicy.stateAfterRefreshFailure(
+                current: downloadStates[model.id],
+                fallback: localState(for: manager(for: model), copy: copy)
+            )
         }
     }
 
@@ -539,6 +590,7 @@ struct ModelsView: View {
     }
 
     private func apply(status: QwenModelStatus, to model: VoiceInputModel) {
+        liveStatuses[model.id] = status
         let manager = manager(for: model)
         // Trust disk over the helper's in-memory session: after a delete the
         // helper can still report a recently-loaded model as installed, which
@@ -590,6 +642,30 @@ struct ModelsView: View {
         return "\(copy.modelPreparingMessage) \(percentage)%"
     }
 
+    private func downloadSourceTitle(_ source: String?) -> String? {
+        switch source {
+        case "modelscope": return "ModelScope"
+        case "huggingface": return "Hugging Face"
+        default: return nil
+        }
+    }
+
+}
+
+enum ModelStatusRefreshPolicy {
+    static func intervalNanoseconds(hasActivePreparation: Bool) -> UInt64 {
+        hasActivePreparation ? 500_000_000 : 2_000_000_000
+    }
+
+    static func stateAfterRefreshFailure(
+        current: ModelDownloadState?,
+        fallback: ModelDownloadState
+    ) -> ModelDownloadState {
+        if case .downloading = current {
+            return current ?? fallback
+        }
+        return fallback
+    }
 }
 
 private struct ModelSuitabilityAlert: Identifiable {

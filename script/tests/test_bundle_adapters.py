@@ -91,6 +91,14 @@ class BundleAdapterTests(unittest.TestCase):
         self.assertLess(assembly, signing)
         self.assertIn("CODESIGN_IDENTITY ?= -", self.makefile)
 
+    def test_install_archives_previous_app_before_replacement(self) -> None:
+        install_target = self.makefile.split("install: build", 1)[1].split("\ndmg:", 1)[0]
+
+        self.assertIn('archive_root="$(CURDIR)/.trash"', install_target)
+        self.assertIn('mv "/Applications/$(APP_NAME).app" "$$archive_path"', install_target)
+        self.assertIn('ditto "$(APP_DIR)" "/Applications/$(APP_NAME).app"', install_target)
+        self.assertNotIn("rm -rf", install_target)
+
     def test_package_verifier_delegates_inventory_then_retains_trust_checks(self) -> None:
         source = self._logical_lines(self.verify_script)
         checks = (

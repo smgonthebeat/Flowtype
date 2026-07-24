@@ -16,6 +16,9 @@ class ModelStatusResponse(BaseModel):
     error_code: str | None = None
     operation_id: str | None = None
     updated_at: float | None = None
+    downloaded_bytes: int | None = None
+    total_bytes: int | None = None
+    download_source: str | None = None
     model_id: str
     model_path: str | None = None
 

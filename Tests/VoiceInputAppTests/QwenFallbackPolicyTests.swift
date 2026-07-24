@@ -20,6 +20,7 @@ final class QwenFallbackPolicyTests: XCTestCase {
         XCTAssertTrue(policy.shouldFallback(for: .transcriptionTimedOut))
         XCTAssertTrue(policy.shouldFallback(for: .helperStartFailed))
         XCTAssertTrue(policy.shouldFallback(for: .transcriptionFailed))
+        XCTAssertTrue(policy.shouldFallback(for: .contextLeakDetected))
     }
 
     func testClassifiesKnownErrors() {
@@ -27,6 +28,7 @@ final class QwenFallbackPolicyTests: XCTestCase {
 
         XCTAssertEqual(policy.classify(TranscriptionError.emptyResult), .emptyAudio)
         XCTAssertEqual(policy.classify(TranscriptionError.timedOut), .transcriptionTimedOut)
+        XCTAssertEqual(policy.classify(TranscriptionError.contextLeakDetected), .contextLeakDetected)
         XCTAssertEqual(policy.classify(CancellationError()), .cancelled)
         XCTAssertEqual(policy.classify(URLError(.cancelled)), .cancelled)
         XCTAssertEqual(policy.classify(URLError(.timedOut)), .transcriptionTimedOut)

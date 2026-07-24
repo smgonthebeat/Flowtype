@@ -591,6 +591,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     previewID: previewID,
                     selectedEngine: selectedEngine
                 )
+                try self.validateTranscriptForCommit(result.text)
                 self.captureDebugRecordingIfNeeded(
                     at: recordingURL,
                     recordingDuration: recordingDuration,
@@ -982,9 +983,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     languageMode: settingsStore.languageMode
                 )
                 qwenFinishedAt = Date()
+                if let recovery = result.contextEchoRecovery {
+                    AppLogger.asr.notice("Qwen context echo recovered action=\(recovery.rawValue, privacy: .public)")
+                }
                 try? ModelManager(model: runModel, applicationSupportRoot: modelManager.applicationSupportRoot).markInstalled()
                 let postStartedAt = Date()
                 let processed = await postProcessedOffMainActor(result)
+                let recordingDurationSeconds = QwenContextEchoDetector.recordingDuration(fileURL: url)
+                if QwenContextEchoDetector.isLikelyEcho(
+                    processed.text,
+                    context: context,
+                    recordingDuration: recordingDurationSeconds ?? 0,
+                    knownTermPolicy: processed.contextEchoRecovery == nil ? .all : .listOnly
+                ) {
+                    throw TranscriptionError.contextLeakDetected
+                }
                 let postProcessingMilliseconds = milliseconds(since: postStartedAt)
                 let totalMilliseconds = milliseconds(since: totalStartedAt)
                 let timingSample = TranscriptionTimingSample(
@@ -992,7 +1005,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     modelID: runModel.modelID,
                     requestedStrategy: processed.requestedStrategy ?? strategy.rawValue,
                     effectiveStrategy: processed.effectiveStrategy ?? processed.requestedStrategy ?? strategy.rawValue,
-                    recordingDurationSeconds: QwenContextEchoDetector.recordingDuration(fileURL: url),
+                    recordingDurationSeconds: recordingDurationSeconds,
                     helperStartMilliseconds: helperStartMilliseconds,
                     modelPreparationMilliseconds: statusProbeMilliseconds,
                     decodeMilliseconds: decodeMilliseconds,
@@ -1017,6 +1030,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                         recordingDurationSeconds: timingSample.recordingDurationSeconds,
                         qwenStartedAt: qwenStartedAt,
                         qwenFinishedAt: qwenFinishedAt,
+                        contextEchoRecovery: processed.contextEchoRecovery?.rawValue,
                         sessionStateAtCompletion: currentSessionStateForDiagnostics(),
                         commitOutcome: commitOutcomeForDiagnostics(previewID: previewID, currentOutcome: "committed"),
                         ignoredInputReason: ignoredInputReasonForDiagnostics(previewID: previewID),
@@ -1129,6 +1143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                         fallbackReason: failureKind.rawValue
                     )
                 )
+                try validateTranscriptForCommit(processed.text)
                 let timingSample = TranscriptionTimingSample(
                     createdAt: Date(),
                     modelID: runModel.modelID,
@@ -1178,6 +1193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             let result = try await AppleSpeechEngine(localeIdentifier: settingsStore.appleSpeechLocaleIdentifier)
                 .transcribe(fileURL: url, languageMode: settingsStore.languageMode)
             let processed = postProcessed(result)
+            try validateTranscriptForCommit(processed.text)
             await appendTranscriptionProvenance(
                 TranscriptionProvenance(
                     recordingID: previewID,
@@ -1219,6 +1235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 strategy: .chunked,
                 selectedEngine: item.retryEngine
             )
+            try validateTranscriptForCommit(result.text)
             let duration = item.recordingDuration
                 ?? QwenContextEchoDetector.recordingDuration(fileURL: retryURL)
                 ?? 0
@@ -1310,6 +1327,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
              .helperBusyTimedOut,
              .transcriptionTimedOut,
              .transcriptionFailed,
+             .contextLeakDetected,
              .emptyAudio,
              .permissionMissing,
              .cancelled:
@@ -1940,7 +1958,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             requestedModelID: result.requestedModelID,
             requestedStrategy: result.requestedStrategy,
             effectiveStrategy: result.effectiveStrategy,
-            fallbackReason: result.fallbackReason
+            fallbackReason: result.fallbackReason,
+            contextEchoRecovery: result.contextEchoRecovery
         )
     }
 
@@ -1955,7 +1974,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 requestedModelID: result.requestedModelID,
                 requestedStrategy: result.requestedStrategy,
                 effectiveStrategy: result.effectiveStrategy,
-                fallbackReason: result.fallbackReason
+                fallbackReason: result.fallbackReason,
+                contextEchoRecovery: result.contextEchoRecovery
             )
         }.value
     }
@@ -1969,6 +1989,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             mathNotationOutputFormat: settingsStore.mathNotationOutputFormat,
             knownTerms: knownTerms
         )
+    }
+
+    private func validateTranscriptForCommit(_ text: String) throws {
+        let hotwords = (try? hotwordStore?.enabledHotwords()) ?? []
+        let context = TranscriptionContextBuilder.context(for: hotwords)
+        try SensitiveTranscriptCommitGuard.validate(text, context: context)
     }
 
     private static func transcriptionFailureText(for error: Error) -> String {

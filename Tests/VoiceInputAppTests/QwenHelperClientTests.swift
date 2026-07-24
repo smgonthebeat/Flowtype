@@ -58,6 +58,9 @@ final class QwenHelperClientTests: XCTestCase {
                   "error_code": null,
                   "operation_id": "operation-1",
                   "updated_at": 1783872000.0,
+                  "downloaded_bytes": 1880560703,
+                  "total_bytes": 1880560703,
+                  "download_source": "modelscope",
                   "model_id": "Qwen/Qwen3-ASR-0.6B",
                   "model_path": "/tmp/VoiceInput/Models/qwen3-asr-0.6b"
                 }
@@ -82,6 +85,9 @@ final class QwenHelperClientTests: XCTestCase {
         XCTAssertNil(status.errorCode)
         XCTAssertEqual(status.operationId, "operation-1")
         XCTAssertEqual(status.updatedAt, 1_783_872_000)
+        XCTAssertEqual(status.downloadedBytes, 1_880_560_703)
+        XCTAssertEqual(status.totalBytes, 1_880_560_703)
+        XCTAssertEqual(status.downloadSource, "modelscope")
         XCTAssertEqual(status.modelId, "Qwen/Qwen3-ASR-0.6B")
         XCTAssertEqual(status.modelPath, "/tmp/VoiceInput/Models/qwen3-asr-0.6b")
     }
@@ -116,6 +122,9 @@ final class QwenHelperClientTests: XCTestCase {
         XCTAssertNil(status.errorCode)
         XCTAssertNil(status.operationId)
         XCTAssertNil(status.updatedAt)
+        XCTAssertNil(status.downloadedBytes)
+        XCTAssertNil(status.totalBytes)
+        XCTAssertNil(status.downloadSource)
     }
 
     func testFailedPreparationStatusExposesTypedErrorWithoutRawHelperMessage() async throws {
@@ -237,7 +246,7 @@ final class QwenHelperClientTests: XCTestCase {
             XCTAssertTrue(body.contains("name=\"model_id\""))
             XCTAssertTrue(body.contains("name=\"strategy\""))
             XCTAssertTrue(body.contains("Qwen/Qwen3-ASR-1.7B"))
-            XCTAssertTrue(body.contains("Important terms to preserve exactly: Claude Code."))
+            XCTAssertTrue(body.contains("Claude Code Qwen3-ASR"))
             XCTAssertTrue(body.contains("full"))
             let data = Data(#"{"text":"Claude Code"}"#.utf8)
             let response = HTTPURLResponse(
@@ -258,7 +267,7 @@ final class QwenHelperClientTests: XCTestCase {
         let text = try await client.transcribe(
             wavURL: audioURL,
             modelID: "Qwen/Qwen3-ASR-1.7B",
-            context: "Important terms to preserve exactly: Claude Code."
+            context: "Claude Code Qwen3-ASR"
         )
 
         XCTAssertEqual(text, "Claude Code")

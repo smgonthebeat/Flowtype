@@ -532,6 +532,7 @@ final class DiagnosticsExporterTests: XCTestCase {
             effectiveStrategy: "chunked",
             qwenErrorKind: QwenFailureKind.transcriptionTimedOut.rawValue,
             appleFallbackReason: "VOICEINPUT_HELPER_TOKEN=secret",
+            contextEchoRecovery: QwenContextEchoRecovery.retriedWithoutContext.rawValue,
             sessionStateAtCompletion: "transcribing",
             commitOutcome: "committed",
             ignoredInputReason: "none"
@@ -550,6 +551,7 @@ final class DiagnosticsExporterTests: XCTestCase {
         XCTAssertTrue(text.contains("- requested_strategy: full"))
         XCTAssertTrue(text.contains("- effective_strategy: chunked"))
         XCTAssertTrue(text.contains("- qwen_error_kind: transcriptionTimedOut"))
+        XCTAssertTrue(text.contains("- context_echo_recovery: retriedWithoutContext"))
         XCTAssertTrue(text.contains("- session_state_at_completion: transcribing"))
         XCTAssertTrue(text.contains("- commit_outcome: committed"))
         XCTAssertTrue(text.contains("- ignored_input_reason: none"))
