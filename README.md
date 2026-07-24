@@ -3,6 +3,8 @@
 [English](README.en.md) · 简体中文
 
 > **Release status:** [`v0.1.0-preview.4`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4) Apple Silicon DMG 已开放下载。它使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**；macOS 会拦截首次启动，需要用户在 System Settings → Privacy & Security 中明确选择 Open Anyway。
+>
+> [首次打开指引 ↓](#first-launch)
 
 <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.4/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
@@ -49,7 +51,42 @@ Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开�
 
 普通用户不需要安装 Swift 或自己编译。请只从官方 [`v0.1.0-preview.4` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4) 下载 `Flowtype.dmg`，打开后按照窗口中的箭头把 `Flowtype.app` 拖进 Applications。
 
-这是一份明确标注的 **unnotarized Preview**：首次双击时 macOS 会因为无法验证开发者而拦截。先尝试打开一次并关闭警告，然后进入 **System Settings → Privacy & Security**，在 Security 区域选择 **Open Anyway**，再确认 Open。Apple 的官方说明见 [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac)。不要关闭 Gatekeeper，也不要运行任何 quarantine-removal 或 Gatekeeper-disabling 命令。
+<a id="first-launch"></a>
+
+### 首次打开 Flowtype
+
+这是一份明确标注的 **unnotarized Preview**。首次双击时，macOS 会因为无法验证开发者而拦截；这是当前签名状态下的预期行为，不表示你需要关闭系统安全保护。
+
+<table>
+  <tr>
+    <td width="42%" valign="top">
+      <strong>1. 先尝试打开一次</strong><br><br>
+      双击 Applications 中的 Flowtype，在提示中先点击「打开」。如果 macOS 仍然阻止启动，关闭该对话框并继续下一步；只有尝试打开过，后面的「仍要打开」按钮才会出现。
+    </td>
+    <td width="58%" valign="top">
+      <strong>2. 在「隐私与安全性」中放行</strong><br><br>
+      打开「系统设置 → 隐私与安全性」，向下滚动到「安全性」，找到“已阻止使用 Flowtype”，点击「仍要打开」。按提示验证登录密码或 Touch ID，最后确认「打开」。
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="website/assets/first-launch-1-blocked.png" alt="macOS 首次阻止打开 Flowtype 的提示" width="420">
+    </td>
+    <td valign="top">
+      <img src="website/assets/first-launch-2-open-anyway.png" alt="macOS 隐私与安全性中的 Flowtype 仍要打开按钮" width="620">
+    </td>
+  </tr>
+</table>
+
+**3. 对照 Apple 官方步骤。** Apple 当前说明同样要求先尝试打开 App，再进入「系统设置 → 隐私与安全性 → 安全性」选择「打开 / 仍要打开」。按钮通常只在尝试打开后的约一小时内出现；如果没有看到，请再次双击 Flowtype，然后立即返回该页面。
+
+<a href="https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac">
+  <img src="website/assets/first-launch-3-apple-guide.png" alt="Apple 官方打开来自未知开发者的 Mac App 指引" width="860">
+</a>
+
+*[查看 Apple 官方实时说明](https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac)。截图仅用于帮助定位设置；Apple 页面与 macOS 文案可能随版本变化。*
+
+只对你确认来自本项目官方 Release 的 Flowtype 执行上述操作。**不要关闭 Gatekeeper，也不要运行任何 quarantine-removal 或 Gatekeeper-disabling 命令。**
 
 以下命令只面向希望审阅或修改源码的 developers：
 

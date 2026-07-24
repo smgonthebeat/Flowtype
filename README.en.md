@@ -3,6 +3,8 @@
 English · [简体中文](README.md)
 
 > **Release status:** The [`v0.1.0-preview.4`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
+>
+> [First-launch guide ↓](#first-launch)
 
 <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.4/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
@@ -49,7 +51,42 @@ Clicking **Prepare Flowtype** for the first time confirms the download: Flowtype
 
 Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.4` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4), open it, and follow the arrow to drag `Flowtype.app` to Applications.
 
-This is an explicitly labelled **unnotarized Preview**. macOS will block the first double-click because it cannot verify the developer. Try to open Flowtype once and dismiss the warning, then open **System Settings → Privacy & Security**, choose **Open Anyway** in the Security section, and confirm Open. See Apple's official guide, [Open a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). Do not disable Gatekeeper or run quarantine-removal or Gatekeeper-disabling commands.
+<a id="first-launch"></a>
+
+### Open Flowtype For The First Time
+
+This is an explicitly labelled **unnotarized Preview**. macOS will block the first double-click because it cannot verify the developer. That is expected for the current signature and does not mean you should disable macOS security protections. The screenshots use a Chinese macOS interface; the control locations are the same in other system languages.
+
+<table>
+  <tr>
+    <td width="42%" valign="top">
+      <strong>1. Try to open Flowtype once</strong><br><br>
+      Double-click Flowtype in Applications and choose Open in the warning. If macOS still blocks the launch, dismiss the dialog and continue to the next step. The Open Anyway control appears only after this first attempt.
+    </td>
+    <td width="58%" valign="top">
+      <strong>2. Allow it in Privacy &amp; Security</strong><br><br>
+      Open System Settings → Privacy &amp; Security, scroll to Security, find the message that Flowtype was blocked, and choose Open Anyway. Authenticate if prompted, then confirm Open.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <img src="website/assets/first-launch-1-blocked.png" alt="macOS blocking the first launch of Flowtype" width="420">
+    </td>
+    <td valign="top">
+      <img src="website/assets/first-launch-2-open-anyway.png" alt="Open Anyway for Flowtype in macOS Privacy and Security settings" width="620">
+    </td>
+  </tr>
+</table>
+
+**3. Compare with Apple's official steps.** Apple's current instructions likewise require an initial launch attempt followed by System Settings → Privacy & Security → Security → Open/Open Anyway. The control is generally available for about one hour after the attempt. If it is missing, double-click Flowtype again and return to the settings page immediately.
+
+<a href="https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac">
+  <img src="website/assets/first-launch-3-apple-guide.png" alt="Apple's official guide for opening a Mac app from an unknown developer" width="860">
+</a>
+
+*[View Apple's live official instructions](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). The screenshot is a location aid; Apple may change the page or macOS wording over time.*
+
+Use this override only for Flowtype obtained from this project's official Release. **Do not disable Gatekeeper or run quarantine-removal or Gatekeeper-disabling commands.**
 
 The following commands are only for developers who want to inspect or modify the source:
 

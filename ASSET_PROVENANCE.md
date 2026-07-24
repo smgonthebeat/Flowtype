@@ -48,6 +48,36 @@ Apple name and symbol are used only to identify the supported Apple Silicon
 platform and do not imply endorsement, as described in
 [TRADEMARKS.md](TRADEMARKS.md).
 
+## First-Launch Guide Screenshots
+
+The GitHub README uses three dated screenshots to explain the supported macOS
+first-launch flow for the unnotarized Preview:
+
+- `website/assets/first-launch-1-blocked.png` is a project-owner capture of the
+  macOS dialog shown when Flowtype is first opened. Its reviewed SHA-256 is
+  `e66519936bced2d4ae4e7a1208a19ac1080ed423b552c6e7c0a16c4022021f1b`.
+- `website/assets/first-launch-2-open-anyway.png` is a project-owner capture of
+  the Flowtype-specific Open Anyway control in macOS Privacy & Security. Its
+  reviewed SHA-256 is
+  `f2240eee602ebf5537b163b5b5eb8884fb7a33348e6fd0089533d5b00236f8e0`.
+- `website/assets/first-launch-3-apple-guide.png` is a 2026-07-25 capture of
+  Apple's Chinese-language Mac User Guide page, [Open a Mac app from an unknown
+  developer](https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac). Its
+  reviewed SHA-256 is
+  `97323658ca0f57c6c87a59b08939fecb6ce63ad9c593e25c99f1d4c221817af1`.
+
+The project owner explicitly selected all three captures for publication. The
+published PNGs retain the source pixels exactly while removing ancillary image
+metadata. Automated tests lock their dimensions and content hashes and reject
+text, EXIF, timestamp, or XMP chunks. No account name, transcript, recording,
+credential, local path, or other user content is visible in the captures.
+
+Apple owns the macOS interface, system icons, support-page content, Apple marks,
+and any other Apple-provided material visible in these screenshots. The images
+are reproduced only as a dated documentary aid and linked back to Apple's live
+instructions. They are not offered under Flowtype's GPL license, and their use
+does not imply Apple affiliation, sponsorship, notarization, or endorsement.
+
 `Resources/DMGBackground.svg`, its exact 1×/2× rendered PNGs, and the combined
 multi-resolution TIFF provide the Finder background for the
 drag-to-Applications disk image. They contain only local project-created vector

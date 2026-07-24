@@ -14,6 +14,7 @@ from them.
 | [uv](https://github.com/astral-sh/uv) | Reproducible Python environment manager | MIT OR Apache-2.0 | A release app bundle may include the uv executable; distributors must preserve its license notices. |
 | [Qwen logo](https://commons.wikimedia.org/wiki/File:Qwen_Logo.svg) | Model-provider identification in the UI | Apache-2.0 | Copyright Alibaba Cloud; the mark may also be protected as a trademark. The bundled SVG is an icon-only crop derived from this source. |
 | [Huashu Design](https://github.com/alchaincyf/huashu-design) | Motion-design method and deterministic render tooling used to produce the README workflow preview | MIT | No Huashu source, runtime, music, or SFX is bundled. The public GIF contains visible attribution, and the Release MP4 soundtrack is project-generated. |
+| [Apple Mac User Guide](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac) and macOS interface | README first-launch location aid and screenshots | © Apple Inc.; all rights reserved | Apple-provided UI, icons, text, and marks visible in the three first-launch screenshots are not offered under Flowtype's GPL license. The captures are used only for dated documentary reference and do not imply Apple affiliation, notarization, or endorsement. |
 
 Apple system frameworks linked by Flowtype are supplied by macOS and are not
 included as third-party source in this repository.
