@@ -91,19 +91,23 @@ derivative of a local HTML animation created for the Flowtype GitHub README. It
 uses a fully synthetic recreation of the public Codex `New chat` empty state as
 an ordinary third-party text target, a synthetic demonstration sentence, and a
 Flowtype-branded closing frame that references the canonical local
-`Resources/Flowtype-logo.svg` microphone-waveform-speech-bubble mark. It does
+app icon extracted from `Resources/Flowtype.icns`. The complete icon preserves
+its white rounded tile and optically inset microphone-waveform-speech-bubble
+mark. It does
 not embed a screenshot, real
 conversation, History text, Hotwords, recording, account identifier, or local
 filesystem path. The Codex name and product mark identify the demonstrated
 target app only; they do not imply an OpenAI integration, affiliation,
-sponsorship, or endorsement. The GIF is 150 frames, 9.99 seconds, and 166,987
+sponsorship, or endorsement. The GIF is 150 frames, 9.99 seconds, and 164,111
 bytes. Its reviewed SHA-256 is
-`8b6cb98cb8c7a157806182359309bb0416b361408cd2241ec4e613c6bef5de0b`.
+`7193c646145c97b16eac6b286be788b97433a6d679625b9e357125bc1a1a80d6`.
 
 The sound-on `Flowtype-GitHub-Promo.mp4` is published only as a GitHub Release
 asset and is intentionally excluded from the source projection. It is a
-10-second 1920×1080, native-60fps H.264/AAC rendering of the same reviewed v4
-visual source. Its soundtrack is generated procedurally from deterministic
+10-second 1920×1080, native-60fps H.264/AAC rendering of the earlier reviewed
+v4 visual source. It was intentionally not regenerated or replaced during the
+later GIF-only app-icon fidelity correction requested by the owner. Its
+soundtrack is generated procedurally from deterministic
 FFmpeg sine and seeded pink-noise sources, with cues aligned to the `Fn` press,
 local-transcription release, atomic paste, and closing resolve. It contains no
 imported music, recording, or third-party SFX file. Input metadata and chapters
