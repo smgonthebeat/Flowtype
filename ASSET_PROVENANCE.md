@@ -90,13 +90,15 @@ analytics, user data, or personal metadata.
 derivative of a local HTML animation created for the Flowtype GitHub README. It
 uses a fully synthetic recreation of the public Codex `New chat` empty state as
 an ordinary third-party text target, a synthetic demonstration sentence, and a
-Flowtype-branded closing frame. It does not embed a screenshot, real
+Flowtype-branded closing frame that references the canonical local
+`Resources/Flowtype-logo.svg` microphone-waveform-speech-bubble mark. It does
+not embed a screenshot, real
 conversation, History text, Hotwords, recording, account identifier, or local
 filesystem path. The Codex name and product mark identify the demonstrated
 target app only; they do not imply an OpenAI integration, affiliation,
-sponsorship, or endorsement. The GIF is 150 frames, 9.99 seconds, and 164,218
+sponsorship, or endorsement. The GIF is 150 frames, 9.99 seconds, and 166,987
 bytes. Its reviewed SHA-256 is
-`c1a3340cc527f3777fdc362505d8c1a767d3b9afb05620f8ea4b69ddcca68cb4`.
+`8b6cb98cb8c7a157806182359309bb0416b361408cd2241ec4e613c6bef5de0b`.
 
 The sound-on `Flowtype-GitHub-Promo.mp4` is published only as a GitHub Release
 asset and is intentionally excluded from the source projection. It is a
@@ -105,9 +107,9 @@ visual source. Its soundtrack is generated procedurally from deterministic
 FFmpeg sine and seeded pink-noise sources, with cues aligned to the `Fn` press,
 local-transcription release, atomic paste, and closing resolve. It contains no
 imported music, recording, or third-party SFX file. Input metadata and chapters
-are stripped from the final container. The MP4 is 428,354 bytes. Its reviewed
+are stripped from the final container. The MP4 is 430,113 bytes. Its reviewed
 SHA-256 is
-`fbf146b9ac67a50ede0822f92dc2a1a3616bc400a74ea8925d6e294ec0377eac`.
+`f971700db08fae1565f1741bddb3862c2fa05c504004747eb49547290fd392fb`.
 
 The motion-design workflow and deterministic seek-render approach were adapted
 from [Huashu Design](https://github.com/alchaincyf/huashu-design), distributed

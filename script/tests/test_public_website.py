@@ -131,7 +131,7 @@ class PublicWebsiteTests(unittest.TestCase):
         self.assertLess(len(data), 8 * 1024 * 1024)
         self.assertEqual(
             hashlib.sha256(data).hexdigest(),
-            "c1a3340cc527f3777fdc362505d8c1a767d3b9afb05620f8ea4b69ddcca68cb4",
+            "8b6cb98cb8c7a157806182359309bb0416b361408cd2241ec4e613c6bef5de0b",
         )
 
 
