@@ -105,7 +105,9 @@ account identifier, private local path, or user data.
 
 `website/assets/flowtype-workflow-quick.gif` preserves the earlier quick workflow
 preview as a separate second README asset. It is a deterministic 1200×675, 25fps
-derivative of a local HTML animation. It uses a fully synthetic recreation of
+derivative of the corrected 1920×1080, native-60fps silent master with SHA-256
+`1493ad58c200c33ba012dd60250129bd077af83ccde67fcf4580e4f31d6826c7`.
+It uses a fully synthetic recreation of
 the public Codex `New chat` empty state as an ordinary third-party text target,
 a synthetic demonstration sentence, and a Flowtype-branded closing frame that
 references the canonical local app icon extracted from `Resources/Flowtype.icns`.
@@ -115,8 +117,8 @@ real conversation, History text, Hotwords, recording, account identifier, or
 local filesystem path. The Codex name and product mark identify the demonstrated
 target app only; they do not imply an OpenAI integration, affiliation,
 sponsorship, or endorsement. The GIF is 250 frames, lasts 10.000 seconds, and is
-389,033 bytes. Its reviewed SHA-256 is
-`4b8973ce61b5d359024303513438c83d35c7c2f4a33c9f844921ec69d9461656`.
+380,462 bytes. Its reviewed SHA-256 is
+`2d439697850f80fb031e6d5dce291267bd6aa8a83502fdbeb552bad34a04fd75`.
 
 The sound-on `Flowtype-GitHub-Promo.mp4` is published only as a GitHub Release
 asset and is intentionally excluded from the source projection. It is a
