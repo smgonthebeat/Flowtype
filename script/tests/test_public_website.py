@@ -128,10 +128,20 @@ class PublicWebsiteTests(unittest.TestCase):
         data = (WEBSITE_ROOT / "assets/flowtype-workflow.gif").read_bytes()
         self.assertIn(data[:6], {b"GIF87a", b"GIF89a"})
         self.assertEqual(struct.unpack("<HH", data[6:10]), (960, 540))
+        self.assertLess(len(data), 15 * 1024 * 1024)
+        self.assertEqual(
+            hashlib.sha256(data).hexdigest(),
+            "74e04814e12652dc0244b1e99b9ebf6078f4c7017f8b918dec4351a1f26e3edf",
+        )
+
+    def test_quick_workflow_gif_matches_reviewed_binary_contract(self) -> None:
+        data = (WEBSITE_ROOT / "assets/flowtype-workflow-quick.gif").read_bytes()
+        self.assertIn(data[:6], {b"GIF87a", b"GIF89a"})
+        self.assertEqual(struct.unpack("<HH", data[6:10]), (1200, 675))
         self.assertLess(len(data), 8 * 1024 * 1024)
         self.assertEqual(
             hashlib.sha256(data).hexdigest(),
-            "ed9c77122d3e21d03d04c3c9975fef1e876f75bc58bf85a1c061843a4f0128fb",
+            "4b8973ce61b5d359024303513438c83d35c7c2f4a33c9f844921ec69d9461656",
         )
 
 

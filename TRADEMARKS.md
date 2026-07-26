@@ -14,7 +14,9 @@ Flowtype branding unless you have separate permission.
 
 Qwen, Apple, macOS, GitHub, OpenAI, ChatGPT, Codex, and other third-party names
 and marks belong to their respective owners. Their appearance does not imply
-integration, affiliation, sponsorship, or endorsement of Flowtype.
+endorsement of Flowtype. The synthetic Codex scene in the quick workflow
+preview identifies an ordinary third-party text target only; it does not imply
+integration, affiliation, sponsorship, or endorsement by OpenAI.
 
 Wispr Flow, Typeless, Qianwen, Doubao, Shandianshuo, and other products named in
 privacy comparisons are referenced only for truthful identification. Those
