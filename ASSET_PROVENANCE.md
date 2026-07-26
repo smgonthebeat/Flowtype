@@ -86,21 +86,22 @@ analytics, user data, or personal metadata.
 
 ## Promotional Motion Assets
 
-`website/assets/flowtype-workflow.gif` is a deterministic 1200×675, 15fps
-derivative of a local HTML animation created for the Flowtype GitHub README. It
-uses a fully synthetic recreation of the public Codex `New chat` empty state as
-an ordinary third-party text target, a synthetic demonstration sentence, and a
-Flowtype-branded closing frame that references the canonical local
-app icon extracted from `Resources/Flowtype.icns`. The complete icon preserves
-its white rounded tile and optically inset microphone-waveform-speech-bubble
-mark. It does
-not embed a screenshot, real
-conversation, History text, Hotwords, recording, account identifier, or local
-filesystem path. The Codex name and product mark identify the demonstrated
-target app only; they do not imply an OpenAI integration, affiliation,
-sponsorship, or endorsement. The GIF is 150 frames, 9.99 seconds, and 164,111
-bytes. Its reviewed SHA-256 is
-`7193c646145c97b16eac6b286be788b97433a6d679625b9e357125bc1a1a80d6`.
+`website/assets/flowtype-workflow.gif` is a deterministic palette-optimized
+derivative of the owner-approved Flowtype launch animatic v3. The frozen source
+is a 37-second, 1920×1080, native-60fps H.264 render with SHA-256
+`dae857b5932ec40558d3556ecc68ad4a15c0af5f60347c249769196470434d23`.
+The README derivative is 960×540 at 10fps with a 160-color adaptive palette.
+It contains 370 frames, lasts 37.000 seconds, and is 6,201,791 bytes. Its
+reviewed SHA-256 is
+`ed9c77122d3e21d03d04c3c9975fef1e876f75bc58bf85a1c061843a4f0128fb`.
+
+The opening uses `macbook-fn-extraction-concept-v1.png`, SHA-256
+`6716332d0ecbe0e12a57f6c59f01bf6a3702ec8033c42f97f6a6970b5942a7f4`.
+On 2026-07-26 the owner explicitly attested that they own or have the right to
+publish this asset and authorized its use in the Flowtype GitHub README. The
+remaining film is rendered from local, editable Flowtype animation and product
+UI sources. The public GIF contains no real transcript history, recording,
+account identifier, private local path, or user data.
 
 The sound-on `Flowtype-GitHub-Promo.mp4` is published only as a GitHub Release
 asset and is intentionally excluded from the source projection. It is a
@@ -114,6 +115,8 @@ imported music, recording, or third-party SFX file. Input metadata and chapters
 are stripped from the final container. The MP4 is 430,113 bytes. Its reviewed
 SHA-256 is
 `f971700db08fae1565f1741bddb3862c2fa05c504004747eb49547290fd392fb`.
+This historical Release asset is no longer linked from either README and was
+not changed, deleted, or used to derive the 37-second launch-film GIF.
 
 The motion-design workflow and deterministic seek-render approach were adapted
 from [Huashu Design](https://github.com/alchaincyf/huashu-design), distributed

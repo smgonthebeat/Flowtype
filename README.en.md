@@ -14,11 +14,9 @@ English · [简体中文](README.md)
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
 
-![Flowtype workflow: hold Fn, speak, transcribe locally, and return text to the cursor](website/assets/flowtype-workflow.gif)
+![Flowtype product tour: dictate locally with Fn and explore the main features](website/assets/flowtype-workflow.gif)
 
-[▶ Watch with sound](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.2/Flowtype-GitHub-Promo.mp4)
-
-The Codex `New chat` view is a synthetic third-party input scene used only to demonstrate ordinary text pasting. It contains no real conversation, and its procedural soundtrack contains no real recording. It does not imply integration, affiliation, sponsorship, or endorsement by OpenAI.
+This 37-second tour shows the `Fn` dictation flow and Flowtype's main pages. It is a privacy-safe product demonstration with no real transcript history, recording, or account information; the opening asset is owned or cleared for public use by the author.
 
 ![The Flowtype author's real usage screen showing 4,680 dictations, 15 hours 19 minutes dictated, 246,000 characters, and 60 hours 37 minutes saved](website/assets/flowtype-home-real-usage.png)
 
