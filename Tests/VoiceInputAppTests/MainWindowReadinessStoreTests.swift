@@ -71,6 +71,57 @@ final class MainWindowReadinessStoreTests: XCTestCase {
         XCTAssertEqual(store.presentation.phase, .checking)
     }
 
+    func testAuthoritativeReplacementCannotBeOverwrittenByOlderLiveRefresh() async {
+        let store = MainWindowReadinessStore(
+            initialSnapshot: snapshot(report: report(status: .notReady)),
+            refreshLightweight: { self.report(status: .notReady) },
+            refreshLive: {
+                try? await Task.sleep(nanoseconds: 80_000_000)
+                return self.report(status: .notReady)
+            }
+        )
+
+        let staleRefresh = Task { await store.refreshLive() }
+        await Task.yield()
+
+        let readySnapshot = ReadinessSnapshot(
+            report: report(status: .ready),
+            context: store.snapshot.context,
+            coverage: .live
+        )
+        store.replace(with: readySnapshot)
+        await staleRefresh.value
+
+        XCTAssertEqual(store.snapshot, readySnapshot)
+        XCTAssertFalse(store.isRefreshing)
+        XCTAssertEqual(store.presentation.phase, .ready)
+    }
+
+    func testAuthoritativeReplacementCannotBeOverwrittenByOlderLightweightRefresh() async {
+        let store = MainWindowReadinessStore(
+            initialSnapshot: snapshot(report: report(status: .notReady)),
+            refreshLightweight: {
+                try? await Task.sleep(nanoseconds: 80_000_000)
+                return self.report(status: .notReady)
+            },
+            refreshLive: { self.report(status: .ready) }
+        )
+
+        let staleRefresh = Task { await store.refreshLightweight() }
+        await Task.yield()
+
+        let readySnapshot = ReadinessSnapshot(
+            report: report(status: .ready),
+            context: store.snapshot.context,
+            coverage: .live
+        )
+        store.replace(with: readySnapshot)
+        await staleRefresh.value
+
+        XCTAssertEqual(store.snapshot, readySnapshot)
+        XCTAssertEqual(store.presentation.phase, .ready)
+    }
+
     private func makeStore(
         liveRefresh: @escaping () async -> ReadinessReport
     ) -> MainWindowReadinessStore {

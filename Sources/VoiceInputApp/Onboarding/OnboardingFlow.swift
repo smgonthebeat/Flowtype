@@ -29,7 +29,7 @@ struct OnboardingActions {
         String,
         @escaping (PreparationSnapshot) -> Void
     ) async -> ReadinessSetupResult
-    var requestClose: () -> Void
+    var requestClose: (ReadinessSnapshot?) -> Void
 
     init(
         permissionSnapshot: @escaping () -> PermissionSnapshot = {
@@ -47,13 +47,25 @@ struct OnboardingActions {
                 report: ReadinessReport(generatedAt: Date(), checks: [])
             )
         },
-        requestClose: @escaping () -> Void = {}
+        requestClose: @escaping (ReadinessSnapshot?) -> Void = { _ in }
     ) {
         self.permissionSnapshot = permissionSnapshot
         self.openMicrophoneSettings = openMicrophoneSettings
         self.openAccessibilitySettings = openAccessibilitySettings
         self.prepareFlowtype = prepareFlowtype
         self.requestClose = requestClose
+    }
+}
+
+enum OnboardingReadinessHandoff {
+    static func resolvedSnapshot(
+        completed: ReadinessSnapshot?,
+        current: ReadinessSnapshot
+    ) -> ReadinessSnapshot {
+        guard let completed, completed.context == current.context else {
+            return current
+        }
+        return completed
     }
 }
 

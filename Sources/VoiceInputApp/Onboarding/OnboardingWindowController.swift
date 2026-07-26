@@ -9,7 +9,8 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     /// Called after the window closes, regardless of whether the user
     /// finished or skipped; the app delegate marks onboarding complete and
     /// routes to the main window there.
-    var onClose: (() -> Void)?
+    var onClose: ((ReadinessSnapshot?) -> Void)?
+    private var completionSnapshot: ReadinessSnapshot?
 
     init(settingsStore: SettingsStore, actions: OnboardingActions) {
         self.settingsStore = settingsStore
@@ -47,7 +48,8 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         let theme = AppTheme.theme(for: settingsStore.appThemeID)
 
         var actions = baseActions
-        actions.requestClose = { [weak self] in
+        actions.requestClose = { [weak self] snapshot in
+            self?.completionSnapshot = snapshot
             self?.close()
         }
 
@@ -68,6 +70,8 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        onClose?()
+        let snapshot = completionSnapshot
+        completionSnapshot = nil
+        onClose?(snapshot)
     }
 }

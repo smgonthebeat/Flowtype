@@ -1345,9 +1345,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     }
 
     @MainActor
-    private func routeInitialWindowAfterReadinessCheck(snapshot: ReadinessSnapshot) {
+    private func routeInitialWindowAfterReadinessCheck(
+        snapshot: ReadinessSnapshot,
+        refreshLive: Bool? = nil
+    ) {
         guard !didRunInitialSetupRoute else { return }
         didRunInitialSetupRoute = true
+        mainWindowController?.replaceReadinessSnapshot(
+            snapshot,
+            refreshLive: refreshLive ?? (snapshot.coverage == .lightweight)
+        )
 
         let presentation = ReadinessPresentationPolicy.presentation(for: snapshot)
         if !presentation.tasks.isEmpty {
@@ -1466,7 +1473,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         case let .failed(failure):
             outcome = .failed(failure.localizedDescription)
         }
-        return ReadinessSetupResult(outcome: outcome, report: result.report)
+        let verifiedContext = await MainActor.run {
+            readinessContext(for: configuration)
+        }
+        return ReadinessSetupResult(
+            outcome: outcome,
+            report: result.report,
+            verifiedContext: verifiedContext
+        )
     }
 
     private func prepareSelectedModelThroughLifecycle() async throws -> QwenModelStatus {
@@ -1535,6 +1549,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         ReadinessContext(
             engine: settingsStore.engine,
             selectedModelID: settingsStore.selectedModelID
+        )
+    }
+
+    @MainActor
+    private func readinessContext(for configuration: PreparationConfiguration) -> ReadinessContext {
+        let selectedModelID = configuration.modelID.flatMap { modelID in
+            VoiceInputModel.all.first(where: { $0.modelID == modelID })?.id
+        } ?? settingsStore.selectedModelID
+        return ReadinessContext(
+            engine: configuration.engine,
+            selectedModelID: selectedModelID
         )
     }
 
@@ -1731,9 +1756,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 settingsStore: settingsStore,
                 actions: makeOnboardingActions()
             )
-            controller.onClose = { [weak self] in
+            controller.onClose = { [weak self] snapshot in
                 Task { @MainActor in
-                    self?.handleOnboardingClosed()
+                    self?.handleOnboardingClosed(completedSnapshot: snapshot)
                 }
             }
             onboardingWindowController = controller
@@ -1745,17 +1770,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     /// Closing the onboarding window — finished or skipped — marks onboarding
     /// complete and lands the user in the main window.
     @MainActor
-    private func handleOnboardingClosed() {
+    private func handleOnboardingClosed(completedSnapshot: ReadinessSnapshot?) {
         settingsStore.hasCompletedOnboarding = true
+        let currentSnapshot = makeLightweightReadinessSnapshot()
+        let nextSnapshot = OnboardingReadinessHandoff.resolvedSnapshot(
+            completed: completedSnapshot,
+            current: currentSnapshot
+        )
         if didRunInitialSetupRoute {
             // Reopened from the menu after a normal launch: the initial route
             // already ran, so route explicitly (this also restores a sane
             // activation policy instead of leaving a window-less Dock icon).
+            mainWindowController?.replaceReadinessSnapshot(
+                nextSnapshot,
+                refreshLive: true
+            )
             if mainWindowController?.window?.isVisible != true {
                 showMainWindow(section: .home)
             }
         } else {
-            routeInitialWindowAfterReadinessCheck(snapshot: makeLightweightReadinessSnapshot())
+            routeInitialWindowAfterReadinessCheck(
+                snapshot: nextSnapshot,
+                refreshLive: true
+            )
         }
     }
 
@@ -2252,7 +2289,11 @@ extension AppDelegate: FlowtypePreparationDriving {
     func prepareSelectedModel(
         configuration: PreparationConfiguration,
         operationID: UUID,
-        progress: @escaping (PreparationStage, Double?) async -> Void
+        progress: @escaping (
+            PreparationStage,
+            Double?,
+            DownloadTransferSnapshot?
+        ) async -> Void
     ) async throws -> PreparedRuntimeIdentity {
         guard let modelID = configuration.modelID,
               let model = VoiceInputModel.all.first(where: { $0.modelID == modelID })
@@ -2260,7 +2301,7 @@ extension AppDelegate: FlowtypePreparationDriving {
             throw PreparationFailure.finalVerificationFailed
         }
 
-        await progress(.startingHelper, nil)
+        await progress(.startingHelper, nil, nil)
         let endpoint = try await startHelperIfNeeded()
         let client = QwenHelperClient(baseURL: endpoint.baseURL, authToken: endpoint.authToken)
         var status = try await client.modelStatus(modelID: modelID)
@@ -2276,7 +2317,12 @@ extension AppDelegate: FlowtypePreparationDriving {
                     status.errorCode ?? "model_preparation_failed"
                 )
             }
-            await progress(ModelPreparationStageResolver.stage(for: status), status.progress)
+            let stage = ModelPreparationStageResolver.stage(for: status)
+            await progress(
+                stage,
+                status.progress,
+                stage == .downloadingModel ? DownloadTransferSnapshot(status: status) : nil
+            )
             guard Date() < deadline else {
                 throw PreparationFailure.modelPreparationFailed("model_preparation_timed_out")
             }

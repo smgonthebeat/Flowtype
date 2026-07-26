@@ -38,4 +38,74 @@ final class OnboardingFlowTests: XCTestCase {
         XCTAssertTrue(OnboardingPrepareState.ready.isReady)
         XCTAssertFalse(OnboardingPrepareState.running(.loadingModel, 1).isReady)
     }
+
+    func testPreparedResultBuildsLiveSnapshotWithVerifiedContext() {
+        let context = ReadinessContext(
+            engine: .qwenLocal,
+            selectedModelID: VoiceInputModel.qwen3ASR06B.id
+        )
+        let report = ReadinessReport(generatedAt: Date(), checks: [])
+        let result = ReadinessSetupResult(
+            outcome: .prepared,
+            report: report,
+            verifiedContext: context
+        )
+
+        XCTAssertEqual(
+            result.verifiedSnapshot,
+            ReadinessSnapshot(report: report, context: context, coverage: .live)
+        )
+    }
+
+    func testHandoffRejectsVerifiedSnapshotWhenCurrentContextChanged() {
+        let verifiedSnapshot = ReadinessSnapshot(
+            report: ReadinessReport(generatedAt: Date(timeIntervalSince1970: 1), checks: []),
+            context: ReadinessContext(
+                engine: .qwenLocal,
+                selectedModelID: VoiceInputModel.qwen3ASR06B.id
+            ),
+            coverage: .live
+        )
+        let currentSnapshot = ReadinessSnapshot(
+            report: ReadinessReport(generatedAt: Date(timeIntervalSince1970: 2), checks: []),
+            context: ReadinessContext(
+                engine: .qwenLocal,
+                selectedModelID: VoiceInputModel.qwen3ASR17B.id
+            ),
+            coverage: .lightweight
+        )
+
+        XCTAssertEqual(
+            OnboardingReadinessHandoff.resolvedSnapshot(
+                completed: verifiedSnapshot,
+                current: currentSnapshot
+            ),
+            currentSnapshot
+        )
+    }
+
+    func testHandoffKeepsVerifiedSnapshotWhenContextStillMatches() {
+        let context = ReadinessContext(
+            engine: .qwenLocal,
+            selectedModelID: VoiceInputModel.qwen3ASR06B.id
+        )
+        let verifiedSnapshot = ReadinessSnapshot(
+            report: ReadinessReport(generatedAt: Date(timeIntervalSince1970: 1), checks: []),
+            context: context,
+            coverage: .live
+        )
+        let currentSnapshot = ReadinessSnapshot(
+            report: ReadinessReport(generatedAt: Date(timeIntervalSince1970: 2), checks: []),
+            context: context,
+            coverage: .lightweight
+        )
+
+        XCTAssertEqual(
+            OnboardingReadinessHandoff.resolvedSnapshot(
+                completed: verifiedSnapshot,
+                current: currentSnapshot
+            ),
+            verifiedSnapshot
+        )
+    }
 }

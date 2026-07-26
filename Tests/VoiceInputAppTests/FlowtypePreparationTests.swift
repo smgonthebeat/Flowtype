@@ -34,6 +34,41 @@ final class FlowtypePreparationTests: XCTestCase {
         )
     }
 
+    func testPreparationForwardsDownloadTransferTelemetry() async {
+        let driver = PreparationDriverFake(
+            evidences: [.qwenReadyForMachineWork, .qwenFullyReady]
+        )
+        let transfer = DownloadTransferSnapshot(
+            operationID: "helper-operation",
+            downloadedBytes: 400,
+            totalBytes: 1_000,
+            updatedAt: 10,
+            source: "modelscope"
+        )
+        driver.transferProgress = transfer
+        let module = FlowtypePreparation(driver: driver)
+        let session = await module.begin(
+            PreparationRequest(intent: .backgroundWarmup, configuration: .qwen06B)
+        )
+        let updates = Task {
+            var snapshots: [PreparationSnapshot] = []
+            for await snapshot in session.updates {
+                snapshots.append(snapshot)
+            }
+            return snapshots
+        }
+
+        let result = await session.result.value
+        let snapshots = await updates.value
+
+        XCTAssertTrue(result.isReady)
+        XCTAssertTrue(snapshots.contains { snapshot in
+            snapshot.stage == .downloadingModel &&
+                snapshot.progress == 0.4 &&
+                snapshot.transfer == transfer
+        })
+    }
+
     func testConcurrentSessionsForSameConfigurationShareOneMachineJob() async {
         let driver = PreparationDriverFake(
             evidences: [.qwenReadyForMachineWork, .qwenFullyReady, .qwenFullyReady]
@@ -479,6 +514,7 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
     private var _hasConsent = true
     private var _recordConsentCount = 0
     private var _repairSelectedModelStorageCount = 0
+    private var _transferProgress: DownloadTransferSnapshot?
     private var _machineEvents: [String] = []
     private var _lifecycleEvents: [String] = []
 
@@ -496,6 +532,10 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
     }
     var recordConsentCount: Int { queue.sync { _recordConsentCount } }
     var repairSelectedModelStorageCount: Int { queue.sync { _repairSelectedModelStorageCount } }
+    var transferProgress: DownloadTransferSnapshot? {
+        get { queue.sync { _transferProgress } }
+        set { queue.sync { _transferProgress = newValue } }
+    }
     var machineEvents: [String] { queue.sync { _machineEvents } }
     var lifecycleEvents: [String] { queue.sync { _lifecycleEvents } }
 
@@ -545,7 +585,11 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
     func prepareSelectedModel(
         configuration: PreparationConfiguration,
         operationID: UUID,
-        progress: @escaping (PreparationStage, Double?) async -> Void
+        progress: @escaping (
+            PreparationStage,
+            Double?,
+            DownloadTransferSnapshot?
+        ) async -> Void
     ) async throws -> PreparedRuntimeIdentity {
         queue.sync {
             _prepareSelectedModelCount += 1
@@ -555,6 +599,13 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
         await machineStarted.open()
         if queue.sync(execute: { _suspendMachinePreparation }) {
             await machineResume.wait()
+        }
+        if let transferProgress = queue.sync(execute: { _transferProgress }) {
+            await progress(
+                .downloadingModel,
+                Double(transferProgress.downloadedBytes) / Double(transferProgress.totalBytes),
+                transferProgress
+            )
         }
         return PreparedRuntimeIdentity(
             configuration: configuration,

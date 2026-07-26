@@ -12,6 +12,7 @@ final class MainWindowReadinessStore: ObservableObject {
     private var liveRefreshTask: Task<ReadinessReport, Never>?
     private var liveRefreshToken: UUID?
     private var followUpRefreshTask: Task<Void, Never>?
+    private var refreshGeneration: UInt64 = 0
 
     init(
         initialSnapshot: ReadinessSnapshot,
@@ -40,20 +41,27 @@ final class MainWindowReadinessStore: ObservableObject {
         didLastRefreshFail = false
     }
 
-    func replace(with lightweightSnapshot: ReadinessSnapshot) {
-        precondition(lightweightSnapshot.coverage == .lightweight)
+    /// Replaces the store's authoritative snapshot and invalidates any older
+    /// in-flight refresh so stale launch work cannot overwrite a newer handoff.
+    func replace(with nextSnapshot: ReadinessSnapshot) {
+        refreshGeneration &+= 1
         liveRefreshToken = nil
         liveRefreshTask?.cancel()
         liveRefreshTask = nil
+        followUpRefreshTask?.cancel()
+        followUpRefreshTask = nil
         isRefreshing = false
         didLastRefreshFail = false
-        snapshot = lightweightSnapshot
+        snapshot = nextSnapshot
     }
 
     func refreshLightweight() async {
         let context = snapshot.context
+        let generation = refreshGeneration
         let report = await refreshLightweightAction()
-        guard context == snapshot.context else { return }
+        guard generation == refreshGeneration,
+              context == snapshot.context
+        else { return }
         accept(report, coverage: .lightweight)
     }
 
@@ -64,6 +72,7 @@ final class MainWindowReadinessStore: ObservableObject {
         }
 
         let context = snapshot.context
+        let generation = refreshGeneration
         let token = UUID()
         let task = Task { await refreshLiveAction() }
         liveRefreshToken = token
@@ -76,7 +85,9 @@ final class MainWindowReadinessStore: ObservableObject {
         liveRefreshToken = nil
         liveRefreshTask = nil
         isRefreshing = false
-        guard context == snapshot.context else { return }
+        guard generation == refreshGeneration,
+              context == snapshot.context
+        else { return }
         accept(report, coverage: .live)
         if presentation.phase == .preparing {
             scheduleFollowUpRefreshes()

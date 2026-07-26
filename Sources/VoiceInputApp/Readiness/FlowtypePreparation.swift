@@ -12,6 +12,26 @@ struct ReadinessSetupResult: Equatable {
 
     let outcome: Outcome
     let report: ReadinessReport
+    let verifiedContext: ReadinessContext?
+
+    init(
+        outcome: Outcome,
+        report: ReadinessReport,
+        verifiedContext: ReadinessContext? = nil
+    ) {
+        self.outcome = outcome
+        self.report = report
+        self.verifiedContext = verifiedContext
+    }
+
+    var verifiedSnapshot: ReadinessSnapshot? {
+        guard outcome == .prepared, let verifiedContext else { return nil }
+        return ReadinessSnapshot(
+            report: report,
+            context: verifiedContext,
+            coverage: .live
+        )
+    }
 }
 
 enum PreparationIntent: Equatable {
@@ -119,12 +139,67 @@ struct PreparedRuntimeIdentity: Equatable {
     let verifiedAt: Date
 }
 
+struct DownloadTransferSnapshot: Equatable {
+    let operationID: String?
+    let downloadedBytes: Int64
+    let totalBytes: Int64
+    let updatedAt: TimeInterval?
+    let source: String?
+
+    init(
+        operationID: String?,
+        downloadedBytes: Int64,
+        totalBytes: Int64,
+        updatedAt: TimeInterval?,
+        source: String?
+    ) {
+        self.operationID = operationID
+        self.downloadedBytes = downloadedBytes
+        self.totalBytes = totalBytes
+        self.updatedAt = updatedAt
+        self.source = source
+    }
+
+    init?(status: QwenModelStatus) {
+        guard let downloadedBytes = status.downloadedBytes,
+              let totalBytes = status.totalBytes,
+              totalBytes > 0
+        else {
+            return nil
+        }
+        self.init(
+            operationID: status.operationId,
+            downloadedBytes: max(downloadedBytes, 0),
+            totalBytes: totalBytes,
+            updatedAt: status.updatedAt,
+            source: status.downloadSource
+        )
+    }
+}
+
 struct PreparationSnapshot: Equatable {
     let runID: UUID
     let operationID: UUID?
     let configuration: PreparationConfiguration
     let stage: PreparationStage
     let progress: Double?
+    let transfer: DownloadTransferSnapshot?
+
+    init(
+        runID: UUID,
+        operationID: UUID?,
+        configuration: PreparationConfiguration,
+        stage: PreparationStage,
+        progress: Double?,
+        transfer: DownloadTransferSnapshot? = nil
+    ) {
+        self.runID = runID
+        self.operationID = operationID
+        self.configuration = configuration
+        self.stage = stage
+        self.progress = progress
+        self.transfer = transfer
+    }
 }
 
 struct PreparationResult {
@@ -161,7 +236,11 @@ protocol FlowtypePreparationDriving: AnyObject {
     func prepareSelectedModel(
         configuration: PreparationConfiguration,
         operationID: UUID,
-        progress: @escaping (PreparationStage, Double?) async -> Void
+        progress: @escaping (
+            PreparationStage,
+            Double?,
+            DownloadTransferSnapshot?
+        ) async -> Void
     ) async throws -> PreparedRuntimeIdentity
 }
 
@@ -421,12 +500,13 @@ actor FlowtypePreparation {
                     return try await self.driver.prepareSelectedModel(
                         configuration: configuration,
                         operationID: operationID,
-                        progress: { [weak self] stage, progress in
+                        progress: { [weak self] stage, progress, transfer in
                             await self?.publish(
                                 key: key,
                                 configuration: configuration,
                                 stage: stage,
                                 progress: progress,
+                                transfer: transfer,
                                 operationID: operationID
                             )
                         }
@@ -565,6 +645,7 @@ actor FlowtypePreparation {
         configuration: PreparationConfiguration,
         stage: PreparationStage,
         progress: Double? = nil,
+        transfer: DownloadTransferSnapshot? = nil,
         operationID: UUID? = nil
     ) {
         for (runID, subscription) in subscriptions
@@ -574,7 +655,8 @@ actor FlowtypePreparation {
                 operationID: operationID ?? jobs[key]?.operationID,
                 configuration: configuration,
                 stage: stage,
-                progress: progress
+                progress: progress,
+                transfer: transfer
             ))
         }
     }
@@ -588,14 +670,16 @@ actor FlowtypePreparation {
         operationID: UUID?,
         configuration: PreparationConfiguration,
         stage: PreparationStage,
-        progress: Double? = nil
+        progress: Double? = nil,
+        transfer: DownloadTransferSnapshot? = nil
     ) -> PreparationSnapshot {
         PreparationSnapshot(
             runID: runID,
             operationID: operationID,
             configuration: configuration,
             stage: stage,
-            progress: progress
+            progress: progress,
+            transfer: transfer
         )
     }
 

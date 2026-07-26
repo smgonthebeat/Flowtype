@@ -11,6 +11,9 @@ struct OnboardingView: View {
     @State private var step: OnboardingStep = .welcome
     @State private var permissions: PermissionSnapshot?
     @State private var prepareState: OnboardingPrepareState = .idle
+    @State private var completedReadinessSnapshot: ReadinessSnapshot?
+    @State private var downloadEstimator = DownloadTransferEstimator()
+    @State private var downloadFeedback: DownloadTransferFeedback?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -150,6 +153,9 @@ struct OnboardingView: View {
                         .font(.caption)
                         .foregroundStyle(theme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                if stage == .downloadingModel, let downloadFeedback {
+                    downloadFeedbackView(downloadFeedback)
                 }
             }
 
@@ -318,7 +324,7 @@ struct OnboardingView: View {
         HStack(spacing: 12) {
             if !step.isLast {
                 Button(copy.onboardingSkipTitle) {
-                    actions.requestClose()
+                    actions.requestClose(nil)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(theme.secondaryInk)
@@ -341,7 +347,7 @@ struct OnboardingView: View {
                 if let next = step.next {
                     step = next
                 } else {
-                    actions.requestClose()
+                    actions.requestClose(completedReadinessSnapshot)
                 }
             } label: {
                 Text(step.isLast ? copy.onboardingFinishTitle : copy.onboardingContinueTitle)
@@ -385,13 +391,25 @@ struct OnboardingView: View {
     private func runPreparation(intent: PreparationIntent) {
         guard !prepareState.isRunning else { return }
         prepareState = .running(.inspecting, nil)
+        completedReadinessSnapshot = nil
+        downloadEstimator.reset()
+        downloadFeedback = nil
 
         Task { @MainActor in
             let result = await actions.prepareFlowtype(intent, model.modelID) { snapshot in
                 prepareState = .running(snapshot.stage, snapshot.progress)
+                if snapshot.stage == .downloadingModel, let transfer = snapshot.transfer {
+                    downloadFeedback = downloadEstimator.update(transfer)
+                } else {
+                    downloadEstimator.reset()
+                    downloadFeedback = nil
+                }
                 refreshPermissions()
             }
             prepareState = OnboardingPrepareState.state(for: result.outcome)
+            completedReadinessSnapshot = result.verifiedSnapshot
+            downloadEstimator.reset()
+            downloadFeedback = nil
             refreshPermissions()
         }
     }
@@ -451,6 +469,73 @@ struct OnboardingView: View {
 
     private func progressPercentage(_ progress: Double) -> String {
         "\(Int((min(max(progress, 0), 1) * 100).rounded()))%"
+    }
+
+    private func downloadFeedbackView(_ feedback: DownloadTransferFeedback) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(downloadedBytesText(feedback))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(theme.secondaryInk)
+            Text(downloadActivityText(feedback.activity))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(theme.secondaryInk)
+        }
+    }
+
+    private func downloadedBytesText(_ feedback: DownloadTransferFeedback) -> String {
+        let downloaded = ByteCountFormatter.string(
+            fromByteCount: feedback.downloadedBytes,
+            countStyle: .file
+        )
+        let total = ByteCountFormatter.string(
+            fromByteCount: feedback.totalBytes,
+            countStyle: .file
+        )
+        return copy.timesUnit == "次"
+            ? "已下载 \(downloaded) / \(total)"
+            : "Downloaded \(downloaded) / \(total)"
+    }
+
+    private func downloadActivityText(_ activity: DownloadTransferActivity) -> String {
+        let usesChinese = copy.timesUnit == "次"
+        switch activity {
+        case .estimating:
+            return usesChinese
+                ? "正在估算下载速度与剩余时间…"
+                : "Estimating download speed and time remaining…"
+        case let .transferring(bytesPerSecond, remainingSeconds):
+            let speed = formattedSpeed(bytesPerSecond)
+            let remaining = formattedRemainingTime(remainingSeconds, usesChinese: usesChinese)
+            return usesChinese
+                ? "\(speed) · 预计还需 \(remaining)"
+                : "\(speed) · About \(remaining) remaining"
+        case .finishing:
+            return usesChinese ? "下载完成，正在校验…" : "Download complete. Verifying…"
+        case .waitingForNetwork:
+            return usesChinese ? "等待网络响应…" : "Waiting for network response…"
+        }
+    }
+
+    private func formattedSpeed(_ bytesPerSecond: Double) -> String {
+        let units: [(threshold: Double, divisor: Double, suffix: String)] = [
+            (1_000_000_000, 1_000_000_000, "GB/s"),
+            (1_000_000, 1_000_000, "MB/s"),
+            (1_000, 1_000, "KB/s"),
+        ]
+        for unit in units where bytesPerSecond >= unit.threshold {
+            return String(format: "%.1f %@", bytesPerSecond / unit.divisor, unit.suffix)
+        }
+        return String(format: "%.0f B/s", max(bytesPerSecond, 0))
+    }
+
+    private func formattedRemainingTime(_ seconds: Int, usesChinese: Bool) -> String {
+        let clampedSeconds = max(seconds, 0)
+        let minutes = clampedSeconds / 60
+        let remainder = clampedSeconds % 60
+        if usesChinese {
+            return minutes > 0 ? "\(minutes) 分 \(remainder) 秒" : "\(remainder) 秒"
+        }
+        return minutes > 0 ? "\(minutes) min \(remainder) sec" : "\(remainder) sec"
     }
 
     private var onboardingPrepareBody: String {
