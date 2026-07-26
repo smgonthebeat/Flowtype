@@ -2,15 +2,15 @@
 
 English · [简体中文](README.md)
 
-> **Release status:** The [`v0.1.0-preview.4`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
+> **Release status:** The [`v0.1.0-preview.5`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.5) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
 >
 > [First-launch guide ↓](#first-launch)
 
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.4/Flowtype.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.5/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 
-[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.4/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
+[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.5/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.5) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
 
@@ -51,11 +51,11 @@ General-purpose dictation often interrupts technical thought when languages, ter
 - Swift 5.9 or later only for developers building from source;
 - several gigabytes of free storage and unified memory for the local model and runtime.
 
-Clicking **Prepare Flowtype** for the first time confirms the download: Flowtype requests Microphone and Accessibility permissions, automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows live download/preparation progress. Fresh downloads prefer ModelScope, with resumable transfer and Hugging Face fallback. Accessibility must still be approved in System Settings; return to Flowtype and setup continues automatically. Model weights are not stored in this repository or bundled with the source archive.
+Clicking **Prepare Flowtype** for the first time confirms the download: Flowtype requests Microphone and Accessibility permissions, automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows downloaded bytes, smoothed transfer speed, estimated time remaining, and preparation progress. Fresh downloads prefer ModelScope, with resumable transfer and Hugging Face fallback. Accessibility must still be approved in System Settings; return to Flowtype and setup continues automatically. Once preparation succeeds, Home immediately reuses the verified Ready state without asking you to prepare Flowtype again. Model weights are not stored in this repository or bundled with the source archive.
 
 ## Getting Started
 
-Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.4` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.4), open it, and follow the arrow to drag `Flowtype.app` to Applications.
+Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.5` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.5), open it, and follow the arrow to drag `Flowtype.app` to Applications.
 
 <a id="first-launch"></a>
 

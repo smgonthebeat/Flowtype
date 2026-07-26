@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.5` adds downloaded-byte, smoothed transfer-speed, and estimated
+  time-remaining feedback to first-run model preparation. A completed setup now
+  hands its verified readiness state directly to Home, so users are not asked
+  to run **Prepare Flowtype** a second time merely to refresh the UI.
 - `v0.1.0-preview.4` prevents Flowtype's internal ASR context and Hotword lists
   from being committed as transcripts, including truncated and Unicode-variant
   echoes. Model preparation now reports live byte-based progress, prefers the
