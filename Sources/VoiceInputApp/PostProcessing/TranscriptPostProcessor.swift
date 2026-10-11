@@ -2,6 +2,7 @@ import Foundation
 
 struct TranscriptProcessingOptions {
     let isSmartNumericFormattingEnabled: Bool
+    let isAcademicReferenceFormattingEnabled: Bool
     let isFillerCleanupEnabled: Bool
     let isMathNotationEnabled: Bool
     let mathNotationOutputFormat: MathNotationOutputFormat
@@ -9,12 +10,14 @@ struct TranscriptProcessingOptions {
 
     init(
         isSmartNumericFormattingEnabled: Bool,
+        isAcademicReferenceFormattingEnabled: Bool,
         isFillerCleanupEnabled: Bool,
         isMathNotationEnabled: Bool = false,
         mathNotationOutputFormat: MathNotationOutputFormat = .latex,
         knownTerms: [String] = []
     ) {
         self.isSmartNumericFormattingEnabled = isSmartNumericFormattingEnabled
+        self.isAcademicReferenceFormattingEnabled = isAcademicReferenceFormattingEnabled
         self.isFillerCleanupEnabled = isFillerCleanupEnabled
         self.isMathNotationEnabled = isMathNotationEnabled
         self.mathNotationOutputFormat = mathNotationOutputFormat
@@ -29,7 +32,11 @@ enum TranscriptPostProcessor {
 
     static func processWithTrace(_ text: String, options: TranscriptProcessingOptions) -> TranscriptProcessingResult {
         let profile = TranscriptProcessingProfile.resolve(from: options)
-        var processed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var processed = CodeSpanDetector.trimOutsideCode(text)
+        if options.isMathNotationEnabled {
+            // The sentinels mark rendered formulas; any already in the input carry no meaning.
+            processed = MathStage.stripSentinels(processed)
+        }
         var trace = PostProcessingTrace(originalText: text, profile: profile, stages: [])
 
         let confusionInput = processed
@@ -47,7 +54,7 @@ enum TranscriptPostProcessor {
         )
 
         let technicalTermInput = processed
-        let technicalTermResult = TechnicalTermNormalizer.normalize(processed)
+        let technicalTermResult = TechnicalTermNormalizer.normalize(processed, knownTerms: options.knownTerms)
         processed = technicalTermResult.text
         if processed != technicalTermInput || !technicalTermResult.events.isEmpty {
             trace.append(
@@ -58,66 +65,124 @@ enum TranscriptPostProcessor {
             )
         }
 
-        let normalizationInput = processed
-        processed = applySmartNumericFormattingIfEnabled(to: processed, options: options)
-        if options.isSmartNumericFormattingEnabled || processed != normalizationInput {
-            trace.append(stage: .normalization, input: normalizationInput, output: processed)
-        }
-
-        if options.isFillerCleanupEnabled {
-            let fillerInput = processed
-            processed = FillerCleanupFormatter.format(processed)
-            trace.append(stage: .fillerCleanup, input: fillerInput, output: processed)
-        }
-
+        // The math layer sees the spoken words before study references, numbers and letter
+        // spelling rewrite them (design.md 2). Each rendered formula is wrapped in sentinels, so
+        // every later stage treats it as a protected span (design.md 8.1).
         if options.isMathNotationEnabled {
             let mathInput = processed
-            let mathResult = MathNotationFormatter.formatWithEvents(
+            let math = MathStage.run(
                 processed,
                 outputFormat: options.mathNotationOutputFormat,
-                knownTerms: options.knownTerms
+                knownTerms: options.knownTerms,
+                wrapInSentinels: true
             )
-            trace.append(
-                stage: .mathNotation,
-                input: mathInput,
-                output: mathResult.text,
-                events: mathResult.events
-            )
+            processed = math.text
+            trace.append(stage: .mathNotation, input: mathInput, output: processed, events: math.events)
+        }
 
-            let decision = MathIntentGate.evaluate(
-                original: mathInput,
-                rendered: mathResult.text,
-                events: mathResult.events,
-                profile: profile
+        if options.isAcademicReferenceFormattingEnabled {
+            let academicInput = processed
+            processed = applyAcademicReferenceFormatting(to: processed, options: options)
+            trace.append(stage: .normalization, input: academicInput, output: processed)
+        }
+
+        let fillerInput = processed
+        if options.isFillerCleanupEnabled {
+            let context = NormalizationContext(
+                knownTerms: options.knownTerms,
+                protectedSpans: ProtectedSpanDetector.detect(in: fillerInput)
             )
-            processed = decision.text
+            let fillerResult = FillerCleanupFormatter.formatWithEvents(
+                fillerInput,
+                context: context
+            )
+            processed = fillerResult.text
             trace.append(
-                stage: .candidateScoring,
-                input: mathInput,
+                stage: .fillerCleanup,
+                input: fillerInput,
                 output: processed,
-                events: [decision.decisionEvent]
+                events: fillerResult.events
             )
+        } else {
+            trace.append(
+                stage: .fillerCleanup,
+                input: fillerInput,
+                output: fillerInput
+            )
+        }
+
+        // Numeric decisions are made on filler-settled text, so a filler can neither create
+        // nor hide numeric evidence (M19).
+        if options.isSmartNumericFormattingEnabled {
+            let numericInput = processed
+            let numeric = NormalizationPipeline.normalizeWithEvents(processed, knownTerms: options.knownTerms)
+            processed = numeric.text
+            trace.append(stage: .normalization, input: numericInput, output: processed, events: numeric.events)
+        }
+
+        // Spelling joins the complete letter runs that remain after filler deletion.
+        let spellingInput = processed
+        let spelling = SpelledLetterNormalizer.normalize(
+            processed,
+            protectedRanges: SharedProtection.ranges(in: processed, knownTerms: options.knownTerms)
+        )
+        processed = spelling.text
+        if processed != spellingInput {
+            trace.append(stage: .technicalTerms, input: spellingInput, output: processed, events: spelling.events)
+        }
+
+        // Single-letter designators join their number once spelling and numbers are settled.
+        if options.isSmartNumericFormattingEnabled {
+            let designatorInput = processed
+            let designators = DesignatorJoiner.join(processed, knownTerms: options.knownTerms)
+            processed = designators.text
+            if processed != designatorInput {
+                trace.append(stage: .normalization, input: designatorInput, output: processed, events: designators.events)
+            }
         }
 
         let cleanupInput = processed
-        processed = cleanupWhitespace(in: processed)
+        processed = cleanupWhitespace(in: processed, knownTerms: options.knownTerms)
         trace.append(stage: .finalCleanup, input: cleanupInput, output: processed)
+
+        if options.isMathNotationEnabled {
+            // No sentinel survives into the output or the diagnostics trace (I10).
+            processed = MathStage.stripSentinels(processed)
+            trace.stages = trace.stages.map {
+                PostProcessingStageTrace(
+                    stage: $0.stage,
+                    input: MathStage.stripSentinels($0.input),
+                    output: MathStage.stripSentinels($0.output),
+                    events: $0.events
+                )
+            }
+        }
 
         return TranscriptProcessingResult(text: processed, trace: trace)
     }
 
-    private static func applySmartNumericFormattingIfEnabled(
+    private static func applyAcademicReferenceFormatting(
         to text: String,
         options: TranscriptProcessingOptions
     ) -> String {
-        guard options.isSmartNumericFormattingEnabled else {
-            return text
+        // Mark complete raw letter runs as opaque to academic rewrites without
+        // splitting the sentence and losing its section/reference context.
+        let spellingSpans = SpelledLetterNormalizer.rawLetterRanges(in: text).map {
+            ProtectedSpan(range: $0, kind: .spelledLetters, text: String(text[$0]))
         }
-
-        return NormalizationPipeline.normalize(text, knownTerms: options.knownTerms)
+        let context = NormalizationContext(
+            knownTerms: options.knownTerms,
+            protectedSpans: ProtectedSpanDetector.detect(in: text) + spellingSpans
+        )
+        return AcademicReferenceNormalizer.normalize(text, context: context)
     }
 
-    private static func cleanupWhitespace(in text: String) -> String {
+    private static func cleanupWhitespace(in text: String, knownTerms: [String]) -> String {
+        // Final cleanup honours the same protected spans as every other stage.
+        SharedProtection.transformUnprotected(in: text, knownTerms: knownTerms, using: cleanupUnprotectedWhitespace)
+    }
+
+    private static func cleanupUnprotectedWhitespace(in text: String) -> String {
         var cleaned = normalizeExclamationMarks(in: text)
         cleaned = insertEnglishSentenceSpacing(in: cleaned)
         let collapsed = cleaned.replacingOccurrences(
@@ -140,7 +205,8 @@ enum TranscriptPostProcessor {
             let character = text[index]
             if character == "！" {
                 result.append("。")
-            } else if character == "!", !isNotEqualOperator(at: index, in: text) {
+            } else if character == "!", !isNotEqualOperator(at: index, in: text),
+                      !isPrefixOperator(at: index, in: text) {
                 result.append(".")
             } else {
                 result.append(character)
@@ -149,6 +215,17 @@ enum TranscriptPostProcessor {
         }
 
         return result
+    }
+
+    /// `!important`, `!isReady`: a prefix operator before an identifier is not punctuation.
+    private static func isPrefixOperator(at index: String.Index, in text: String) -> Bool {
+        let nextIndex = text.index(after: index)
+        guard nextIndex < text.endIndex, isASCIIAlphanumeric(text[nextIndex]) || text[nextIndex] == "_" else {
+            return false
+        }
+        guard index > text.startIndex else { return true }
+        let previous = text[text.index(before: index)]
+        return previous.isWhitespace || "([{,=:;".contains(previous)
     }
 
     private static func isNotEqualOperator(at index: String.Index, in text: String) -> Bool {
@@ -192,6 +269,20 @@ enum TranscriptPostProcessor {
             in: text
         ) {
             return false
+        }
+        // A period needs sentence evidence: ASP.NET, Node.JS, Program.Main stay joined.
+        if text[punctuationIndex] == "." {
+            var rightEnd = nextIndex
+            while rightEnd < text.endIndex, isASCIILetter(text[rightEnd]) { rightEnd = text.index(after: rightEnd) }
+            // The left token is the whole dotted compound (Foundation.framework), not just its last part.
+            var leftStart = precedingSegment.start
+            while leftStart > text.startIndex {
+                let previous = text.index(before: leftStart)
+                guard isASCIIAlphanumeric(text[previous]) || text[previous] == "." else { break }
+                leftStart = previous
+            }
+            let leftToken = text[leftStart..<punctuationIndex]
+            return SentenceBoundary.isBoundary(left: leftToken, right: text[nextIndex..<rightEnd])
         }
 
         return true
@@ -246,6 +337,11 @@ enum TranscriptPostProcessor {
         return (65...90).contains(scalar.value)
             || (97...122).contains(scalar.value)
             || (48...57).contains(scalar.value)
+    }
+
+    private static func isASCIILetter(_ character: Character) -> Bool {
+        guard let scalar = asciiScalar(for: character) else { return false }
+        return (65...90).contains(scalar.value) || (97...122).contains(scalar.value)
     }
 
     private static func isASCIIUppercaseLetter(_ character: Character) -> Bool {

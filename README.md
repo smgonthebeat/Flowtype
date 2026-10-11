@@ -2,15 +2,15 @@
 
 [English](README.en.md) · 简体中文
 
-> **Release status:** [`v0.1.0-preview.5`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.5) Apple Silicon DMG 已开放下载。它使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**；macOS 会拦截首次启动，需要用户在 System Settings → Privacy & Security 中明确选择 Open Anyway。
+> **Release status:** [`v0.1.0-preview.6`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) Apple Silicon DMG 已开放下载。它使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**；macOS 会拦截首次启动，需要用户在 System Settings → Privacy & Security 中明确选择 Open Anyway。
 >
 > [首次打开指引 ↓](#first-launch)
 
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.5/Flowtype.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.6/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 
-[校验 SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.5/Flowtype.dmg.sha256) · [查看 Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.5) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
+[校验 SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.6/Flowtype.dmg.sha256) · [查看 Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开后完成本地转写，并把结果粘贴到刚才使用的 App 中。它重点处理中文、English、technical terms 与 spoken mathematics 混合出现的真实口述场景。
 
@@ -39,9 +39,11 @@ Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开�
 - **按住即说，松开即贴：** 在当前 App 中使用 `Fn` 完成录音、转写和粘贴。
 - **中英混合与专业词汇：** local Qwen3-ASR 配合可自定义的 terminology context。
 - **口述数学：** 可把数学表达转换成 Unicode 或 LaTeX。
+- **智能格式：** 数字、百分比、日期、题号与小问自动整理；可选清理「嗯」「呃」等口头填充词。
+- **中文 / English 界面：** 第一次打开就能选择界面语言，菜单、主窗口和设置全部跟着切换；正文提供三档文字大小。
 - **local-first：** 主引擎在 Apple Silicon 本机运行；不要求云端 ASR 订阅。
 - **失败可恢复：** History、最多三条本地 retry recordings、模型状态和 diagnostics 帮助定位问题。
-- **原生 macOS 体验：** menu bar、recording capsule、permissions onboarding 与 model management。
+- **原生 macOS 体验：** 图解新手引导与 `Fn` 练习、带实时波形的 recording capsule、menu bar 状态、帮助页一键复制 diagnostics。
 
 ## 系统要求
 
@@ -51,11 +53,11 @@ Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开�
 - Swift 5.9 或以上（仅从源码构建的 developers 需要）；
 - 数 GB 可用存储与 unified memory，用于本地模型和 runtime。
 
-首次点击「一键准备 Flowtype」即确认本次下载：Flowtype 会请求 Microphone 与 Accessibility permissions，自动下载约 1.9 GB 的默认 Qwen3-ASR 0.6B model，并实时显示已下载大小、平滑网速、预计剩余时间与 preparation progress。新下载优先使用 ModelScope，保留 Hugging Face fallback 与断点续传。Accessibility 仍需在 System Settings 中由用户确认；返回 Flowtype 后流程会自动继续。准备完成后，主页会立即沿用已验证的 Ready 状态，不需要再次点击准备。模型权重不在本仓库中，也不包含在源码 archive 中。
+首次打开时，五页图解引导会带你选择界面语言、完成准备、练习按住 `Fn` 说话。其中点击「一键准备 Flowtype」即确认本次下载：Flowtype 会请求 Microphone 与 Accessibility permissions，自动下载约 1.9 GB 的默认 Qwen3-ASR 0.6B model，并实时显示已下载大小、平滑网速、预计剩余时间与 preparation progress。新下载优先使用 ModelScope，保留 Hugging Face fallback 与断点续传。Accessibility 仍需在 System Settings 中由用户确认；返回 Flowtype 后流程会自动继续。准备完成后，主页会立即沿用已验证的 Ready 状态，不需要再次点击准备。模型权重不在本仓库中，也不包含在源码 archive 中。
 
 ## 开始使用
 
-普通用户不需要安装 Swift 或自己编译。请只从官方 [`v0.1.0-preview.5` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.5) 下载 `Flowtype.dmg`，打开后按照窗口中的箭头把 `Flowtype.app` 拖进 Applications。
+普通用户不需要安装 Swift 或自己编译。请只从官方 [`v0.1.0-preview.6` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) 下载 `Flowtype.dmg`，打开后按照窗口中的箭头把 `Flowtype.app` 拖进 Applications。
 
 <a id="first-launch"></a>
 

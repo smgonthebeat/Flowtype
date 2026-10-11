@@ -179,17 +179,31 @@ struct MainWindowView: View {
             }
         )
 
-        HSplitView {
+        HStack(spacing: 0) {
             MainSidebarView(
                 selectedSection: selectedSection,
                 uiLanguage: settingsStore.uiLanguage,
                 actions: actions
             )
-            .frame(width: 196)
+            .frame(width: MainSidebarView.baseWidth)
+
+            Rectangle()
+                .fill(theme.divider)
+                .frame(width: 1)
+                .ignoresSafeArea()
 
             detailView
                 .frame(minWidth: 620)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .top) {
+                    // Content scrolls under the transparent titlebar; a short scrim keeps it legible.
+                    GeometryReader { proxy in
+                        LinearGradient(colors: [theme.surface, theme.surface.opacity(0)], startPoint: .top, endPoint: .bottom)
+                            .frame(height: proxy.safeAreaInsets.top + AppSpacing.x2)
+                            .ignoresSafeArea(edges: .top)
+                    }
+                    .allowsHitTesting(false)
+                }
         }
         .background(theme.surface)
         .flowtypeTheme(theme)

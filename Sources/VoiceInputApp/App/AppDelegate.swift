@@ -57,6 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     )
     @MainActor
     private lazy var capsule = FloatingCapsulePanel()
+    /// Capsule strings follow the UI language (design-spec 5.10).
+    private var capsuleCopy: AppCopy.Texts { AppCopy.texts(for: settingsStore.uiLanguage) }
     private var meter = RMSMeter()
     private var dictationSession = DictationSessionController()
     private var recordingPreviewID = UUID()
@@ -69,9 +71,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private var settingsWindowController: SettingsWindowController?
     private var helpWindowController: HelpWindowController?
     private var onboardingWindowController: OnboardingWindowController?
+    /// Set while the onboarding practice page is showing: dictation results go
+    /// there instead of being pasted into another app.
+    private var onboardingPracticeListener: ((OnboardingPracticeEvent) -> Void)?
     private var mainWindowController: MainWindowController?
     private var lastExternalApplication: NSRunningApplication?
     private var recordingTargetApplication: NSRunningApplication?
+    private var recordingTargetSource: PasteTargetSource?
     private var lastTranscript: String?
     private var workspaceActivationObserver: NSObjectProtocol?
     private var selectedModelObserver: NSObjectProtocol?
@@ -93,9 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 self?.mainWindowController?.reload()
             },
             onUILanguageChange: { [weak self] language in
-                self?.mainWindowController?.reload()
-                self?.menuBarController?.refreshMenu()
-                NSApp.mainMenu = AppMainMenu.make(copy: AppCopy.texts(for: language))
+                self?.applyUILanguageChange(language)
             }
         )
         if let hotwordStore, let historyStore {
@@ -302,27 +306,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     },
                     copyDiagnostics: { [weak self] report in
                         guard let self else { return "" }
-                        AppLogger.diagnostics.info("diagnostics_generate_started")
-                        let writer = DiagnosticsFileWriter(
-                            applicationSupportRoot: self.modelManager.applicationSupportRoot
-                        )
-                        let result: DiagnosticsFileResult
-                        do {
-                            result = try await writer.generate(report: report)
-                            AppLogger.diagnostics.info("diagnostics_latest_written file=\(result.latestURL.lastPathComponent, privacy: .public)")
-                            AppLogger.diagnostics.info("diagnostics_timestamped_written file=\(result.timestampedFileName, privacy: .public)")
-                        } catch {
-                            AppLogger.diagnostics.error("diagnostics_generate_failed error=\(error.localizedDescription, privacy: .private)")
-                            throw error
-                        }
-                        let copied = await MainActor.run {
-                            self.pasteInjector.copyPermanent(result.text)
-                        }
-                        guard copied else {
-                            AppLogger.diagnostics.error("diagnostics_copy_failed file=\(result.timestampedFileName, privacy: .public)")
-                            throw DiagnosticsCopyError.pasteboardWriteFailed(result.latestURL)
-                        }
-                        return result.text
+                        return try await self.generateAndCopyDiagnostics(report: report).text
                     },
                     saveDiagnosticsSnapshot: { [weak self] report in
                         guard let self else { return }
@@ -357,6 +341,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         }
         menuBarController = MenuBarController(
             settingsStore: settingsStore,
+            readinessSummary: { [weak self] in
+                guard let self, let store = self.mainWindowController?.readinessStore else { return nil }
+                return ReadinessSummary.make(for: store.presentation, language: self.settingsStore.uiLanguage)
+            },
+            hasLastTranscript: { [weak self] in
+                self?.lastTranscript.map(PasteInjector.isPasteable) ?? false
+            },
+            onMenuWillOpen: { [weak self] in
+                // Show the cached state at once, then confirm it with the helper.
+                guard let store = self?.mainWindowController?.readinessStore else { return }
+                Task { @MainActor [weak self] in
+                    await store.refreshLive()
+                    self?.menuBarController?.updateDynamicItems()
+                }
+            },
             onOpenHome: { [weak self] in
                 self?.showMainWindow(section: .home)
             },
@@ -492,14 +491,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         case let .ignored(reason, activeSessionID):
             logIgnoredDictationStart(reason: reason, activeSessionID: activeSessionID)
             if reason == .transcriptionInFlight {
-                capsule.show(.status("Still transcribing..."))
+                capsule.show(.status(capsuleCopy.capsuleStillTranscribing))
             }
             return
         }
 
         recordingPreviewID = sessionID
         isRecordingPreviewActive = false
-        recordingTargetApplication = pasteTargetApplication()
+        let capturedTarget = pasteTarget()
+        recordingTargetApplication = capturedTarget?.application
+        recordingTargetSource = capturedTarget?.source
         cancelRecordingTimers()
 
         guard permissionManager.snapshot().microphone == .granted else {
@@ -507,7 +508,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 clearRecordingTargetIfCurrent(session: sessionID)
             }
             currentRecordingURL = nil
-            capsule.show(.failure("Microphone permission required"))
+            capsule.show(.failure(capsuleCopy.capsuleMicrophonePermissionRequired))
+            onboardingPracticeListener?(.failed(capsuleCopy.capsuleMicrophonePermissionRequired))
             scheduleCapsuleHide(after: 1.0, previewID: recordingPreviewID)
             return
         }
@@ -522,13 +524,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             currentRecordingURL = try startRecorderWithSelectedMicrophone()
             recordingStartedAt = Date()
             isRecordingPreviewActive = true
-            capsule.show(.listening())
+            capsule.show(.listening(capsuleCopy.capsuleListening))
+            onboardingPracticeListener?(.listening)
             scheduleRecordingTimeout(previewID: recordingPreviewID)
         } catch AudioRecorderError.alreadyRecording {
             currentRecordingURL = currentRecordingURL ?? recorder.outputURL
             recordingStartedAt = recordingStartedAt ?? Date()
             isRecordingPreviewActive = true
-            capsule.show(.listening())
+            capsule.show(.listening(capsuleCopy.capsuleListening))
         } catch {
             if dictationSession.abortRecordingStart(session: sessionID) {
                 clearRecordingTargetIfCurrent(session: sessionID)
@@ -536,10 +539,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             currentRecordingURL = nil
             recordingStartedAt = nil
             if permissionManager.snapshot().microphone == .granted {
-                capsule.show(.failure("Recording unavailable"))
+                capsule.show(.failure(capsuleCopy.capsuleRecordingUnavailable))
             } else {
-                capsule.show(.failure("Microphone permission required"))
+                capsule.show(.failure(capsuleCopy.capsuleMicrophonePermissionRequired))
             }
+            // Same as the permission branch above: without this the failure capsule never hid.
+            scheduleCapsuleHide(after: 1.0, previewID: recordingPreviewID)
         }
     }
 
@@ -559,7 +564,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         guard isRecordingPreviewActive else {
             recordingStartedAt = nil
             _ = dictationSession.handleFailure(session: previewID)
-            capsule.update(.failure("Transcription failed"))
+            capsule.update(.failure(capsuleCopy.capsuleTranscriptionFailed))
             scheduleCapsuleHide(after: 1.0, previewID: previewID) { [weak self] in
                 self?.finishDictationPresentation(session: previewID)
             }
@@ -570,11 +575,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         let recordingDuration = recordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
         recordingStartedAt = nil
         recorder.stop()
-        capsule.update(.transcribing("Transcribing..."))
+        let practiceListener = onboardingPracticeListener
+
+        if FnPressPolicy.isAccidentalTap(recordingDuration: recordingDuration) {
+            // A tap this short holds no speech; the user most likely expects
+            // tap-to-start. Teach hold-to-talk instead of reporting no speech.
+            AppLogger.asr.info("dictation_accidental_tap session=\(previewID.uuidString, privacy: .public) duration_ms=\(Int(recordingDuration * 1000), privacy: .public)")
+            if let recordingURL = currentRecordingURL {
+                deleteTemporaryRecording(at: recordingURL)
+            }
+            currentRecordingURL = nil
+            _ = dictationSession.handleFailure(session: previewID)
+            capsule.update(.status(capsuleCopy.capsuleHoldFnHint))
+            practiceListener?(.tooShort)
+            scheduleCapsuleHide(after: 2.0, previewID: previewID) { [weak self] in
+                self?.finishDictationPresentation(session: previewID)
+            }
+            return
+        }
+
+        capsule.update(.transcribing(capsuleCopy.capsuleTranscribing))
+        practiceListener?(.transcribing)
 
         guard let recordingURL = currentRecordingURL else {
             _ = dictationSession.handleFailure(session: previewID)
-            capsule.update(.failure("Transcription failed"))
+            capsule.update(.failure(capsuleCopy.capsuleTranscriptionFailed))
             scheduleCapsuleHide(after: 1.0, previewID: previewID) { [weak self] in
                 self?.finishDictationPresentation(session: previewID)
             }
@@ -606,6 +631,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     AppLogger.asr.error("dictation_stale_result session=\(session.uuidString, privacy: .public) reason=\(reason.diagnosticName, privacy: .public) state=\(self.dictationSession.state.diagnosticName, privacy: .public)")
                     return
                 case .presentFailure:
+                    return
+                }
+                if let practiceListener {
+                    // Practice dictation stays in the onboarding window: no paste,
+                    // no history entry, no usage stats.
+                    self.capsule.hide()
+                    practiceListener(.result(result.text))
+                    self.finishDictationPresentation(session: previewID)
                     return
                 }
                 self.lastTranscript = result.text
@@ -655,10 +688,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                         // Keep dictation flow uninterrupted if local history cannot be written.
                     }
                 }
-                self.capsule.update(.result(result.text))
+                // No success frame: the text is already pasted, so the capsule just leaves.
                 self.capsule.hide()
-                self.pasteAfterOverlayDismiss(result.text, previewID: previewID) { [weak self] in
-                    self?.finishDictationPresentation(session: previewID)
+                self.pasteAfterOverlayDismiss(result.text, previewID: previewID) { [weak self] outcome in
+                    guard let self else { return }
+                    // When the paste could not land, say where the text went instead of
+                    // letting it silently vanish (owner report, 2026-10-03).
+                    if case .copiedOnly = outcome {
+                        self.capsule.show(.status(self.capsuleCopy.capsuleCopiedPressToPaste))
+                        self.scheduleCapsuleHide(after: 1.6, previewID: previewID)
+                    }
+                    self.finishDictationPresentation(session: previewID)
                 }
             } catch TranscriptionFlowError.speechPermissionRequired {
                 self.captureDebugRecordingIfNeeded(
@@ -668,6 +708,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     error: TranscriptionFlowError.speechPermissionRequired
                 )
                 guard self.markDictationFailureForPresentation(previewID: previewID) else { return }
+                practiceListener?(.failed(""))
                 self.requestSpeechPermissionIfNeeded(previewID: previewID)
             } catch {
                 self.captureDebugRecordingIfNeeded(
@@ -684,11 +725,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     error: error
                 )
                 let copy = AppCopy.texts(for: self.settingsStore.uiLanguage)
-                self.capsule.update(.failure(
-                    savedRecoverableAttempt
-                        ? copy.capsuleRecoverableTranscriptionFailed
-                        : Self.transcriptionFailureText(for: error)
-                ))
+                let category = Self.transcriptionFailureCategory(for: error)
+                practiceListener?(.failed(copy.capsuleFailureText(for: category)))
+                if !savedRecoverableAttempt && category == .noSpeechDetected {
+                    self.capsule.update(.noSpeech(copy.capsuleFailureText(for: category)))
+                } else {
+                    self.capsule.update(.failure(
+                        savedRecoverableAttempt
+                            ? copy.capsuleRecoverableTranscriptionFailed
+                            : copy.capsuleFailureText(for: category)
+                    ))
+                }
                 self.scheduleCapsuleHide(after: 1.0, previewID: previewID) { [weak self] in
                     self?.finishDictationPresentation(session: previewID)
                 }
@@ -783,7 +830,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         guard
             let category = TranscriptionFailureClassifier.recoverableHomeRowCategory(
                 for: error,
-                selectedEngine: selectedEngine
+                selectedEngine: selectedEngine,
+                recordingDuration: recordingDuration
             ),
             settingsStore.isHistoryEnabled,
             historyStore != nil,
@@ -901,7 +949,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         case .qwenLocal:
             if preparedConfiguration == nil {
                 if recordingPreviewID == previewID {
-                    capsule.update(.transcribing("Preparing Qwen..."))
+                    capsule.update(.transcribing(capsuleCopy.capsulePreparingModel))
                 }
                 let configuration = currentPreparationConfiguration()
                 helperStopRequestedAfterTranscription = false
@@ -944,7 +992,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 let client = QwenHelperClient(baseURL: endpoint.baseURL, authToken: endpoint.authToken)
 
                 if recordingPreviewID == previewID {
-                    capsule.update(.transcribing("Preparing Qwen..."))
+                    capsule.update(.transcribing(capsuleCopy.capsulePreparingModel))
                 }
                 modelStatusBefore = try? await client.modelStatus(modelID: runModel.modelID)
                 if let status = modelStatusBefore,
@@ -964,7 +1012,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     throw QwenReadinessError(kind: failureKind)
                 }
                 if recordingPreviewID == previewID {
-                    capsule.update(.transcribing("Transcribing with Qwen..."))
+                    capsule.update(.transcribing(capsuleCopy.capsuleTranscribing))
                 }
 
                 let hotwords = (try? hotwordStore?.enabledHotwords()) ?? []
@@ -1122,13 +1170,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
                 let appleFallbackStartedAt = Date()
                 if recordingPreviewID == previewID {
-                    capsule.update(.transcribing("Using Apple Speech"))
+                    capsule.update(.transcribing(capsuleCopy.capsuleUsingAppleSpeech))
                 }
                 let result: TranscriptionResult
                 do {
                     result = try await AppleSpeechEngine(localeIdentifier: settingsStore.appleSpeechLocaleIdentifier)
                         .transcribe(fileURL: url, languageMode: settingsStore.languageMode)
                 } catch let fallbackError {
+                    // Record the double failure too, so a lost dictation leaves a diagnostic trace.
+                    await appendTranscriptionProvenance(
+                        TranscriptionProvenance(
+                            recordingID: previewID,
+                            createdAt: Date(),
+                            selectedEngine: .qwenLocal,
+                            winnerEngine: nil,
+                            selectedModelID: runSelectedModelID,
+                            modelStatusBefore: modelStatusBefore.map(QwenModelStatusSnapshot.init(status:)),
+                            requestedModelID: runModel.modelID,
+                            requestedStrategy: strategy.rawValue,
+                            effectiveStrategy: "appleSpeechFallbackFailed",
+                            recordingDurationSeconds: QwenContextEchoDetector.recordingDuration(fileURL: url),
+                            qwenStartedAt: qwenStartedAt,
+                            qwenFinishedAt: qwenFinishedAt,
+                            qwenErrorKind: failureKind.rawValue,
+                            appleFallbackReason: failureKind.rawValue,
+                            fallbackReason: failureKind.rawValue,
+                            sessionStateAtCompletion: currentSessionStateForDiagnostics(),
+                            commitOutcome: commitOutcomeForDiagnostics(previewID: previewID, currentOutcome: "failed"),
+                            ignoredInputReason: ignoredInputReasonForDiagnostics(previewID: previewID),
+                            capsuleEvents: [
+                                CapsuleEvent(at: Date(), text: "Preparing Qwen..."),
+                                CapsuleEvent(at: appleFallbackStartedAt, text: "Using Apple Speech")
+                            ]
+                        ),
+                        previewID: previewID
+                    )
                     throw TranscriptionFallbackFailure(primaryError: qwenError, fallbackError: fallbackError)
                 }
                 let fallbackPostStartedAt = Date()
@@ -1471,7 +1547,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         case .blocked:
             outcome = .blockedByAppBundle
         case let .failed(failure):
-            outcome = .failed(failure.localizedDescription)
+            let language = await MainActor.run { settingsStore.uiLanguage }
+            outcome = .failed(UserFacingErrorMessage.message(for: failure, language: language))
         }
         let verifiedContext = await MainActor.run {
             readinessContext(for: configuration)
@@ -1672,15 +1749,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
     @MainActor
     private func pasteTargetApplication() -> NSRunningApplication? {
+        pasteTarget()?.application
+    }
+
+    @MainActor
+    private func pasteTarget() -> (application: NSRunningApplication, source: PasteTargetSource)? {
         let ownBundleIdentifier = Bundle.main.bundleIdentifier
         let ownProcessIdentifier = NSRunningApplication.current.processIdentifier
-        return [currentExternalApplication(), lastExternalApplication].compactMap { $0 }.first {
-            PasteTargetPolicy.isUsableExternalTarget(
-                $0,
-                ownBundleIdentifier: ownBundleIdentifier,
-                ownProcessIdentifier: ownProcessIdentifier
-            )
+        let focusedApplication = FocusedApplicationReader.focusedProcessIdentifier()
+            .flatMap { NSRunningApplication(processIdentifier: $0) }
+        guard let choice = PasteTargetPolicy.chooseTarget(
+            focused: focusedApplication,
+            frontmost: currentExternalApplication(),
+            lastActivated: lastExternalApplication,
+            isUsable: {
+                PasteTargetPolicy.isUsableExternalTarget(
+                    $0,
+                    ownBundleIdentifier: ownBundleIdentifier,
+                    ownProcessIdentifier: ownProcessIdentifier
+                )
+            }
+        ) else {
+            return nil
         }
+        return (choice.candidate, choice.source)
+    }
+
+    /// The app that owns keyboard focus now; see `PasteTargetPolicy.liveFrontProcessIdentifier`.
+    @MainActor
+    private func liveFrontProcessIdentifier() -> pid_t? {
+        PasteTargetPolicy.liveFrontProcessIdentifier(
+            focused: FocusedApplicationReader.focusedProcessIdentifier(),
+            frontmost: NSWorkspace.shared.frontmostApplication?.processIdentifier,
+            ownProcessIdentifier: NSRunningApplication.current.processIdentifier
+        )
+    }
+
+    @MainActor
+    private func pasteTargetAcceptsText(_ target: PasteTargetIdentity) -> Bool {
+        guard let bundleIdentifier = target.bundleIdentifier,
+              PasteTargetPolicy.textInputRequiredBundleIdentifiers.contains(bundleIdentifier) else {
+            return true
+        }
+        return PasteTargetPolicy.acceptsPastedText(
+            bundleIdentifier: bundleIdentifier,
+            focusedRole: FocusedApplicationReader.focusedElementRole(
+                processIdentifier: target.processIdentifier
+            )
+        )
     }
 
     @MainActor
@@ -1694,17 +1810,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             return
         }
 
+        let target = pasteTarget()
         let attempt = PasteAttempt(
             id: previewID,
             source: .menuLastTranscript,
             text: text,
-            target: pasteTargetApplication().map(pasteTargetIdentity)
+            target: target.map { pasteTargetIdentity($0.application) },
+            targetSource: target?.source
         )
         let outcome = await pasteCoordinator.perform(attempt) { [weak self] target in
             guard let self else { return nil }
             return await self.activateAndValidatePasteTarget(target)
         } validateTarget: { [weak self] target in
             self?.isPasteTargetReadyForDispatch(target) == true
+        } acceptsText: { [weak self] target in
+            self?.pasteTargetAcceptsText(target) ?? false
         }
         let copy = AppCopy.texts(for: settingsStore.uiLanguage)
         capsule.show(.status(
@@ -1739,9 +1859,101 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     @MainActor
     private func showHelpWindow() {
         if helpWindowController == nil {
-            helpWindowController = HelpWindowController(settingsStore: settingsStore)
+            helpWindowController = HelpWindowController(
+                settingsStore: settingsStore,
+                actions: HelpActions(
+                    openSection: { [weak self] section in
+                        self?.showMainWindow(section: section)
+                    },
+                    showOnboarding: { [weak self] in
+                        self?.showOnboardingWindow()
+                    },
+                    copyLastTranscript: { [weak self] in
+                        guard let self, let text = self.lastTranscript, PasteInjector.isPasteable(text) else {
+                            return false
+                        }
+                        return self.pasteInjector.copyPermanent(text)
+                    },
+                    checkAndCopyDiagnostics: { [weak self] in
+                        guard let self else { throw CancellationError() }
+                        return try await self.checkAndCopyDiagnosticsForHelp()
+                    },
+                    revealFile: { url in
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    },
+                    openURL: { url in
+                        NSWorkspace.shared.open(url)
+                    }
+                )
+            )
         }
         helpWindowController?.show()
+    }
+
+    /// Help's one-button flow: a fresh live check first, so the report is not stale, then the
+    /// same file-and-clipboard path as Setup & Status. Errors come back as a sentence in the
+    /// interface language.
+    @MainActor
+    private func checkAndCopyDiagnosticsForHelp() async throws -> HelpDiagnosticsResult {
+        let language = settingsStore.uiLanguage
+        do {
+            let report = await readinessReportWithHelperStatus()
+            mainWindowController?.readinessStore.accept(report, coverage: .live)
+            let snapshot = ReadinessSnapshot(report: report, context: currentReadinessContext(), coverage: .live)
+            let result = try await generateAndCopyDiagnostics(report: report)
+            return HelpDiagnosticsResult(
+                summary: ReadinessSummary.make(
+                    for: ReadinessPresentationPolicy.presentation(for: snapshot),
+                    language: language
+                ),
+                fileURL: result.timestampedURL
+            )
+        } catch {
+            throw UserFacingMessageError(message: UserFacingErrorMessage.message(for: error, language: language))
+        }
+    }
+
+    private func generateAndCopyDiagnostics(report: ReadinessReport) async throws -> DiagnosticsFileResult {
+        AppLogger.diagnostics.info("diagnostics_generate_started")
+        let writer = DiagnosticsFileWriter(
+            applicationSupportRoot: modelManager.applicationSupportRoot
+        )
+        let result: DiagnosticsFileResult
+        do {
+            result = try await writer.generate(report: report)
+            AppLogger.diagnostics.info("diagnostics_latest_written file=\(result.latestURL.lastPathComponent, privacy: .public)")
+            AppLogger.diagnostics.info("diagnostics_timestamped_written file=\(result.timestampedFileName, privacy: .public)")
+        } catch {
+            AppLogger.diagnostics.error("diagnostics_generate_failed error=\(error.localizedDescription, privacy: .private)")
+            throw error
+        }
+        let copied = await MainActor.run {
+            pasteInjector.copyPermanent(result.text)
+        }
+        guard copied else {
+            AppLogger.diagnostics.error("diagnostics_copy_failed file=\(result.timestampedFileName, privacy: .public)")
+            throw DiagnosticsCopyError.pasteboardWriteFailed(result.latestURL)
+        }
+        return result
+    }
+
+    @MainActor
+    @objc func increaseTextSize(_ sender: Any?) {
+        if let larger = settingsStore.textSize.larger {
+            settingsStore.textSize = larger
+        }
+    }
+
+    @MainActor
+    @objc func decreaseTextSize(_ sender: Any?) {
+        if let smaller = settingsStore.textSize.smaller {
+            settingsStore.textSize = smaller
+        }
+    }
+
+    @MainActor
+    @objc func resetTextSize(_ sender: Any?) {
+        settingsStore.textSize = AppTextSize.defaultSize
     }
 
     @MainActor
@@ -1771,6 +1983,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     /// complete and lands the user in the main window.
     @MainActor
     private func handleOnboardingClosed(completedSnapshot: ReadinessSnapshot?) {
+        onboardingPracticeListener = nil
         settingsStore.hasCompletedOnboarding = true
         let currentSnapshot = makeLightweightReadinessSnapshot()
         let nextSnapshot = OnboardingReadinessHandoff.resolvedSnapshot(
@@ -1825,8 +2038,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     }
                 }
                 return await self.prepareFlowtypeThroughLifecycle(intent: intent, onUpdate: onUpdate)
+            },
+            setPracticeListener: { [weak self] listener in
+                self?.onboardingPracticeListener = listener
+            },
+            uiLanguageDidChange: { [weak self] language in
+                self?.applyUILanguageChange(language)
+                // Settings may already exist with the old language; Settings' own picker
+                // does not need this because its view already holds the new value.
+                self?.settingsWindowController?.reloadFromStore()
             }
         )
+    }
+
+    /// Redraws everything that caches interface text after the language changes, whether
+    /// it was switched in Settings or on the onboarding welcome page.
+    @MainActor
+    private func applyUILanguageChange(_ language: UILanguage) {
+        mainWindowController?.reload()
+        menuBarController?.refreshMenu()
+        NSApp.mainMenu = AppMainMenu.make(copy: AppCopy.texts(for: language))
     }
 
     @MainActor
@@ -1837,17 +2068,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     @MainActor
     private func pasteTranscript(_ text: String) async {
         guard PasteInjector.isPasteable(text) else { return }
+        let target = pasteTarget()
         let attempt = PasteAttempt(
             id: UUID(),
             source: .history,
             text: text,
-            target: pasteTargetApplication().map(pasteTargetIdentity)
+            target: target.map { pasteTargetIdentity($0.application) },
+            targetSource: target?.source
         )
         _ = await pasteCoordinator.perform(attempt) { [weak self] target in
             guard let self else { return nil }
             return await self.activateAndValidatePasteTarget(target)
         } validateTarget: { [weak self] target in
             self?.isPasteTargetReadyForDispatch(target) == true
+        } acceptsText: { [weak self] target in
+            self?.pasteTargetAcceptsText(target) ?? false
         }
     }
 
@@ -1855,9 +2090,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private func pasteAfterOverlayDismiss(
         _ text: String,
         previewID: UUID,
-        onComplete: (@MainActor () -> Void)? = nil
+        onComplete: (@MainActor (PasteOutcome) -> Void)? = nil
     ) {
         let target = recordingTargetApplication.map(pasteTargetIdentity)
+        let targetSource = recordingTargetSource
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             Task { @MainActor in
                 guard self.dictationSession.isPresentingResult(session: previewID) else { return }
@@ -1865,16 +2101,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     id: previewID,
                     source: .dictation,
                     text: text,
-                    target: target
+                    target: target,
+                    targetSource: targetSource
                 )
                 let outcome = await self.pasteCoordinator.perform(attempt) { [weak self] capturedTarget in
                     guard let self else { return nil }
                     return await self.activateAndValidatePasteTarget(capturedTarget)
                 } validateTarget: { [weak self] capturedTarget in
                     self?.isPasteTargetReadyForDispatch(capturedTarget) == true
+                } acceptsText: { [weak self] capturedTarget in
+                    self?.pasteTargetAcceptsText(capturedTarget) ?? false
                 }
                 guard outcome.ownsPresentationCompletion else { return }
-                onComplete?()
+                onComplete?(outcome)
             }
         }
     }
@@ -1909,7 +2148,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             return nil
         }
 
-        if NSWorkspace.shared.frontmostApplication?.processIdentifier != application.processIdentifier {
+        if liveFrontProcessIdentifier() != application.processIdentifier {
             guard application.activate() else {
                 return nil
             }
@@ -1929,7 +2168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
             ownBundleIdentifier: ownBundleIdentifier,
             ownProcessIdentifier: ownProcessIdentifier
         ),
-        NSWorkspace.shared.frontmostApplication?.processIdentifier == expectedTarget.processIdentifier else {
+        liveFrontProcessIdentifier() == expectedTarget.processIdentifier else {
             return nil
         }
 
@@ -1957,7 +2196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         ) else {
             return false
         }
-        return NSWorkspace.shared.frontmostApplication?.processIdentifier == expectedTarget.processIdentifier
+        return liveFrontProcessIdentifier() == expectedTarget.processIdentifier
     }
 
     @MainActor
@@ -1972,6 +2211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     private func clearRecordingTargetIfCurrent(session: UUID) {
         guard recordingPreviewID == session else { return }
         recordingTargetApplication = nil
+        recordingTargetSource = nil
     }
 
     private var selectedModel: VoiceInputModel {
@@ -2021,6 +2261,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         let knownTerms = ((try? hotwordStore?.enabledHotwords()) ?? []).map(\.text)
         return TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: settingsStore.isSmartNumericFormattingEnabled,
+            isAcademicReferenceFormattingEnabled: settingsStore.isAcademicReferenceFormattingEnabled,
             isFillerCleanupEnabled: settingsStore.isFillerCleanupEnabled,
             isMathNotationEnabled: settingsStore.isMathNotationEnabled,
             mathNotationOutputFormat: settingsStore.mathNotationOutputFormat,
@@ -2032,12 +2273,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         let hotwords = (try? hotwordStore?.enabledHotwords()) ?? []
         let context = TranscriptionContextBuilder.context(for: hotwords)
         try SensitiveTranscriptCommitGuard.validate(text, context: context)
-    }
-
-    private static func transcriptionFailureText(for error: Error) -> String {
-        TranscriptionFailureClassifier.capsuleText(
-            for: transcriptionFailureCategory(for: error)
-        )
     }
 
     private static func transcriptionFailureCategory(for error: Error) -> TranscriptFailureCategory {
@@ -2056,7 +2291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
     @MainActor
     private func requestSpeechPermissionIfNeeded(previewID: UUID) {
-        capsule.update(.failure("Speech permission required"))
+        capsule.update(.failure(capsuleCopy.capsuleSpeechPermissionRequired))
         let snapshot = permissionManager.snapshot()
         if snapshot.speechRecognition == .notDetermined {
             permissionManager.requestSpeechRecognition { [weak self] _ in
@@ -2082,7 +2317,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 guard let self else { return }
                 guard self.recordingPreviewID == previewID else { return }
                 guard self.isRecordingPreviewActive else { return }
-                self.capsule.update(.transcribing("Time limit reached, transcribing..."))
+                self.capsule.update(.transcribing(self.capsuleCopy.capsuleTimeLimitReached))
                 self.stopRecordingPreview()
             }
         }
@@ -2101,7 +2336,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     guard let self else { return }
                     guard self.recordingPreviewID == previewID else { return }
                     guard self.isRecordingPreviewActive else { return }
-                    self.capsule.update(.status("\(secondsRemaining) seconds left"))
+                    self.capsule.update(.listeningCountdown(self.capsuleCopy.capsuleSecondsLeft(secondsRemaining)))
                 }
             }
             recordingWarningWorkItems.append(workItem)
@@ -2245,9 +2480,12 @@ extension AppDelegate: FlowtypePreparationDriving {
                 permissionManager.requestMicrophone { _ in continuation.resume() }
             }
         case .accessibility:
+            // Only the macOS alert: it registers Flowtype in the Accessibility list and its own
+            // "Open System Settings" button opens the pane. Opening the pane here as well showed the
+            // pane and a system alert that cannot be dismissed from the app. The readiness card keeps
+            // the direct "open settings" action as the fallback.
             await MainActor.run {
                 permissionManager.requestAccessibilityPrompt()
-                permissionManager.openAccessibilitySettings()
             }
         case .speechRecognition:
             await withCheckedContinuation { continuation in
@@ -2356,7 +2594,13 @@ private enum TranscriptionFlowError: LocalizedError {
     }
 }
 
-private enum DiagnosticsCopyError: LocalizedError {
+/// Carries a sentence that is already in the interface language.
+struct UserFacingMessageError: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
+}
+
+enum DiagnosticsCopyError: LocalizedError {
     case pasteboardWriteFailed(URL?)
 
     var errorDescription: String? {
@@ -2364,5 +2608,22 @@ private enum DiagnosticsCopyError: LocalizedError {
             return "Unable to copy diagnostics to the clipboard. Latest diagnostics were saved to \(url.path)."
         }
         return "Unable to copy diagnostics to the clipboard."
+    }
+}
+
+extension AppDelegate: NSMenuItemValidation {
+    /// Greys out the text size items that would do nothing at the current size.
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        let size = MainActor.assumeIsolated { settingsStore.textSize }
+        switch menuItem.action {
+        case #selector(increaseTextSize(_:)):
+            return size.larger != nil
+        case #selector(decreaseTextSize(_:)):
+            return size.smaller != nil
+        case #selector(resetTextSize(_:)):
+            return size != AppTextSize.defaultSize
+        default:
+            return true
+        }
     }
 }

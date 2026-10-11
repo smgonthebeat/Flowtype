@@ -30,7 +30,7 @@ struct DictionaryView: View {
                         Group {
                             if let duplicateFeedback {
                                 Label(duplicateFeedback, systemImage: "info.circle.fill")
-                                    .font(.callout)
+                                    .scaledFont(.callout)
                                     .foregroundStyle(theme.secondaryInk)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
@@ -76,11 +76,11 @@ struct DictionaryView: View {
         return HStack(alignment: .lastTextBaseline) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(copy.dictionaryTitle)
-                    .font(.system(size: 34, weight: .semibold))
+                    .scaledFont(size: 34, weight: .semibold)
                     .foregroundStyle(theme.ink)
 
                 Text(copy.dictionarySubtitle)
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -88,7 +88,7 @@ struct DictionaryView: View {
             Spacer()
 
             Text(copy.termCount(hotwords.count))
-                .font(.caption)
+                .scaledFont(.caption)
                 .fontWeight(.bold)
                 .foregroundStyle(theme.secondaryInk)
                 .padding(.horizontal, 10)
@@ -115,13 +115,13 @@ struct DictionaryView: View {
 
             TextField(copy.addHotwordPlaceholder, text: $draftWord)
                 .textFieldStyle(.plain)
-                .font(.body)
+                .scaledFont(.body)
                 .onSubmit(addDraftWord)
 
             Button(action: addDraftWord) {
                 Label(copy.addWordTitle, systemImage: "plus")
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(FlowtypeProminentButtonStyle(theme: theme))
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(draftWord.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
@@ -139,7 +139,7 @@ struct DictionaryView: View {
 
             TextField(copy.searchHotwordsPlaceholder, text: $query)
                 .textFieldStyle(.plain)
-                .font(.body)
+                .scaledFont(.body)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
@@ -152,11 +152,11 @@ struct DictionaryView: View {
 
         return HStack {
             Label(copy.manageHotwordsTitle, systemImage: "tag")
-                .font(.headline)
+                .scaledFont(.headline)
             Spacer()
             if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(copy.matchCount(filteredWords.count))
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(theme.secondaryInk)
             }
         }
@@ -234,7 +234,7 @@ struct DictionaryView: View {
     }
 
     private func showError(_ error: Error) {
-        errorMessage = error.localizedDescription
+        errorMessage = UserFacingErrorMessage.message(for: error, language: uiLanguage)
         isShowingError = true
     }
 }
@@ -251,7 +251,7 @@ private struct HotwordCard: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Text(hotword.text)
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(theme.ink)
                 .lineLimit(1)
                 .truncationMode(.middle)

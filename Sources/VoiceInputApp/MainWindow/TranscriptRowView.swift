@@ -124,8 +124,8 @@ struct TranscriptRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            Text(Self.timeFormatter.string(from: item.createdAt))
-                .font(.caption)
+            Text(Self.timeFormatter(for: copy.language).string(from: item.createdAt))
+                .scaledFont(.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(theme.secondaryInk)
                 .frame(width: timestampWidth, alignment: .trailing)
@@ -148,13 +148,13 @@ struct TranscriptRowView: View {
 
                 if let secondaryText = presentation.secondaryText {
                     Text(secondaryText)
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.secondaryInk)
                 }
 
                 if let recoveryMarkerText = presentation.recoveryMarkerText {
                     Label(recoveryMarkerText, systemImage: "checkmark.circle.fill")
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(theme.success)
                         .padding(.horizontal, 7)
@@ -164,7 +164,7 @@ struct TranscriptRowView: View {
 
                 if item.transcriptionIssue == .possibleTruncation {
                     Label(copy.rowPossibleTruncation, systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(.orange)
                 }
 
@@ -282,7 +282,7 @@ struct TranscriptRowView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium)
                 .rotationEffect(rotation)
                 .animation(rotationAnimation, value: rotation)
                 .frame(width: 24, height: 24)
@@ -379,7 +379,7 @@ struct TranscriptRowView: View {
 
     private func retryFeedbackLabel(_ state: RetryFeedbackState) -> some View {
         Label(retryFeedbackText(for: state), systemImage: retryFeedbackImage(for: state))
-            .font(.caption)
+            .scaledFont(.caption)
             .fontWeight(.semibold)
             .foregroundStyle(retryFeedbackColor(for: state))
             .padding(.horizontal, 7)
@@ -452,12 +452,20 @@ struct TranscriptRowView: View {
         }
     }
 
-    private static let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        formatter.dateStyle = .none
-        return formatter
-    }()
+    /// Times follow the interface language rather than the Mac's region (下午3:05 / 3:05 PM).
+    private static let timeFormatters: [UILanguage: DateFormatter] = Dictionary(
+        uniqueKeysWithValues: UILanguage.allCases.map { language in
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: language == .chinese ? "zh_Hans" : "en_US")
+            formatter.timeStyle = .short
+            formatter.dateStyle = .none
+            return (language, formatter)
+        }
+    )
+
+    private static func timeFormatter(for language: UILanguage) -> DateFormatter {
+        timeFormatters[language] ?? timeFormatters[.english]!
+    }
 }
 
 private enum RetryFeedbackState: Equatable {

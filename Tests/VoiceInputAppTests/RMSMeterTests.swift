@@ -24,8 +24,9 @@ final class RMSMeterTests: XCTestCase {
     }
 
     func testPerceptualNormalizationPreservesNoiseFloorAndCeiling() {
-        XCTAssertEqual(RMSMeter.normalizedInputLevel(forRMS: rms(atDecibels: -50)), 0, accuracy: 0.0001)
-        XCTAssertEqual(RMSMeter.normalizedInputLevel(forRMS: rms(atDecibels: -10)), 1, accuracy: 0.0001)
+        // Owner feedback 2026-10-03 (waveform not sensitive enough): floor -50 -> -55 dB, ceiling -10 -> -12 dB.
+        XCTAssertEqual(RMSMeter.normalizedInputLevel(forRMS: rms(atDecibels: -55)), 0, accuracy: 0.0001)
+        XCTAssertEqual(RMSMeter.normalizedInputLevel(forRMS: rms(atDecibels: -12)), 1, accuracy: 0.0001)
 
         let quiet = RMSMeter.normalizedInputLevel(forRMS: rms(atDecibels: -40))
         let normal = RMSMeter.normalizedInputLevel(forRMS: rms(atDecibels: -30))
@@ -41,8 +42,10 @@ final class RMSMeterTests: XCTestCase {
 
         let firstSpeechLevel = meter.normalizedLevel(forRMS: rms(atDecibels: -30))
 
+        // Owner feedback 2026-10-03: recalibrated range (-55..-12 dB) with attack 0.5 makes the
+        // first -30 dB buffer reach about 0.32 (was about 0.32 with the old range and attack 0.55).
         XCTAssertGreaterThan(firstSpeechLevel, 0.30)
-        XCTAssertLessThan(firstSpeechLevel, 0.34)
+        XCTAssertLessThan(firstSpeechLevel, 0.35)
         XCTAssertLessThan(firstSpeechLevel, 1.0)
     }
 

@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 @MainActor
@@ -11,13 +12,16 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
     /// routes to the main window there.
     var onClose: ((ReadinessSnapshot?) -> Void)?
     private var completionSnapshot: ReadinessSnapshot?
+    /// Freezes the onboarding animations at one moment; set by the snapshot harness.
+    var illustrationStillTime: Double?
+    private var textSizeObserver: AnyCancellable?
 
     init(settingsStore: SettingsStore, actions: OnboardingActions) {
         self.settingsStore = settingsStore
         self.baseActions = actions
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 620, height: 560),
+            contentRect: NSRect(origin: .zero, size: OnboardingLayout.windowSize(for: AppTextSizeModel.shared.size)),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -28,6 +32,11 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         super.init(window: window)
         window.delegate = self
+        textSizeObserver = AppTextSizeModel.shared.$size
+            .removeDuplicates()
+            .sink { [weak window] size in
+                window?.setContentSize(OnboardingLayout.windowSize(for: size))
+            }
     }
 
     required init?(coder: NSCoder) {
@@ -44,7 +53,17 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
             return
         }
 
-        let copy = AppCopy.texts(for: settingsStore.uiLanguage)
+        loadContent()
+        showWindow(nil)
+        window?.center()
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Builds the themed onboarding content without presenting the window.
+    /// `show()` calls this first; the offscreen UI snapshot harness calls it
+    /// directly so it can render the window without ordering it front.
+    func loadContent() {
         let theme = AppTheme.theme(for: settingsStore.appThemeID)
 
         var actions = baseActions
@@ -57,16 +76,13 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
         window?.appearance = theme.usesSystemMaterials ? nil : NSAppearance(named: .darkAqua)
         window?.contentView = NSHostingView(
             rootView: OnboardingView(
-                copy: copy,
                 model: VoiceInputModel.model(for: settingsStore.selectedModelID),
-                actions: actions
+                actions: actions,
+                settingsStore: settingsStore,
+                illustrationStillTime: illustrationStillTime
             )
                 .flowtypeTheme(theme)
         )
-        showWindow(nil)
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     func windowWillClose(_ notification: Notification) {

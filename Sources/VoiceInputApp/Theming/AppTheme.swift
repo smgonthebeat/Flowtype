@@ -26,8 +26,13 @@ struct AppTheme: Equatable {
     let sidebarSurfaceHex: String
     let hoverSurfaceHex: String
     let borderHex: String
+    /// Recording-capsule waveform and status colours (design-spec 2.4).
+    let voiceHex: String
+    let warningHex: String
 
     var accent: Color { color(accentHex) }
+    var voice: Color { color(voiceHex) }
+    var warning: Color { usesSystemMaterials ? Color(nsColor: .systemOrange) : color(warningHex) }
     var onAccent: Color { color(onAccentHex) }
     var surface: Color { usesSystemMaterials ? Color(nsColor: .windowBackgroundColor) : color(surfaceHex) }
     var ink: Color { usesSystemMaterials ? .primary : color(inkHex) }
@@ -63,7 +68,9 @@ struct AppTheme: Equatable {
                 controlSurfaceHex: "#3A3A3C",
                 sidebarSurfaceHex: "#242426",
                 hoverSurfaceHex: "#3A3A3C",
-                borderHex: "#48484A"
+                borderHex: "#48484A",
+                voiceHex: "#409CFF",
+                warningHex: "#FF9F0A"
             )
         case .codex:
             return AppTheme(
@@ -83,7 +90,9 @@ struct AppTheme: Equatable {
                 controlSurfaceHex: "#252525",
                 sidebarSurfaceHex: "#161616",
                 hoverSurfaceHex: "#292929",
-                borderHex: "#363636"
+                borderHex: "#363636",
+                voiceHex: "#4DA3FF",
+                warningHex: "#E8A013"
             )
         case .oscurange:
             return AppTheme(
@@ -103,7 +112,9 @@ struct AppTheme: Equatable {
                 controlSurfaceHex: "#23232A",
                 sidebarSurfaceHex: "#101014",
                 hoverSurfaceHex: "#2A2524",
-                borderHex: "#343038"
+                borderHex: "#343038",
+                voiceHex: "#F9B98C",
+                warningHex: "#F5C24B"
             )
         }
     }

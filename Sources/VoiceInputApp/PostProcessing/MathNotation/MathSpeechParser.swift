@@ -74,7 +74,17 @@ enum MathSpeechParser {
     ]
 
     static func parseArgumentExpression(_ phrase: String) -> MathExpression? {
-        let normalized = MathLexicon.normalizeSpaces(phrase)
+        guard phrase.utf8.count <= 512 else { return nil }
+        if let rendered = RenderedMathArgumentReader.read(phrase) { return rendered }
+        if phrase.contains("\\") {
+            guard RenderedMathArgumentReader.containsOnlySupportedCommands(phrase),
+                  phrase.contains(where: \.isWhitespace) else { return nil }
+        }
+        // Canonical command and Greek case must survive a following spoken modifier.
+        let normalized = phrase.split(whereSeparator: \.isWhitespace).map { token in
+            token.contains("\\") || token.unicodeScalars.contains(where: { !$0.isASCII })
+                ? String(token) : token.lowercased()
+        }.joined(separator: " ")
 
         if let betaHat = parseBetaHatASRNearMiss(normalized) {
             return betaHat
@@ -372,11 +382,38 @@ enum MathSpeechParser {
         return result
     }
 
-    private static func replaceBinaryStatisticsFunctions(
-        in text: String,
-        outputFormat: MathNotationOutputFormat
+    struct StatisticsCandidate {
+        let range: Range<String.Index>
+        let expression: MathExpression
+    }
+
+    /// Uses exactly the same argument parser and prose/code vetoes as rendering.
+    static func statisticsCandidates(in text: String) -> [StatisticsCandidate] {
+        binaryStatisticsCandidates(in: text) + unaryStatisticsCandidates(in: text)
+    }
+
+    private static func renderStatisticsCandidates(
+        _ candidates: [StatisticsCandidate], in text: String, outputFormat: MathNotationOutputFormat
     ) -> String {
         var result = ""
+        var cursor = text.startIndex
+        for candidate in candidates where candidate.range.lowerBound >= cursor {
+            result += text[cursor..<candidate.range.lowerBound]
+            result += MathRenderer.render(candidate.expression, outputFormat: outputFormat)
+            cursor = candidate.range.upperBound
+        }
+        result += text[cursor...]
+        return result
+    }
+
+    private static func replaceBinaryStatisticsFunctions(
+        in text: String, outputFormat: MathNotationOutputFormat
+    ) -> String {
+        renderStatisticsCandidates(binaryStatisticsCandidates(in: text), in: text, outputFormat: outputFormat)
+    }
+
+    private static func binaryStatisticsCandidates(in text: String) -> [StatisticsCandidate] {
+        var candidates: [StatisticsCandidate] = []
         var searchStart = text.startIndex
         let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
 
@@ -396,13 +433,11 @@ enum MathSpeechParser {
             }
 
             let expression = MathExpression.function(name: function, arguments: parsedArguments.expressions)
-            result += text[searchStart..<matchRange.lowerBound]
-            result += MathRenderer.render(expression, outputFormat: outputFormat)
+            candidates.append(StatisticsCandidate(range: matchRange.lowerBound..<parsedArguments.end, expression: expression))
             searchStart = parsedArguments.end
         }
 
-        result += text[searchStart..<text.endIndex]
-        return result
+        return candidates
     }
 
     private static func replacePunctuatedBetaHatNearMisses(
@@ -437,43 +472,74 @@ enum MathSpeechParser {
     }
 
     private static func replaceUnaryStatisticsFunctions(
-        in text: String,
-        outputFormat: MathNotationOutputFormat
+        in text: String, outputFormat: MathNotationOutputFormat
     ) -> String {
-        var result = ""
-        var searchStart = text.startIndex
-        let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
+        renderStatisticsCandidates(unaryStatisticsCandidates(in: text), in: text, outputFormat: outputFormat)
+    }
 
-        unaryStatisticsFunctionRegex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
-            guard let match,
-                  let matchRange = Range(match.range, in: text),
-                  matchRange.lowerBound >= searchStart,
-                  !isInsideInlineCode(in: text, at: matchRange.lowerBound),
-                  let functionPhrase = group(1, in: match, text: text),
-                  !isCodeLikeBareVar(functionPhrase: functionPhrase, in: text, before: matchRange.lowerBound),
-                  let function = MathLexicon.function(from: functionPhrase),
-                  let parsedArgument = parseArgumentCandidate(in: text, from: matchRange.upperBound),
-                  !isVariantGreekAlias(functionPhrase: functionPhrase, argumentPhrase: parsedArgument.phrase),
-                  !isPlainEnglishUnaryFalsePositive(functionPhrase: functionPhrase, argumentPhrase: parsedArgument.phrase),
-                  !isBareExpectationFalsePositive(
-                    functionPhrase: functionPhrase,
-                    in: text,
-                    before: matchRange.lowerBound,
-                    argumentEnd: parsedArgument.end
-                  ),
-                  !isCodeLikeContinuation(in: text, from: parsedArgument.end),
-                  !isInsideInlineCode(in: text, at: parsedArgument.end) else {
-                return
+    /// All consumers share function eligibility and complete operand ownership.
+    static func ambiguousUnaryOperandRanges(in text: String) -> [Range<String.Index>] {
+        resolveUnaryStatistics(in: text).abstentions
+    }
+
+    private static func unaryStatisticsCandidates(in text: String) -> [StatisticsCandidate] {
+        resolveUnaryStatistics(in: text).candidates
+    }
+
+    private static func resolveUnaryStatistics(in text: String) -> (
+        candidates: [StatisticsCandidate], abstentions: [Range<String.Index>]
+    ) {
+        let matches = unaryStatisticsFunctionRegex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        guard !matches.isEmpty else { return ([], []) }
+        let letterRuns = SpelledLetterNormalizer.rawLetterRanges(in: text)
+        let codeRanges = CodeSpanDetector.ranges(in: text)
+        var letterIndex = 0
+        var coveredEnd = text.startIndex
+        var candidates: [StatisticsCandidate] = []
+        var abstentions: [Range<String.Index>] = []
+        for match in matches {
+            guard let range = Range(match.range, in: text), range.lowerBound >= coveredEnd else { continue }
+            while letterIndex < letterRuns.count, letterRuns[letterIndex].upperBound <= range.lowerBound {
+                letterIndex += 1
             }
-
-            let expression = MathExpression.function(name: function, arguments: [parsedArgument.expression])
-            result += text[searchStart..<matchRange.lowerBound]
-            result += MathRenderer.render(expression, outputFormat: outputFormat)
-            searchStart = parsedArgument.end
+            // A shorthand inside a larger spelling run cannot claim that run.
+            if letterIndex < letterRuns.count, letterRuns[letterIndex].lowerBound < range.lowerBound,
+               letterRuns[letterIndex].contains(range.lowerBound) { continue }
+            guard !CodeSpanDetector.overlaps(range, ranges: codeRanges),
+                  let phrase = group(1, in: match, text: text),
+                  !isCodeLikeBareVar(functionPhrase: phrase, in: text, before: range.lowerBound),
+                  let function = MathLexicon.function(from: phrase),
+                  let first = parseArgumentCandidate(in: text, from: range.upperBound),
+                  !isVariantGreekAlias(functionPhrase: phrase, argumentPhrase: first.phrase),
+                  !isPlainEnglishUnaryFalsePositive(functionPhrase: phrase, argumentPhrase: first.phrase),
+                  !isBareExpectationFalsePositive(functionPhrase: phrase, in: text,
+                                                 before: range.lowerBound, argumentEnd: first.end),
+                  !isCodeLikeContinuation(in: text, from: first.end) else { continue }
+            var end = first.end
+            var operandCount = 1
+            while end < text.endIndex {
+                let next = skipWhitespace(in: text, from: end)
+                guard next > end, let argument = parseArgumentCandidate(in: text, from: next),
+                      argument.end > next else { break }
+                end = argument.end
+                operandCount += 1
+            }
+            let completeRange = range.lowerBound..<end
+            guard !CodeSpanDetector.overlaps(completeRange, ranges: codeRanges) else { continue }
+            coveredEnd = end
+            if operandCount > 1 {
+                // Bare E plus a complete ASCII letter run still follows the existing
+                // spelling convention (ETN); explicit expectation/variance owns its operands.
+                if MathLexicon.normalizeSpaces(phrase) == "e", letterIndex < letterRuns.count,
+                   letterRuns[letterIndex].lowerBound == range.lowerBound,
+                   letterRuns[letterIndex].upperBound >= end { continue }
+                abstentions.append(completeRange)
+            } else {
+                candidates.append(StatisticsCandidate(range: completeRange,
+                    expression: .function(name: function, arguments: [first.expression])))
+            }
         }
-
-        result += text[searchStart..<text.endIndex]
-        return result
+        return (candidates, abstentions)
     }
 
     private static func parseArgumentCandidate(
@@ -488,6 +554,26 @@ enum MathSpeechParser {
                 cursor = text.index(after: cursor)
             }
 
+            var renderedEnd = cursor
+            var braceDepth = 0
+            var tokenLength = 0
+            while renderedEnd < text.endIndex, !text[renderedEnd].isWhitespace {
+                guard tokenLength < 128 else { return nil }
+                tokenLength += 1
+                let character = text[renderedEnd]
+                if braceDepth == 0 && ".,;:!?)]".contains(character) { break }
+                if character == "{" { braceDepth += 1 }
+                if character == "}" { braceDepth -= 1 }
+                if braceDepth < 0 { break }
+                renderedEnd = text.index(after: renderedEnd)
+            }
+            let renderedToken = String(text[cursor..<renderedEnd])
+            if renderedToken.contains(where: { "\\_^'".contains($0) }) {
+                guard RenderedMathArgumentReader.read(renderedToken) != nil, braceDepth == 0 else { return nil }
+                tokens.append((start: cursor, end: renderedEnd))
+                cursor = renderedEnd
+                continue
+            }
             guard cursor < text.endIndex, text[cursor].isLetter || text[cursor].isNumber else {
                 break
             }

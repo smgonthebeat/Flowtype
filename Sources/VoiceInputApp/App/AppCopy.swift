@@ -17,6 +17,9 @@ enum AppCopy {
     }
 
     struct Texts {
+        /// The interface language this table was built for. Language-dependent helpers read
+        /// this instead of guessing from a translated string.
+        let language: UILanguage
         let homeTitle: String
         let dictionaryTitle: String
         let modelsTitle: String
@@ -151,6 +154,21 @@ enum AppCopy {
         let rowRetryTranscription: String
         let rowRecordingExpired: String
         let capsuleRecoverableTranscriptionFailed: String
+        let capsuleListening: String
+        let capsuleTranscribing: String
+        let capsulePreparingModel: String
+        let capsuleStillTranscribing: String
+        let capsuleTimeLimitReached: String
+        let capsuleMicrophonePermissionRequired: String
+        let capsuleSpeechPermissionRequired: String
+        let capsuleRecordingUnavailable: String
+        let capsuleTranscriptionFailed: String
+        let capsuleUsingAppleSpeech: String
+        let capsuleCopiedPressToPaste: String
+        let capsuleNoSpeechDetected: String
+        let capsuleHoldFnHint: String
+        let capsuleAudioSetupError: String
+        let capsuleRecordingExpired: String
         let dictationCountTitle: String
         let recordingDurationTitle: String
         let dictatedUnitsTitle: String
@@ -175,14 +193,24 @@ enum AppCopy {
         let pastedLastTranscript: String
         let mainWindowUnavailableTitle: String
         let mainWindowUnavailableMessage: String
-        let helpMessageTitle: String
-        let helpMessageBody: String
         let historySectionTitle: String
         let modelEverydayRoleTitle: String
         let modelPrecisionRoleTitle: String
         let modelDeleteTitle: String
         let modelDeleteConfirmTitle: String
         let onboardingMenuTitle: String
+        let mainMenuQuit: String
+        let mainMenuEdit: String
+        let mainMenuUndo: String
+        let mainMenuRedo: String
+        let mainMenuCut: String
+        let mainMenuCopy: String
+        let mainMenuPaste: String
+        let mainMenuSelectAll: String
+        let mainMenuView: String
+        let mainMenuTextBigger: String
+        let mainMenuTextSmaller: String
+        let mainMenuTextDefault: String
         let onboardingWelcomeTitle: String
         let onboardingWelcomeBody: String
         let onboardingPrivacyNote: String
@@ -197,17 +225,25 @@ enum AppCopy {
         let onboardingPrepareBody: String
         let onboardingPrepareReadyTitle: String
         let onboardingPreparePermissionsHint: String
-        let onboardingHowToTitle: String
-        let onboardingHowToHoldTitle: String
-        let onboardingHowToHoldDetail: String
-        let onboardingHowToReleaseTitle: String
-        let onboardingHowToReleaseDetail: String
-        let onboardingHowToDictionaryTitle: String
-        let onboardingHowToDictionaryDetail: String
         let onboardingContinueTitle: String
         let onboardingBackTitle: String
         let onboardingSkipTitle: String
         let onboardingFinishTitle: String
+
+        func capsuleSecondsLeft(_ seconds: Int) -> String {
+            usesChinese ? "还剩 \(seconds) 秒" : "\(seconds) seconds left"
+        }
+
+        /// Localised twin of `TranscriptionFailureClassifier.capsuleText(for:)`, which stays English.
+        func capsuleFailureText(for category: TranscriptFailureCategory) -> String {
+            switch category {
+            case .noSpeechDetected: return capsuleNoSpeechDetected
+            case .audioSetupError: return capsuleAudioSetupError
+            case .recordingUnavailable: return capsuleRecordingUnavailable
+            case .expiredRecording: return capsuleRecordingExpired
+            case .transcriptionFailed: return capsuleTranscriptionFailed
+            }
+        }
 
         func termCount(_ count: Int) -> String {
             "\(count) \(termsSuffix)"
@@ -233,8 +269,8 @@ enum AppCopy {
             let totalMinutes = max(0, Int((seconds / 60).rounded()))
             let hours = totalMinutes / 60
             let minutes = totalMinutes % 60
-            let hourUnit = usesChineseReadinessCopy ? "时" : "hr"
-            let minuteUnit = usesChineseReadinessCopy ? "分" : "min"
+            let hourUnit = usesChinese ? "时" : "hr"
+            let minuteUnit = usesChinese ? "分" : "min"
 
             if hours > 0 {
                 return [
@@ -249,7 +285,7 @@ enum AppCopy {
             guard count >= 10_000 else {
                 return [.number("\(count)"), .unit(dictatedUnitSuffix)]
             }
-            if usesChineseReadinessCopy {
+            if usesChinese {
                 return [
                     .number(String(format: "%.1f", Double(count) / 10_000)),
                     .unit("万" + dictatedUnitSuffix)
@@ -268,7 +304,7 @@ enum AppCopy {
         }
 
         func modelRoleDescription(for model: VoiceInputModel) -> String {
-            if usesChineseReadinessCopy {
+            if usesChinese {
                 return model.id == VoiceInputModel.qwen3ASR17B.id
                     ? "识别更准，适合复杂内容——但转写更慢、更占内存。"
                     : "默认推荐，速度快、占用小，适合日常本地听写。"
@@ -279,26 +315,26 @@ enum AppCopy {
         }
 
         func modelProvenance(for model: VoiceInputModel) -> String {
-            usesChineseReadinessCopy
+            usesChinese
                 ? "基于 \(model.displayName) 开源模型"
                 : "Based on the open-source \(model.displayName) model"
         }
 
         func modelStorageUsage(_ formattedSize: String) -> String {
-            usesChineseReadinessCopy
+            usesChinese
                 ? "已占用 \(formattedSize)"
                 : "Uses \(formattedSize) on disk"
         }
 
         func modelDownloadUsage(_ downloaded: String, total: String, source: String?) -> String {
             let sourceSuffix = source.map { " · \($0)" } ?? ""
-            return usesChineseReadinessCopy
+            return usesChinese
                 ? "已下载 \(downloaded) / \(total)\(sourceSuffix)"
                 : "Downloaded \(downloaded) / \(total)\(sourceSuffix)"
         }
 
         func modelDeleteConfirmMessage(for model: VoiceInputModel, formattedSize: String?) -> String {
-            if usesChineseReadinessCopy {
+            if usesChinese {
                 let sizeNote = formattedSize.map { "（\($0)）" } ?? ""
                 return "将从磁盘删除 \(model.displayName)\(sizeNote) 的本地文件。之后可以随时重新下载。"
             }
@@ -325,13 +361,13 @@ enum AppCopy {
         func readinessStatusTitle(for check: ReadinessCheck) -> String {
             if check.status == .optional {
                 if check.group == .performance {
-                    return timesUnit == "次" ? "建议" : "Advisory"
+                    return usesChinese ? "建议" : "Advisory"
                 }
                 if check.group == .models {
                     if check.id.hasSuffix("-warm") {
                         return check.locationTarget == .selectedModel
-                            ? (timesUnit == "次" ? "未准备" : "Not Prepared")
-                            : (timesUnit == "次" ? "未选择" : "Not Selected")
+                            ? (usesChinese ? "未准备" : "Not Prepared")
+                            : (usesChinese ? "未选择" : "Not Selected")
                     }
                     return modelNotInstalled
                 }
@@ -340,7 +376,7 @@ enum AppCopy {
         }
 
         func modelSuitabilityDetail(for recommendation: ModelSuitabilityRecommendation) -> String {
-            guard usesChineseReadinessCopy else {
+            guard usesChinese else {
                 return recommendation.detail
             }
 
@@ -360,7 +396,7 @@ enum AppCopy {
         }
 
         func readinessSetupSummaryTitle(for summary: ReadinessSetupSummary) -> String {
-            if timesUnit == "次" {
+            if usesChinese {
                 return summary.isComplete
                     ? readinessSetupCompleteTitle
                     : "Flowtype 还需要完成 \(summary.requiredIssueCount) 项设置"
@@ -371,54 +407,54 @@ enum AppCopy {
         }
 
         var readinessCheckingTitle: String {
-            timesUnit == "次" ? "正在检查 Flowtype…" : "Checking Flowtype…"
+            usesChinese ? "正在检查 Flowtype…" : "Checking Flowtype…"
         }
 
         var readinessCheckingDetail: String {
-            timesUnit == "次"
+            usesChinese
                 ? "正在确认权限、当前引擎和本地运行环境。"
                 : "Confirming permissions, the selected engine, and the local runtime."
         }
 
         var readinessPreparingDetail: String {
-            timesUnit == "次"
+            usesChinese
                 ? "Flowtype 正在完成本地准备；当前页面会保持稳定并自动更新。"
                 : "Flowtype is finishing local preparation. This page will stay in place and update automatically."
         }
 
         var readinessRepairRequiredTitle: String {
-            timesUnit == "次" ? "Flowtype 需要修复" : "Flowtype needs repair"
+            usesChinese ? "Flowtype 需要修复" : "Flowtype needs repair"
         }
 
         var readinessRepairRequiredDetail: String {
-            timesUnit == "次"
+            usesChinese
                 ? "至少一项必要组件无法通过检查。先使用下面的恢复操作，具体证据仍保留在技术诊断中。"
                 : "At least one required component did not pass its checks. Use the recovery action below; the evidence remains in Technical Diagnostics."
         }
 
         var readinessNeedsActionTitle: String {
-            timesUnit == "次" ? "需要处理" : "Needs Action"
+            usesChinese ? "需要处理" : "Needs Action"
         }
 
         var readinessEverydayRequirementsTitle: String {
-            timesUnit == "次" ? "日常使用条件" : "Everyday Requirements"
+            usesChinese ? "日常使用条件" : "Everyday Requirements"
         }
 
         var readinessRefreshFailedDetail: String {
-            timesUnit == "次"
+            usesChinese
                 ? "暂时无法刷新；仍显示上一次已确认的状态。"
                 : "Refresh is temporarily unavailable. The last confirmed state is still shown."
         }
 
         func readinessTaskSummaryTitle(count: Int) -> String {
-            timesUnit == "次"
+            usesChinese
                 ? "Flowtype 还需要完成 \(count) 项设置"
                 : "Flowtype needs \(count) setup \(count == 1 ? "step" : "steps")"
         }
 
         func readinessTaskSummaryDetail(for tasks: [ReadinessTask]) -> String {
             guard let first = tasks.first else { return readinessCheckingDetail }
-            if timesUnit == "次" {
+            if usesChinese {
                 switch first.kind {
                 case .grantMicrophone, .grantAccessibility, .grantSpeechRecognition:
                     return "先完成必要的 macOS 授权，然后即可继续准备。"
@@ -448,13 +484,13 @@ enum AppCopy {
 
         func readinessReadyDetail(for context: ReadinessContext) -> String {
             if context.engine == .appleSpeech {
-                return timesUnit == "次"
+                return usesChinese
                     ? "Apple Speech 已准备好，可以按住 Fn 开始听写。"
                     : "Apple Speech is ready. Hold Fn to start dictating."
             }
             let model = VoiceInputModel.model(for: context.selectedModelID)
             let role = modelRoleTitle(for: model)
-            return timesUnit == "次"
+            return usesChinese
                 ? "本地模型「\(role)」已准备好，按住 Fn 开始听写。"
                 : "Local model \"\(role)\" is ready. Hold Fn to start dictating."
         }
@@ -483,55 +519,55 @@ enum AppCopy {
         }
 
         func readinessCheckDetailsTitle(count: Int) -> String {
-            timesUnit == "次" ? "检查详情（\(count)）" : "Check Details (\(count))"
+            usesChinese ? "检查详情（\(count)）" : "Check Details (\(count))"
         }
 
         func readinessPermissionsReadyDetail(for context: ReadinessContext) -> String {
             if context.engine == .appleSpeech {
-                return timesUnit == "次"
+                return usesChinese
                     ? "权限：麦克风、辅助功能和语音识别已授权"
                     : "Permissions: Microphone, Accessibility, and Speech Recognition are ready"
             }
-            return timesUnit == "次"
+            return usesChinese
                 ? "权限：麦克风和辅助功能已授权"
                 : "Permissions: Microphone and Accessibility are ready"
         }
 
         func readinessEngineReadyDetail(for context: ReadinessContext) -> String {
             if context.engine == .appleSpeech {
-                return timesUnit == "次" ? "当前引擎：Apple Speech 已准备好" : "Current engine: Apple Speech is ready"
+                return usesChinese ? "当前引擎：Apple Speech 已准备好" : "Current engine: Apple Speech is ready"
             }
             let model = VoiceInputModel.model(for: context.selectedModelID)
             let role = modelRoleTitle(for: model)
-            return timesUnit == "次"
+            return usesChinese
                 ? "当前引擎：本地「\(role)」模型已准备好"
                 : "Current engine: local \"\(role)\" model is ready"
         }
 
         func readinessEngineCheckingDetail(for context: ReadinessContext) -> String {
             if context.engine == .appleSpeech {
-                return timesUnit == "次" ? "当前引擎：正在确认 Apple Speech" : "Current engine: Checking Apple Speech"
+                return usesChinese ? "当前引擎：正在确认 Apple Speech" : "Current engine: Checking Apple Speech"
             }
             let model = VoiceInputModel.model(for: context.selectedModelID)
             let role = modelRoleTitle(for: model)
-            return timesUnit == "次"
+            return usesChinese
                 ? "当前引擎：正在确认本地「\(role)」模型"
                 : "Current engine: checking the local \"\(role)\" model"
         }
 
         func readinessEnginePreparingDetail(for context: ReadinessContext) -> String {
             if context.engine == .appleSpeech {
-                return timesUnit == "次" ? "当前引擎：正在准备 Apple Speech" : "Current engine: Preparing Apple Speech"
+                return usesChinese ? "当前引擎：正在准备 Apple Speech" : "Current engine: Preparing Apple Speech"
             }
             let model = VoiceInputModel.model(for: context.selectedModelID)
             let role = modelRoleTitle(for: model)
-            return timesUnit == "次"
+            return usesChinese
                 ? "当前引擎：正在准备本地「\(role)」模型"
                 : "Current engine: preparing the local \"\(role)\" model"
         }
 
         func readinessTaskTitle(_ kind: ReadinessTaskKind, context: ReadinessContext) -> String {
-            let chinese = timesUnit == "次"
+            let chinese = usesChinese
             switch kind {
             case .grantMicrophone: return chinese ? "允许使用麦克风" : "Allow Microphone Access"
             case .grantAccessibility: return chinese ? "允许使用辅助功能" : "Allow Accessibility Access"
@@ -549,7 +585,7 @@ enum AppCopy {
         }
 
         func readinessTaskDetail(_ kind: ReadinessTaskKind, context: ReadinessContext) -> String {
-            let chinese = timesUnit == "次"
+            let chinese = usesChinese
             switch kind {
             case .grantMicrophone:
                 return chinese ? "用于录制听写音频。" : "Required to record dictation audio."
@@ -591,12 +627,12 @@ enum AppCopy {
 
         func readinessSetupSummaryDetail(for summary: ReadinessSetupSummary) -> String {
             if summary.isComplete {
-                return timesUnit == "次"
+                return usesChinese
                     ? "你可以直接使用 Fn 开始本地 Qwen 听写。"
                     : "You can use Fn for local Qwen dictation."
             }
 
-            if timesUnit == "次" {
+            if usesChinese {
                 var parts: [String] = []
                 if summary.blockingCount > 0 { parts.append("需要重新安装完整的 Flowtype") }
                 if summary.repairableCount > 0 { parts.append("可以修复本地运行环境") }
@@ -612,7 +648,7 @@ enum AppCopy {
         }
 
         func readinessCheckTitle(for check: ReadinessCheck) -> String {
-            guard usesChineseReadinessCopy else {
+            guard usesChinese else {
                 return check.title
             }
 
@@ -648,7 +684,7 @@ enum AppCopy {
         }
 
         func readinessCheckDetail(for check: ReadinessCheck) -> String {
-            guard usesChineseReadinessCopy else {
+            guard usesChinese else {
                 return check.detail
             }
 
@@ -742,7 +778,7 @@ enum AppCopy {
             guard let message = check.statusMessage else {
                 return nil
             }
-            guard usesChineseReadinessCopy else {
+            guard usesChinese else {
                 return message
             }
 
@@ -771,7 +807,7 @@ enum AppCopy {
             let hours = totalMinutes / 60
             let minutes = totalMinutes % 60
 
-            if timesUnit == "次" {
+            if usesChinese {
                 if hours > 0 {
                     return "\(hours) 时 \(minutes) 分"
                 }
@@ -795,14 +831,13 @@ enum AppCopy {
                 return "\(count)"
             }
             let value = Double(count) / 10_000
-            return timesUnit == "次"
+            return usesChinese
                 ? String(format: "%.1f万", value)
                 : String(format: "%.1fk", Double(count) / 1_000)
         }
 
-        private var usesChineseReadinessCopy: Bool {
-            timesUnit == "次"
-        }
+        var usesChinese: Bool { language == .chinese }
+
 
         private func readinessManifestDetail(for check: ReadinessCheck) -> String {
             guard check.status == .ready else {
@@ -916,12 +951,13 @@ enum AppCopy {
         switch language {
         case .chinese:
             return Texts(
+                language: .chinese,
                 homeTitle: "主页",
                 dictionaryTitle: "词典",
                 modelsTitle: "模型",
                 readinessTitle: "准备状态",
-                preferencesTitle: "转写与外观",
-                settingsTitle: "设备与存储",
+                preferencesTitle: "格式与外观",
+                settingsTitle: "设置与存储",
                 helpTitle: "帮助",
                 mainHeadline: "回到心流 - Flowtype",
                 mainSubtitle: "本地优先的听写工具，适合提示词、笔记和中英文混合开发术语。",
@@ -1050,6 +1086,21 @@ enum AppCopy {
                 rowRetryTranscription: "重新转写",
                 rowRecordingExpired: "录音已过期",
                 capsuleRecoverableTranscriptionFailed: "转写失败，主页可重试",
+                capsuleListening: "正在聆听…",
+                capsuleTranscribing: "正在转写…",
+                capsulePreparingModel: "正在准备模型…",
+                capsuleStillTranscribing: "仍在转写上一段…",
+                capsuleTimeLimitReached: "已到时长上限，正在转写…",
+                capsuleMicrophonePermissionRequired: "需要麦克风权限",
+                capsuleSpeechPermissionRequired: "需要语音识别权限",
+                capsuleRecordingUnavailable: "无法开始录音",
+                capsuleTranscriptionFailed: "转写失败",
+                capsuleUsingAppleSpeech: "改用 Apple Speech",
+                capsuleCopiedPressToPaste: "已复制，可按 ⌘V 粘贴",
+                capsuleNoSpeechDetected: "没有检测到语音",
+                capsuleHoldFnHint: "按住 Fn 说话，说完再松开",
+                capsuleAudioSetupError: "音频设备出错",
+                capsuleRecordingExpired: "录音已过期",
                 dictationCountTitle: "听写次数",
                 recordingDurationTitle: "累计口述时间",
                 dictatedUnitsTitle: "口述字数",
@@ -1060,36 +1111,38 @@ enum AppCopy {
                 menuStatusStarting: "状态：启动中",
                 menuEngine: "引擎：Qwen3-ASR 本地",
                 menuFallback: "备用：Apple Speech",
-                menuShowHome: "显示主页",
-                menuShowDictionary: "显示词典",
-                menuShowPreferences: "显示转写与外观",
+                menuShowHome: "主页",
+                menuShowDictionary: "词典",
+                menuShowPreferences: "格式与外观",
                 menuCurrentModelPrefix: "模型：",
-                menuSettings: "设备与存储...",
-                menuHelp: "帮助...",
-                menuSetupStatus: "准备状态...",
+                menuSettings: "设置与存储…",
+                menuHelp: "帮助…",
+                menuSetupStatus: "准备状态",
                 menuPasteLastTranscript: "粘贴上次转写",
-                menuQuit: "退出",
+                menuQuit: "退出 Flowtype",
                 noTranscriptYet: "还没有转写内容",
                 copiedLastTranscript: "已复制上次转写",
                 pastedLastTranscript: "已粘贴上次转写",
                 mainWindowUnavailableTitle: "Flowtype 存储不可用",
                 mainWindowUnavailableMessage: "主窗口无法打开，因为本地热词或历史存储还没有准备好。",
-                helpMessageTitle: "Flowtype 帮助",
-                helpMessageBody: """
-                按住 Fn 说话，松开 Fn 后会用当前本地模型转写，并自动复制、粘贴到你刚才使用的应用里。
-
-                主页会在开启历史时显示本地转写历史。若某条长录音疑似只转出一小段，历史里会标记“可能不完整”，你可以点重新分段转写。最近几条录音会短暂保留在本机，只用于这个手动重试。
-
-                词典热词会帮助 Qwen 保留人名、工具名、课程代码和中英文短语。模型页可以下载、切换 Qwen3-ASR 0.6B / 1.7B；“转写与外观”可以调整主题、数字格式、数学符号和填充词清理。
-
-                在“准备状态”页面开启麦克风和辅助功能；只有使用 Apple Speech 备用转写时才需要语音识别权限。使用“设备与存储”管理麦克风、历史和本地文件位置。转写历史与为手动重试短暂保留的录音都只保存在这台 Mac 本地。
-                """,
                 historySectionTitle: "转写历史",
                 modelEverydayRoleTitle: "日常听写",
                 modelPrecisionRoleTitle: "精准听写",
                 modelDeleteTitle: "删除模型",
                 modelDeleteConfirmTitle: "删除这个模型？",
                 onboardingMenuTitle: "新手引导…",
+                mainMenuQuit: "退出 Flowtype",
+                mainMenuEdit: "编辑",
+                mainMenuUndo: "撤销",
+                mainMenuRedo: "重做",
+                mainMenuCut: "剪切",
+                mainMenuCopy: "拷贝",
+                mainMenuPaste: "粘贴",
+                mainMenuSelectAll: "全选",
+                mainMenuView: "显示",
+                mainMenuTextBigger: "放大文字",
+                mainMenuTextSmaller: "缩小文字",
+                mainMenuTextDefault: "默认文字大小",
                 onboardingWelcomeTitle: "回到心流",
                 onboardingWelcomeBody: "Flowtype 是本地优先的语音听写工具：按住 Fn 说话，松开即转写，结果会自动粘贴到你正在使用的应用。",
                 onboardingPrivacyNote: "所有识别都在这台 Mac 上完成，录音和文字不会上传。",
@@ -1104,13 +1157,6 @@ enum AppCopy {
                 onboardingPrepareBody: "一键完成全部准备：开启麦克风与辅助功能权限，并下载默认的 Qwen3-ASR 0.6B 本地模型（约 1.9 GB，仅首次需要，也可以稍后在“准备状态”页完成）。",
                 onboardingPrepareReadyTitle: "已准备就绪",
                 onboardingPreparePermissionsHint: "需要你在系统设置中完成授权，返回本窗口会自动继续。",
-                onboardingHowToTitle: "开始听写",
-                onboardingHowToHoldTitle: "按住 Fn 说话",
-                onboardingHowToHoldDetail: "在任何应用里按住 Fn 键开始录音。",
-                onboardingHowToReleaseTitle: "松开 Fn 完成",
-                onboardingHowToReleaseDetail: "松开后自动转写，并粘贴到你刚才使用的应用。",
-                onboardingHowToDictionaryTitle: "词典让专有名词更准",
-                onboardingHowToDictionaryDetail: "把人名、术语加入词典，转写时会优先保留它们。",
                 onboardingContinueTitle: "继续",
                 onboardingBackTitle: "上一步",
                 onboardingSkipTitle: "跳过引导",
@@ -1118,12 +1164,13 @@ enum AppCopy {
             )
         case .english:
             return Texts(
+                language: .english,
                 homeTitle: "Home",
                 dictionaryTitle: "Dictionary",
                 modelsTitle: "Models",
                 readinessTitle: "Setup & Status",
-                preferencesTitle: "Transcription & Appearance",
-                settingsTitle: "Device & Storage",
+                preferencesTitle: "Formatting & Appearance",
+                settingsTitle: "Settings & Storage",
                 helpTitle: "Help",
                 mainHeadline: "Back to Flow - Flowtype",
                 mainSubtitle: "Local-first dictation for prompts, notes, and mixed Chinese-English developer terms.",
@@ -1252,6 +1299,21 @@ enum AppCopy {
                 rowRetryTranscription: "Retry transcription",
                 rowRecordingExpired: "Recording expired",
                 capsuleRecoverableTranscriptionFailed: "Failed, retry in Home",
+                capsuleListening: "Listening…",
+                capsuleTranscribing: "Transcribing…",
+                capsulePreparingModel: "Preparing model…",
+                capsuleStillTranscribing: "Still transcribing the last one…",
+                capsuleTimeLimitReached: "Time limit reached, transcribing…",
+                capsuleMicrophonePermissionRequired: "Microphone permission required",
+                capsuleSpeechPermissionRequired: "Speech recognition permission required",
+                capsuleRecordingUnavailable: "Recording unavailable",
+                capsuleTranscriptionFailed: "Transcription failed",
+                capsuleUsingAppleSpeech: "Using Apple Speech",
+                capsuleCopiedPressToPaste: "Copied. Press ⌘V to paste",
+                capsuleNoSpeechDetected: "No speech detected",
+                capsuleHoldFnHint: "Hold Fn while you talk, then release",
+                capsuleAudioSetupError: "Audio setup error",
+                capsuleRecordingExpired: "Recording expired",
                 dictationCountTitle: "Dictations",
                 recordingDurationTitle: "Dictated time",
                 dictatedUnitsTitle: "Dictated words",
@@ -1262,36 +1324,38 @@ enum AppCopy {
                 menuStatusStarting: "Status: Starting",
                 menuEngine: "Engine: Qwen3-ASR Local",
                 menuFallback: "Fallback: Apple Speech",
-                menuShowHome: "Show Home",
-                menuShowDictionary: "Show Dictionary",
-                menuShowPreferences: "Show Transcription & Appearance",
+                menuShowHome: "Home",
+                menuShowDictionary: "Dictionary",
+                menuShowPreferences: "Formatting & Appearance",
                 menuCurrentModelPrefix: "Model: ",
-                menuSettings: "Device & Storage...",
-                menuHelp: "Help...",
-                menuSetupStatus: "Setup & Status...",
+                menuSettings: "Settings & Storage…",
+                menuHelp: "Help…",
+                menuSetupStatus: "Setup & Status",
                 menuPasteLastTranscript: "Paste Last Transcript",
-                menuQuit: "Quit",
+                menuQuit: "Quit Flowtype",
                 noTranscriptYet: "No transcript yet",
                 copiedLastTranscript: "Copied last transcript",
                 pastedLastTranscript: "Pasted last transcript",
                 mainWindowUnavailableTitle: "Flowtype storage is unavailable",
                 mainWindowUnavailableMessage: "The main window cannot open because local hotword or history storage could not be prepared.",
-                helpMessageTitle: "Flowtype Help",
-                helpMessageBody: """
-                Hold Fn to talk, then release Fn to transcribe with the selected local model. Flowtype copies the result and pastes it into the app you were using.
-
-                Home shows local transcript history when history is enabled. If a longer recording looks truncated, the row is marked as possibly incomplete and you can retry it with segmented transcription. Recent recordings are kept briefly on this Mac only for that manual retry.
-
-                Dictionary hotwords help Qwen keep names, tools, course codes, and mixed-language phrases. Models lets you download and switch between Qwen3-ASR 0.6B and 1.7B. Transcription & Appearance controls themes, number cleanup, math notation, and filler cleanup.
-
-                Use Setup & Status for Microphone and Accessibility. Speech Recognition is only needed for Apple Speech fallback. Use Device & Storage for microphones, history, and local file locations. Transcript history and recordings retained briefly for manual retry stay local on this Mac.
-                """,
                 historySectionTitle: "History",
                 modelEverydayRoleTitle: "Everyday Dictation",
                 modelPrecisionRoleTitle: "Precision Dictation",
                 modelDeleteTitle: "Delete Model",
                 modelDeleteConfirmTitle: "Delete this model?",
                 onboardingMenuTitle: "Getting Started…",
+                mainMenuQuit: "Quit Flowtype",
+                mainMenuEdit: "Edit",
+                mainMenuUndo: "Undo",
+                mainMenuRedo: "Redo",
+                mainMenuCut: "Cut",
+                mainMenuCopy: "Copy",
+                mainMenuPaste: "Paste",
+                mainMenuSelectAll: "Select All",
+                mainMenuView: "View",
+                mainMenuTextBigger: "Bigger Text",
+                mainMenuTextSmaller: "Smaller Text",
+                mainMenuTextDefault: "Default Text Size",
                 onboardingWelcomeTitle: "Back to Flow",
                 onboardingWelcomeBody: "Flowtype is a local-first dictation tool: hold Fn to talk, release to transcribe, and the result is pasted into the app you were using.",
                 onboardingPrivacyNote: "Everything runs on this Mac — audio and text never leave it.",
@@ -1306,13 +1370,6 @@ enum AppCopy {
                 onboardingPrepareBody: "One click does everything: grants Microphone and Accessibility permissions and downloads the default Qwen3-ASR 0.6B local model (about 1.9 GB, first run only — you can also do this later from Setup & Status).",
                 onboardingPrepareReadyTitle: "Ready to go",
                 onboardingPreparePermissionsHint: "Finish granting the permission in System Settings, then return to this window to continue automatically.",
-                onboardingHowToTitle: "Start Dictating",
-                onboardingHowToHoldTitle: "Hold Fn and talk",
-                onboardingHowToHoldDetail: "Hold the Fn key in any app to start recording.",
-                onboardingHowToReleaseTitle: "Release Fn to finish",
-                onboardingHowToReleaseDetail: "The transcript is pasted into the app you were just using.",
-                onboardingHowToDictionaryTitle: "Dictionary keeps names accurate",
-                onboardingHowToDictionaryDetail: "Add names and terms to the Dictionary so transcription preserves them.",
                 onboardingContinueTitle: "Continue",
                 onboardingBackTitle: "Back",
                 onboardingSkipTitle: "Skip",

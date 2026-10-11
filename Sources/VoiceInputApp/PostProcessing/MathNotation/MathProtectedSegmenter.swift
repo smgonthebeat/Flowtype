@@ -1,19 +1,43 @@
 import Foundation
 
 enum MathProtectedSegmenter {
+    static func syntaxProtectedRanges(in text: String) -> [Range<String.Index>] {
+        mergedProtectedRanges(
+            in: text, protectLatexCommands: true,
+            unprotectedLatexCommands: [], knownTerms: []
+        )
+    }
+
     static func formatUnprotectedSegments(
         in text: String,
         protectLatexCommands: Bool = true,
         unprotectedLatexCommands: Set<String> = [],
         knownTerms: [String] = [],
+        protectSpelledNames: Bool = false,
         using transform: (String) -> String
     ) -> String {
-        let protectedRanges = mergedProtectedRanges(
+        var protectedRanges = mergedProtectedRanges(
             in: text,
             protectLatexCommands: protectLatexCommands,
             unprotectedLatexCommands: unprotectedLatexCommands,
             knownTerms: knownTerms
         )
+        protectedRanges = merge(protectedRanges + MathSpeechParser.ambiguousUnaryOperandRanges(in: text))
+        if protectSpelledNames {
+            // Resolve ambiguous raw spelling against the complete input before
+            // strong protection splits it into formatter segments.
+            protectedRanges = merge(protectedRanges + SpelledLetterNormalizer.ambiguousLetterRanges(in: text))
+        }
+        return transformUnprotected(in: text, ranges: protectedRanges) { segment in
+            guard protectSpelledNames else { return transform(segment) }
+            // Strong protection splits the input before math/name arbitration.
+            return transformUnprotected(in: segment, ranges: SpelledLetterNormalizer.nameRanges(in: segment), using: transform)
+        }
+    }
+
+    private static func transformUnprotected(
+        in text: String, ranges protectedRanges: [Range<String.Index>], using transform: (String) -> String
+    ) -> String {
         guard !protectedRanges.isEmpty else {
             return transform(text)
         }
@@ -45,8 +69,6 @@ enum MathProtectedSegmenter {
     ) -> [Range<String.Index>] {
         let detectedRanges = ProtectedSpanDetector.detect(in: text).map(\.range)
         var protectedRanges = detectedRanges
-        protectedRanges += fencedCodeRanges(in: text)
-        protectedRanges += regexRanges(in: text, pattern: #"`[^`\n]+`"#)
         protectedRanges += knownTermRanges(in: text, knownTerms: knownTerms)
 
         if protectLatexCommands {
@@ -96,24 +118,6 @@ enum MathProtectedSegmenter {
         return regex
             .matches(in: text, range: NSRange(location: 0, length: source.length))
             .compactMap { Range($0.range, in: text) }
-    }
-
-    private static func fencedCodeRanges(in text: String) -> [Range<String.Index>] {
-        var ranges: [Range<String.Index>] = []
-        var cursor = text.startIndex
-
-        while let opening = text.range(of: "```", range: cursor..<text.endIndex) {
-            let bodyStart = opening.upperBound
-            guard let closing = text.range(of: "```", range: bodyStart..<text.endIndex) else {
-                ranges.append(opening.lowerBound..<text.endIndex)
-                break
-            }
-
-            ranges.append(opening.lowerBound..<closing.upperBound)
-            cursor = closing.upperBound
-        }
-
-        return ranges
     }
 
     private static func latexCommandRanges(in text: String) -> [Range<String.Index>] {

@@ -11,11 +11,19 @@ struct PasteTargetIdentity: Equatable, Sendable {
     let bundleIdentifier: String?
 }
 
+/// How the paste target was found, recorded in telemetry so a wrong target can be traced.
+enum PasteTargetSource: String, Equatable, Sendable {
+    case focusedApplication = "ax_focus"
+    case frontmostApplication = "workspace_front"
+    case lastActivated = "last_activated"
+}
+
 struct PasteAttempt: Equatable, Sendable {
     let id: UUID
     let source: PasteSource
     let text: String
     let target: PasteTargetIdentity?
+    var targetSource: PasteTargetSource? = nil
 }
 
 enum CopyOnlyReason: String, Equatable, Sendable {
@@ -23,6 +31,8 @@ enum CopyOnlyReason: String, Equatable, Sendable {
     case targetRejected
     case eventCreationFailed
     case inputSourceBusy
+    /// The target is front, but its focused element cannot take text (Finder's Desktop).
+    case noTextInput
 }
 
 enum PasteOutcome: Equatable, Sendable {

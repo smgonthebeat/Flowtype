@@ -5,6 +5,7 @@ final class MathKnownTermsProtectionTests: XCTestCase {
     func testKnownTermProtectsFormatterRewrite() {
         let options = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .unicode,
@@ -17,6 +18,7 @@ final class MathKnownTermsProtectionTests: XCTestCase {
                 "keep variance x as a formula",
                 options: TranscriptProcessingOptions(
                     isSmartNumericFormattingEnabled: false,
+                    isAcademicReferenceFormattingEnabled: false,
                     isFillerCleanupEnabled: false,
                     isMathNotationEnabled: true,
                     mathNotationOutputFormat: .unicode
@@ -29,6 +31,7 @@ final class MathKnownTermsProtectionTests: XCTestCase {
     func testKnownTermProtectsASRConfusionRewrite() {
         let protectedOptions = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .unicode,
@@ -41,6 +44,7 @@ final class MathKnownTermsProtectionTests: XCTestCase {
 
         let unprotectedOptions = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .unicode
@@ -54,6 +58,7 @@ final class MathKnownTermsProtectionTests: XCTestCase {
     func testKnownTermDoesNotBlockMathOutsideProtectedSpan() {
         let options = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .unicode,

@@ -55,14 +55,14 @@ struct ReadinessCenterView: View {
                                 copy.readinessGeneratedDiagnosticsTitle(generatedDiagnosticsResult.timestampedFileName),
                                 systemImage: "checkmark.circle.fill"
                             )
-                            .font(.callout.weight(.medium))
+                            .scaledFont(.callout, weight: .medium)
                             .foregroundStyle(theme.success)
                             .transition(.opacity)
                         }
 
                         if copiedDiagnosticsToken != nil {
                             Label(copy.readinessCopiedDiagnosticsTitle, systemImage: "checkmark.circle.fill")
-                                .font(.callout.weight(.medium))
+                                .scaledFont(.callout, weight: .medium)
                                 .foregroundStyle(theme.success)
                                 .transition(.opacity)
                         }
@@ -114,7 +114,7 @@ struct ReadinessCenterView: View {
                                 ),
                                 systemImage: "checkmark.circle"
                             )
-                            .font(.headline)
+                            .scaledFont(.headline)
                             .foregroundStyle(theme.ink)
                         }
                         .padding(14)
@@ -126,7 +126,7 @@ struct ReadinessCenterView: View {
                         .padding(.top, 14)
                     } label: {
                         Label(copy.readinessAdvancedDiagnosticsTitle, systemImage: "stethoscope")
-                            .font(.headline)
+                            .scaledFont(.headline)
                             .foregroundStyle(theme.ink)
                     }
                     .padding(14)
@@ -139,7 +139,7 @@ struct ReadinessCenterView: View {
                         } icon: {
                             Image(systemName: "exclamationmark.triangle.fill")
                         }
-                        .font(.callout)
+                        .scaledFont(.callout)
                         .foregroundStyle(theme.danger)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,10 +172,10 @@ struct ReadinessCenterView: View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(copy.readinessTitle)
-                    .font(.system(size: 34, weight: .semibold))
+                    .scaledFont(size: 34, weight: .semibold)
                     .foregroundStyle(theme.ink)
                 Text(copy.readinessSubtitle)
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -197,8 +197,16 @@ struct ReadinessCenterView: View {
                 }
             } label: {
                 Label(copy.readinessDiagnosticsTitle, systemImage: "stethoscope")
+                    .scaledFont(size: 13)
+                    .foregroundStyle(theme.ink)
             }
-            .controlSize(.regular)
+            // Drawn as a neutral button: the system pop-up arrow box turned the accent into muddy gold.
+            .menuStyle(.borderlessButton)
+            .tint(theme.ink)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 22)
+            .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .fixedSize()
 
             Button {
                 Task {
@@ -207,8 +215,8 @@ struct ReadinessCenterView: View {
             } label: {
                 Label(copy.readinessRefreshTitle, systemImage: "arrow.clockwise")
             }
+            .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
             .disabled(availability.isRefreshDisabled)
-            .controlSize(.regular)
         }
     }
 
@@ -294,7 +302,7 @@ struct ReadinessCenterView: View {
             }
             saveDiagnosticsSnapshot(report)
         } catch {
-            actionError = error.localizedDescription
+            actionError = UserFacingErrorMessage.message(for: error, language: settingsStore.uiLanguage)
         }
     }
 
@@ -314,7 +322,7 @@ struct ReadinessCenterView: View {
             }
             saveDiagnosticsSnapshot(report)
         } catch {
-            actionError = error.localizedDescription
+            actionError = UserFacingErrorMessage.message(for: error, language: settingsStore.uiLanguage)
         }
     }
 
@@ -326,23 +334,23 @@ struct ReadinessCenterView: View {
     private func needsActionView(copy: AppCopy.Texts) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(copy.readinessNeedsActionTitle)
-                .font(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(theme.ink)
 
             VStack(spacing: 0) {
                 ForEach(Array(presentation.tasks.enumerated()), id: \.element.id) { index, task in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: copy.readinessTaskSymbol(task.kind))
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold)
                             .foregroundStyle(task.kind == .reinstallApplication ? theme.danger : .orange)
                             .frame(width: 20, height: 20)
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(copy.readinessTaskTitle(task.kind, context: readinessStore.snapshot.context))
-                                .font(.system(size: 14, weight: .semibold))
+                                .scaledFont(size: 14, weight: .semibold)
                                 .foregroundStyle(theme.ink)
                             Text(copy.readinessTaskDetail(task.kind, context: readinessStore.snapshot.context))
-                                .font(.caption)
+                                .scaledFont(.caption)
                                 .foregroundStyle(theme.secondaryInk)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -364,7 +372,7 @@ struct ReadinessCenterView: View {
     private func everydayRequirementsView(copy: AppCopy.Texts) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(copy.readinessEverydayRequirementsTitle)
-                .font(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(theme.ink)
 
             VStack(spacing: 0) {
@@ -393,7 +401,7 @@ struct ReadinessCenterView: View {
             Group {
                 if isComplete {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold)
                         .foregroundStyle(theme.success)
                 } else {
                     ProgressView()
@@ -405,7 +413,7 @@ struct ReadinessCenterView: View {
                 .foregroundStyle(theme.secondaryInk)
                 .frame(width: 20)
             Text(title)
-                .font(.callout.weight(.medium))
+                .scaledFont(.callout, weight: .medium)
                 .foregroundStyle(theme.ink)
             Spacer()
         }
@@ -456,11 +464,11 @@ struct ReadinessCenterView: View {
                 ProgressView()
                     .controlSize(.small)
                 Text(preparationStageTitle(snapshot.stage, copy: copy))
-                    .font(.callout.weight(.medium))
+                    .scaledFont(.callout, weight: .medium)
                     .foregroundStyle(theme.ink)
             }
             if let progress = snapshot.progress {
-                ProgressView(value: min(max(progress, 0), 1))
+                FlowtypeProgressBar(theme: theme, value: progress)
             }
         }
         .padding(12)
@@ -495,7 +503,7 @@ struct ReadinessCenterView: View {
             showCopiedDiagnosticsFeedback()
         } catch {
             guard !Task.isCancelled else { return }
-            actionError = error.localizedDescription
+            actionError = UserFacingErrorMessage.message(for: error, language: settingsStore.uiLanguage)
         }
     }
 
@@ -519,7 +527,7 @@ struct ReadinessCenterView: View {
             showGeneratedDiagnosticsFeedback(result)
             actions.revealDiagnosticsFile(result.timestampedURL)
         case let .failed(message):
-            actionError = message
+            actionError = UserFacingErrorMessage.genericFailure(detail: message, language: settingsStore.uiLanguage)
         case .alreadyRunning, .cancelled:
             break
         }
@@ -629,7 +637,7 @@ private struct SetupSummaryView: View {
                         .controlSize(.small)
                 } else {
                     Image(systemName: symbolName)
-                        .font(.system(size: 24, weight: .semibold))
+                        .scaledFont(size: 24, weight: .semibold)
                         .foregroundStyle(symbolColor)
                 }
             }
@@ -637,15 +645,15 @@ private struct SetupSummaryView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(copy.readinessPresentationTitle(presentation.phase, count: presentation.requiredTaskCount))
-                    .font(.headline)
+                    .scaledFont(.headline)
                     .foregroundStyle(theme.ink)
                 Text(copy.readinessPresentationDetail(presentation, context: context))
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
                 if refreshFailed {
                     Text(copy.readinessRefreshFailedDetail)
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -668,7 +676,7 @@ private struct SetupSummaryView: View {
                         systemImage: action == .reinstallFlowtypeApp ? "arrow.down.circle" : "wand.and.stars"
                     )
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(FlowtypeProminentButtonStyle(theme: theme))
                 .disabled(availability.isActionDisabled(action))
             }
         }
@@ -708,7 +716,7 @@ struct ReadinessGroupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(theme.ink)
 
             VStack(spacing: 0) {
@@ -752,21 +760,21 @@ private struct ReadinessCheckRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: symbolName)
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold)
                 .foregroundStyle(symbolColor)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(copy.readinessCheckTitle(for: check))
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(theme.ink)
                 Text(copy.readinessCheckDetail(for: check))
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(theme.secondaryInk)
                     .lineLimit(2)
                 if let message = copy.readinessCheckStatusMessage(for: check) {
                     Text(message)
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.danger)
                         .lineLimit(2)
                 }
@@ -775,11 +783,12 @@ private struct ReadinessCheckRow: View {
             Spacer(minLength: 12)
 
             Text(copy.readinessStatusTitle(for: check))
-                .font(.caption.weight(.semibold))
+                .scaledFont(.caption, weight: .semibold)
                 .foregroundStyle(symbolColor)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(symbolColor.opacity(0.14), in: Capsule())
+                // An accent-tinted pill turns muddy over the dark card; accent text sits on neutral grey.
+                .background(symbolColor == theme.accent ? theme.controlSurface : symbolColor.opacity(0.14), in: Capsule())
 
             if let action = check.primaryAction {
                 Button {

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import struct
 import hashlib
+import plistlib
+import re
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
@@ -30,22 +32,34 @@ class AssetParser(HTMLParser):
 class PublicWebsiteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.index_path = WEBSITE_ROOT / "index.html"
-        self.html = self.index_path.read_text(encoding="utf-8")
+        info = plistlib.loads((REPO_ROOT / "Resources/Info.plist").read_bytes())
+        self.release_tag = (
+            f"v{info['CFBundleShortVersionString']}-preview.{info['CFBundleVersion']}"
+        )
+        # The private source keeps a release-tag token that the public export renders from
+        # Info.plist; spell it in pieces so the published copy of this test holds no raw token.
+        release_token = "@@" + "RELEASE_TAG" + "@@"
+        self.html = self.index_path.read_text(encoding="utf-8").replace(
+            release_token, self.release_tag
+        )
 
     def test_preview_release_links_and_safety_copy(self) -> None:
         self.assertNotIn("TODO: replace", self.html)
         self.assertNotIn('href="#"', self.html)
         self.assertNotIn("xattr -cr", self.html)
         self.assertNotIn("spctl --master-disable", self.html)
-        self.assertIn("v0.1.0-preview.5", self.html)
-        self.assertIn("releases/download/v0.1.0-preview.5/Flowtype.dmg", self.html)
-        self.assertNotIn("releases/download/v0.1.0-preview.4/Flowtype.dmg", self.html)
+        self.assertIn(f"releases/download/{self.release_tag}/Flowtype.dmg", self.html)
+        self.assertIn(f"releases/download/{self.release_tag}/Flowtype.dmg.sha256", self.html)
+        self.assertEqual(
+            set(re.findall(r"releases/download/([^/\"]+)/Flowtype\.dmg", self.html)),
+            {self.release_tag},
+        )
         self.assertIn("未经过 Apple notarization", self.html)
         self.assertIn("Open Anyway", self.html)
         self.assertIn("自动下载约 1.9 GB 的默认模型", self.html)
         self.assertIn("显示下载与准备进度", self.html)
         self.assertIn("平滑网速和预计剩余时间", self.html)
-        self.assertIn("不再要求用户重复点击准备", self.html)
+        self.assertIn("图解新手引导", self.html)
         self.assertIn("本地临时录音，转写即删", self.html)
         self.assertIn("日常转写不必把录音发送到云端 ASR", self.html)
         self.assertIn("docs/PRIVACY-COMPARISON.md", self.html)

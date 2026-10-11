@@ -31,6 +31,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.6` rebuilds first run as an illustrated five-page guide:
+  choose Chinese or English for the whole interface on the first page, prepare
+  the model and permissions before continuing, then practise holding `Fn` on a
+  drawn MacBook keyboard without pasting anywhere. The recording capsule shows a
+  live waveform, a no-speech hint and a countdown near the recording limit.
+  Interface text comes in three sizes (Settings or `⌘+` / `⌘−`), and the menu
+  bar menu shows readiness. Help now covers basic use, common problems and a
+  single **Check and copy diagnostics** action with contact links. Formatting
+  gains spoken filler cleanup (on by default for new installs), rebuilt number,
+  date, academic-reference and spoken-math handling, and paste now targets the
+  app that owns keyboard focus. Long dictations no longer fail on an empty final
+  chunk.
 - `v0.1.0-preview.5` adds downloaded-byte, smoothed transfer-speed, and estimated
   time-remaining feedback to first-run model preparation. A completed setup now
   hands its verified readiness state directly to Home, so users are not asked

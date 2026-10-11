@@ -1,8 +1,9 @@
 import XCTest
 @testable import VoiceInputApp
 
-final class EnglishNumberNormalizerTests: XCTestCase {
-    func testConvertsStandaloneEnglishNumberWordsHarshly() {
+final class EnglishNumericPhraseTests: XCTestCase {
+    // fix-design 4.2: cardinal words convert on their own evidence (renamed from ...Harshly).
+    func testConvertsStandaloneCardinalWords() {
         XCTAssertEqual(
             NormalizationPipeline.normalize("I need four, five, ten, twelve, thirteen, fourteen, fifty examples."),
             "I need 4, 5, 10, 12, 13, 14, 50 examples."
@@ -12,7 +13,7 @@ final class EnglishNumberNormalizerTests: XCTestCase {
     func testConvertsEnglishNumbersInOrdinaryAcademicPhrases() {
         XCTAssertEqual(
             NormalizationPipeline.normalize("Problem set one. problem set twelve. week fourteen. question ninety nine."),
-            "Problem set 1. problem set 12. week 14. Question 99."
+            "Problem set 1. problem set 12. week 14. question 99."
         )
     }
 

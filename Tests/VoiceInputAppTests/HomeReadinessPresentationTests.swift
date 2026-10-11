@@ -18,9 +18,14 @@ final class HomeReadinessPresentationTests: XCTestCase {
         XCTAssertTrue(HomeReadinessPresentation.repairRequired(1).showsProminentCard)
     }
 
-    func testCheckingPreparingAndReadyUseTheStableInlineHeaderSlot() {
-        let inlineStates: [HomeReadinessPresentation] = [.checking, .preparing, .ready]
-        XCTAssertTrue(inlineStates.allSatisfy { !$0.showsProminentCard })
+    // Owner decision (2026-10-03): no inline "ready" line; only preparation shows one, and the
+    // brief launch check shows nothing so the header does not appear and then vanish.
+    func testOnlyPreparationShowsAnInlineHeaderLine() {
+        XCTAssertTrue(HomeReadinessPresentation.preparing.showsInlineStatus)
+        XCTAssertFalse(HomeReadinessPresentation.ready.showsInlineStatus)
+        XCTAssertFalse(HomeReadinessPresentation.checking.showsInlineStatus)
+        XCTAssertFalse(HomeReadinessPresentation.needsSetup(1).showsInlineStatus)
+        XCTAssertFalse(HomeReadinessPresentation.repairRequired(1).showsInlineStatus)
     }
 
     private func home(

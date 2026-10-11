@@ -2,6 +2,8 @@ import AppKit
 import SwiftUI
 
 struct MainSidebarView: View {
+    static let baseWidth: CGFloat = 196
+
     @Environment(\.appTheme) private var theme
 
     @Binding var selectedSection: MainWindowSection
@@ -25,7 +27,9 @@ struct MainSidebarView: View {
             Spacer()
             sidebarActions(copy: copy)
         }
-        .frame(width: 196)
+        .frame(width: Self.baseWidth)
+        // Full height so the sidebar colour runs under the transparent titlebar to the window top.
+        .frame(maxHeight: .infinity)
         .background(theme.sidebarSurface)
         .foregroundStyle(theme.ink)
     }
@@ -35,13 +39,13 @@ struct MainSidebarView: View {
             FlowtypeLogoMark()
                 .frame(height: 21)
             Text("Flowtype")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold)
                 .foregroundStyle(theme.ink)
             Spacer()
         }
+        // The brand row sits just below the traffic lights (the content view is full size).
         .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 10)
+        .padding(.top, 8)
     }
 
     private func sidebarSectionButton(_ section: MainWindowSection) -> some View {
@@ -51,7 +55,7 @@ struct MainSidebarView: View {
             selectedSection = section
         } label: {
             Label(section.title(for: uiLanguage), systemImage: section.systemImage)
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(isSelected ? theme.onAccent : theme.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
@@ -97,7 +101,7 @@ private struct FlowtypeLogoMark: View {
                 .foregroundStyle(theme.ink)
         } else {
             Image(systemName: "waveform")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(theme.ink)
         }
     }

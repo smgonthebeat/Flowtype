@@ -72,6 +72,56 @@ final class TranscriptionFailureClassifierTests: XCTestCase {
         )
     }
 
+    // 2026-10-08: the exact helper response that discarded a 133 s dictation.
+    private let helperEmptyAudio = QwenHelperClientError.httpStatus(
+        400,
+        "No usable speech was captured. Hold Fn a little longer and check the microphone input."
+    )
+
+    func testHelperEmptyAudioOnALongRecordingIsKeptForRetry() {
+        let error = TranscriptionFallbackFailure(
+            primaryError: helperEmptyAudio,
+            fallbackError: TranscriptionError.unavailable
+        )
+
+        XCTAssertEqual(
+            TranscriptionFailureClassifier.recoverableHomeRowCategory(
+                for: error,
+                selectedEngine: .qwenLocal,
+                recordingDuration: 133.6
+            ),
+            .transcriptionFailed
+        )
+    }
+
+    func testHelperEmptyAudioOnAShortPressIsStillNoSpeech() {
+        XCTAssertNil(TranscriptionFailureClassifier.recoverableHomeRowCategory(
+            for: helperEmptyAudio,
+            selectedEngine: .qwenLocal,
+            recordingDuration: 1.5
+        ))
+        XCTAssertNil(TranscriptionFailureClassifier.recoverableHomeRowCategory(
+            for: helperEmptyAudio,
+            selectedEngine: .qwenLocal
+        ))
+    }
+
+    func testModelThatHeardNothingIsStillNotKeptEvenWhenLong() {
+        XCTAssertNil(TranscriptionFailureClassifier.recoverableHomeRowCategory(
+            for: TranscriptionError.emptyResult,
+            selectedEngine: .qwenLocal,
+            recordingDuration: 10
+        ))
+    }
+
+    func testHelperEmptyAudioRuleOnlyAppliesToTheLocalModel() {
+        XCTAssertNil(TranscriptionFailureClassifier.recoverableHomeRowCategory(
+            for: helperEmptyAudio,
+            selectedEngine: .appleSpeech,
+            recordingDuration: 133.6
+        ))
+    }
+
     func testGenericAppleSpeechFailureIsNonRecoverable() {
         let category = TranscriptionFailureClassifier.category(
             for: TestFailure(errorDescription: "recognizer returned an internal error")

@@ -2,12 +2,16 @@ import Foundation
 
 struct RMSMeter {
     private var smoothed: Double = 0
-    private let attack: Double = 0.55
-    private let release: Double = 0.14
+    // Owner feedback (2026-10-03): the first build lagged, the next one was "way too much".
+    // These values sit between the original 0.55/0.14 and the over-eager 0.7/0.25.
+    private let attack: Double = 0.5
+    private let release: Double = 0.18
     private let weights: [Double] = [0.5, 0.8, 1.0, 0.75, 0.55]
 
-    private static let noiseFloorDecibels = -50.0
-    private static let fullScaleDecibels = -10.0
+    // Calibrated for speech at laptop-microphone distance: quiet speech now leaves the floor and
+    // ordinary speech uses most of the height.
+    private static let noiseFloorDecibels = -55.0
+    private static let fullScaleDecibels = -12.0
     private static let perceptualExponent = 0.80
 
     mutating func smoothedLevel(forRMS rms: Double) -> Double {

@@ -38,16 +38,32 @@ enum TranscriptionFailureClassifier {
         selectedEngine == .qwenLocal && category == .transcriptionFailed
     }
 
+    /// A recording at least this long almost certainly holds speech worth keeping.
+    static let minimumRetainedFailureDuration: TimeInterval = 2
+
     static func recoverableHomeRowCategory(
         for error: Error,
-        selectedEngine: TranscriptionEngineKind
+        selectedEngine: TranscriptionEngineKind,
+        recordingDuration: TimeInterval? = nil
     ) -> TranscriptFailureCategory? {
         let candidateError = (error as? TranscriptionFallbackFailure)?.primaryError ?? error
         let category = category(for: candidateError)
-        guard canCreateRecoverableHomeRow(category: category, selectedEngine: selectedEngine) else {
-            return nil
+        if canCreateRecoverableHomeRow(category: category, selectedEngine: selectedEngine) {
+            return category
         }
-        return category
+        // 2026-10-08: the helper answered a two-minute dictation with HTTP 400 "No usable speech"
+        // because its own splitter produced an empty piece, and the recording was discarded as
+        // silence. An error raised by the helper is a model failure, not a heard-nothing result
+        // (that arrives as TranscriptionError.emptyResult), so a recording long enough to hold
+        // speech is kept for retry.
+        if selectedEngine == .qwenLocal,
+           category == .noSpeechDetected,
+           candidateError is QwenHelperClientError,
+           let recordingDuration,
+           recordingDuration >= minimumRetainedFailureDuration {
+            return .transcriptionFailed
+        }
+        return nil
     }
 
     static func capsuleText(for category: TranscriptFailureCategory) -> String {

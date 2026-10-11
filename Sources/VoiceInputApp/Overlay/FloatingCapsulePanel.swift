@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import SwiftUI
 
 enum CapsuleMotion {
     static let showDuration: TimeInterval = 0.18
@@ -26,12 +27,28 @@ final class FloatingCapsulePanel {
     private let panel: NSPanel
     private let label = NSTextField(labelWithString: "")
     private let waveformView = WaveformView()
+    private let glyphView = NSImageView()
+    /// 28pt circle behind the glyph (owner choice "C1", 2026-10-03).
+    private let glyphChip = NSView()
+    private let border = NSView()
+    private var stackLeading: NSLayoutConstraint?
     private var visibilityGeneration = 0
+    private var currentKind: CapsuleKind = .listening
+
+    /// The capsule has no SettingsStore; it reads the stored theme when it applies a presentation.
+    /// The snapshot harness replaces this so it never reads the test process's defaults.
+    var themeProvider: () -> AppTheme = {
+        AppTheme.theme(for: SettingsStore.storedAppThemeID())
+    }
 
     private let capsuleHeight: CGFloat = 56
     private let hPad: CGFloat = 24
     private let waveSize: CGFloat = 44
-    private let gap: CGFloat = 14
+    private let gap: CGFloat = 12
+    private let glyphSize: CGFloat = 15
+    private let chipSize: CGFloat = 28
+    /// A chip sits closer to the rounded end than text or bars do.
+    private let chipLeadingPad: CGFloat = 12
     private let minWidth: CGFloat = 160
     private let maxWidth: CGFloat = 560
 
@@ -57,7 +74,7 @@ final class FloatingCapsulePanel {
         visibilityGeneration += 1
         apply(presentation)
 
-        let w = idealWidth(for: presentation.text)
+        let w = idealWidth(for: presentation)
         let targetFrame = frame(width: w)
         let reduceMotion = shouldReduceMotion
         let initialFrame = CapsuleMotion.animatesFrame(reduceMotion: reduceMotion)
@@ -118,7 +135,7 @@ final class FloatingCapsulePanel {
     func update(_ presentation: CapsulePresentation) {
         apply(presentation)
 
-        let w = idealWidth(for: presentation.text)
+        let w = idealWidth(for: presentation)
         let newFrame = NSRect(x: frame(width: w).origin.x, y: panel.frame.origin.y, width: w, height: capsuleHeight)
         let reduceMotion = shouldReduceMotion
         guard CapsuleMotion.animatesFrame(reduceMotion: reduceMotion) else {
@@ -137,9 +154,63 @@ final class FloatingCapsulePanel {
         waveformView.setLevel(CGFloat(level))
     }
 
+    /// Lays the capsule out for `presentation` without ordering the panel
+    /// front and returns its content view. Only the offscreen UI snapshot
+    /// harness calls this; the app presents through `show` and `update`.
+    func layoutOffscreen(_ presentation: CapsulePresentation) -> NSView? {
+        apply(presentation)
+        panel.setFrame(
+            NSRect(x: 0, y: 0, width: idealWidth(for: presentation), height: capsuleHeight),
+            display: false
+        )
+        return panel.contentView
+    }
+
+    /// Kind decides the colours (design-spec 5.10): voice-coloured live bars while listening,
+    /// warning bars for the countdown, pulsing dots while transcribing, a success check for
+    /// confirmations and a warning triangle plus a thin warning outline for failures.
     private func apply(_ presentation: CapsulePresentation) {
+        let theme = themeProvider()
+        let kindChanged = presentation.kind != currentKind
+        currentKind = presentation.kind
+
         label.stringValue = presentation.text
+        label.textColor = NSColor.white.withAlphaComponent(0.92)
+
+        waveformView.isHidden = !presentation.showsWaveform
         waveformView.isAnimating = presentation.animatesWaveform
+        if !presentation.animatesWaveform {
+            waveformView.resetLevel()
+        }
+        switch presentation.kind {
+        case .warning:
+            waveformView.setBarColor(NSColor(theme.warning))
+        default:
+            waveformView.setBarColor(NSColor(theme.voice))
+        }
+        if kindChanged || !presentation.pulsesWaveform {
+            waveformView.setPulsing(presentation.pulsesWaveform, reduceMotion: shouldReduceMotion)
+        }
+
+        switch presentation.kind {
+        case .noSpeech:
+            setGlyph("mic.slash", color: NSColor.white.withAlphaComponent(0.8))
+        case .failure:
+            setGlyph("exclamationmark", color: NSColor.white.withAlphaComponent(0.8))
+        case .confirmation:
+            setGlyph("checkmark", color: NSColor(theme.success))
+        default:
+            glyphChip.isHidden = true
+        }
+        stackLeading?.constant = glyphChip.isHidden ? hPad : chipLeadingPad
+    }
+
+    private func setGlyph(_ symbol: String, color: NSColor) {
+        let configuration = NSImage.SymbolConfiguration(pointSize: glyphSize, weight: .medium)
+            .applying(.init(paletteColors: [color]))
+        glyphView.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration)
+        glyphChip.isHidden = false
     }
 
     private var shouldReduceMotion: Bool {
@@ -174,7 +245,6 @@ final class FloatingCapsulePanel {
         effectView.translatesAutoresizingMaskIntoConstraints = false
         shadowHost.addSubview(effectView)
 
-        let border = NSView()
         border.wantsLayer = true
         border.layer?.cornerRadius = capsuleHeight / 2
         border.layer?.borderWidth = 0.5
@@ -192,7 +262,16 @@ final class FloatingCapsulePanel {
         waveformView.translatesAutoresizingMaskIntoConstraints = false
         stack.addArrangedSubview(waveformView)
 
-        label.font = .systemFont(ofSize: 15, weight: .medium)
+        glyphChip.wantsLayer = true
+        glyphChip.layer?.cornerRadius = chipSize / 2
+        glyphChip.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.09).cgColor
+        glyphChip.translatesAutoresizingMaskIntoConstraints = false
+        glyphChip.isHidden = true
+        glyphView.translatesAutoresizingMaskIntoConstraints = false
+        glyphChip.addSubview(glyphView)
+        stack.addArrangedSubview(glyphChip)
+
+        label.font = AppTextRole.label.nsFont
         label.textColor = NSColor.white.withAlphaComponent(0.92)
         label.lineBreakMode = .byTruncatingTail
         label.maximumNumberOfLines = 1
@@ -201,6 +280,8 @@ final class FloatingCapsulePanel {
 
         panel.contentView = content
 
+        let leading = stack.leadingAnchor.constraint(equalTo: effectView.leadingAnchor, constant: hPad)
+        stackLeading = leading
         NSLayoutConstraint.activate([
             shadowHost.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             shadowHost.trailingAnchor.constraint(equalTo: content.trailingAnchor),
@@ -216,16 +297,28 @@ final class FloatingCapsulePanel {
             border.bottomAnchor.constraint(equalTo: effectView.bottomAnchor),
             waveformView.widthAnchor.constraint(equalToConstant: waveSize),
             waveformView.heightAnchor.constraint(equalToConstant: 32),
-            stack.leadingAnchor.constraint(equalTo: effectView.leadingAnchor, constant: hPad),
+            glyphChip.widthAnchor.constraint(equalToConstant: chipSize),
+            glyphChip.heightAnchor.constraint(equalToConstant: chipSize),
+            glyphView.centerXAnchor.constraint(equalTo: glyphChip.centerXAnchor),
+            glyphView.centerYAnchor.constraint(equalTo: glyphChip.centerYAnchor),
+            leading,
             stack.trailingAnchor.constraint(equalTo: effectView.trailingAnchor, constant: -hPad),
             stack.centerYAnchor.constraint(equalTo: effectView.centerYAnchor)
         ])
     }
 
-    private func idealWidth(for text: String) -> CGFloat {
+    private func idealWidth(for presentation: CapsulePresentation) -> CGFloat {
         let attrs: [NSAttributedString.Key: Any] = [.font: label.font as Any]
-        let textWidth = ceil((text as NSString).size(withAttributes: attrs).width)
-        let total = hPad + waveSize + gap + textWidth + hPad
+        let textWidth = ceil((presentation.text as NSString).size(withAttributes: attrs).width)
+        let total: CGFloat
+        switch presentation.kind {
+        case .listening, .transcribing, .warning:
+            total = hPad + waveSize + gap + textWidth + hPad
+        case .noSpeech, .failure, .confirmation:
+            total = chipLeadingPad + chipSize + gap + textWidth + hPad
+        case .info:
+            total = hPad + textWidth + hPad
+        }
         return min(max(total, minWidth), maxWidth)
     }
 

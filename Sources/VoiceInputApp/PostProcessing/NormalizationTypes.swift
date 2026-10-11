@@ -17,6 +17,7 @@ struct ProtectedSpan: Equatable {
 }
 
 enum ProtectedSpanKind: String, Equatable {
+    case code
     case url
     case email
     case filePath
@@ -25,6 +26,11 @@ enum ProtectedSpanKind: String, Equatable {
     case version
     case courseCode
     case academicReference
+    case spelledLetters
+    case numericCandidate
+    case knownTerm
+    /// A formula rendered by MathStage, wrapped in its sentinel characters.
+    case mathSpan
 }
 
 struct NormalizationChange: Equatable {

@@ -9,13 +9,20 @@ final class AppCopyTests: XCTestCase {
         XCTAssertEqual(copy.dictionaryTitle, "词典")
         XCTAssertEqual(copy.modelsTitle, "模型")
         XCTAssertEqual(copy.readinessTitle, "准备状态")
-        XCTAssertEqual(copy.preferencesTitle, "转写与外观")
-        XCTAssertEqual(copy.settingsTitle, "设备与存储")
+        // Renamed from 转写与外观 (owner decision 2026-10-11): the page formats text and sets the theme.
+        XCTAssertEqual(copy.preferencesTitle, "格式与外观")
+        // Renamed from 设备与存储 (owner decision 2026-10-11): the page also holds the interface language.
+        XCTAssertEqual(copy.settingsTitle, "设置与存储")
         XCTAssertEqual(copy.dictationCountTitle, "听写次数")
         XCTAssertEqual(copy.dictatedUnits(198_000), "19.8万 字")
-        XCTAssertEqual(copy.menuShowHome, "显示主页")
-        XCTAssertEqual(copy.menuShowPreferences, "显示转写与外观")
-        XCTAssertEqual(copy.menuSetupStatus, "准备状态...")
+        // Menu items now read like the sidebar, without the repeated 显示 (owner review 2026-10-11).
+        XCTAssertEqual(copy.menuShowHome, "主页")
+        XCTAssertEqual(copy.menuShowPreferences, "格式与外观")
+        // Opens a page, so no ellipsis; window items use the single … character.
+        XCTAssertEqual(copy.menuSetupStatus, "准备状态")
+        XCTAssertEqual(copy.menuSettings, "设置与存储…")
+        XCTAssertEqual(copy.menuHelp, "帮助…")
+        XCTAssertEqual(copy.menuQuit, "退出 Flowtype")
         XCTAssertEqual(copy.currentModelMenuTitle("Qwen3-ASR 1.7B"), "模型：Qwen3-ASR 1.7B")
         XCTAssertEqual(copy.rowRetrySegmented, "重新分段转写")
         XCTAssertEqual(copy.rowRetrySegmentedSucceeded, "已重新转写")
@@ -60,11 +67,7 @@ final class AppCopyTests: XCTestCase {
         XCTAssertEqual(copy.readinessRequestSpeechRecognitionTitle, "语音识别")
         XCTAssertEqual(copy.readinessReinstallAppTitle, "重新安装")
         XCTAssertEqual(copy.readinessRestartHelperTitle, "重启 Helper")
-        XCTAssertTrue(copy.helpMessageBody.contains("可能不完整"))
-        XCTAssertTrue(copy.helpMessageBody.contains("主题"))
-        XCTAssertTrue(copy.helpMessageBody.contains("Qwen3-ASR 0.6B / 1.7B"))
-        XCTAssertTrue(copy.helpMessageBody.contains("在“准备状态”页面"))
-        XCTAssertFalse(copy.helpMessageBody.contains("设置权限"))
+        // Help text moved to HelpCopy (2026-10-11 rewrite); its facts are checked in HelpCopyTests.
         XCTAssertEqual(copy.hotwordAlreadyExists, "这个词条已经存在，已为你显示对应结果。")
         XCTAssertEqual(MainWindowSection.models.title(for: .chinese), "模型")
         XCTAssertEqual(MainWindowSection.readiness.title(for: .chinese), "准备状态")
@@ -275,11 +278,17 @@ final class AppCopyTests: XCTestCase {
         XCTAssertEqual(copy.dictionaryTitle, "Dictionary")
         XCTAssertEqual(copy.modelsTitle, "Models")
         XCTAssertEqual(copy.readinessTitle, "Setup & Status")
-        XCTAssertEqual(copy.preferencesTitle, "Transcription & Appearance")
-        XCTAssertEqual(copy.settingsTitle, "Device & Storage")
-        XCTAssertEqual(copy.menuShowHome, "Show Home")
-        XCTAssertEqual(copy.menuShowPreferences, "Show Transcription & Appearance")
-        XCTAssertEqual(copy.menuSetupStatus, "Setup & Status...")
+        // Renamed from Transcription & Appearance (owner decision 2026-10-11).
+        XCTAssertEqual(copy.preferencesTitle, "Formatting & Appearance")
+        // Renamed from Device & Storage (owner decision 2026-10-11).
+        XCTAssertEqual(copy.settingsTitle, "Settings & Storage")
+        // Sidebar wording without "Show" (owner review 2026-10-11).
+        XCTAssertEqual(copy.menuShowHome, "Home")
+        XCTAssertEqual(copy.menuShowPreferences, "Formatting & Appearance")
+        XCTAssertEqual(copy.menuSetupStatus, "Setup & Status")
+        XCTAssertEqual(copy.menuSettings, "Settings & Storage…")
+        XCTAssertEqual(copy.menuHelp, "Help…")
+        XCTAssertEqual(copy.menuQuit, "Quit Flowtype")
         XCTAssertEqual(copy.currentModelMenuTitle("Qwen3-ASR 1.7B"), "Model: Qwen3-ASR 1.7B")
         XCTAssertEqual(copy.rowRetrySegmented, "Retry with segments")
         XCTAssertEqual(copy.rowRetrySegmentedSucceeded, "Retried")
@@ -324,11 +333,7 @@ final class AppCopyTests: XCTestCase {
         XCTAssertEqual(copy.readinessRequestSpeechRecognitionTitle, "Speech Recognition")
         XCTAssertEqual(copy.readinessReinstallAppTitle, "Reinstall")
         XCTAssertEqual(copy.readinessRestartHelperTitle, "Restart Helper")
-        XCTAssertTrue(copy.helpMessageBody.contains("possibly incomplete"))
-        XCTAssertTrue(copy.helpMessageBody.contains("themes"))
-        XCTAssertTrue(copy.helpMessageBody.contains("Qwen3-ASR 0.6B and 1.7B"))
-        XCTAssertTrue(copy.helpMessageBody.contains("Use Setup & Status"))
-        XCTAssertTrue(copy.helpMessageBody.contains("only needed for Apple Speech fallback"))
+        // Help text moved to HelpCopy (2026-10-11 rewrite); see HelpCopyTests.
         XCTAssertEqual(copy.hotwordAlreadyExists, "This term already exists. The matching result is now shown.")
         XCTAssertEqual(MainWindowSection.models.title(for: .english), "Models")
         XCTAssertEqual(MainWindowSection.readiness.title(for: .english), "Setup & Status")
@@ -449,14 +454,16 @@ final class AppCopyTests: XCTestCase {
         XCTAssertTrue(chinese.onboardingPrepareBody.contains("Qwen3-ASR 0.6B"))
         XCTAssertTrue(chinese.onboardingPrepareBody.contains("权限"))
         XCTAssertTrue(chinese.onboardingPreparePermissionsHint.contains("系统设置"))
-        XCTAssertEqual(chinese.onboardingHowToHoldTitle, "按住 Fn 说话")
+        // The how-to cards were replaced by the illustrated hold-Fn page (2026-10-10); its title
+        // still has to say "hold Fn" and "release", which was the point of the old card.
+        XCTAssertEqual(OnboardingCopy.texts(for: .chinese).holdTitle, "按住 Fn 说话，松开就转写")
         XCTAssertEqual(chinese.onboardingFinishTitle, "开始使用 Flowtype")
         XCTAssertEqual(chinese.onboardingSkipTitle, "跳过引导")
 
         XCTAssertEqual(english.onboardingMenuTitle, "Getting Started…")
         XCTAssertEqual(english.onboardingWelcomeTitle, "Back to Flow")
         XCTAssertTrue(english.onboardingPrepareBody.contains("Qwen3-ASR 0.6B"))
-        XCTAssertEqual(english.onboardingHowToHoldTitle, "Hold Fn and talk")
+        XCTAssertEqual(OnboardingCopy.texts(for: .english).holdTitle, "Hold Fn to talk, release to type")
         XCTAssertEqual(english.onboardingFinishTitle, "Start Using Flowtype")
     }
 

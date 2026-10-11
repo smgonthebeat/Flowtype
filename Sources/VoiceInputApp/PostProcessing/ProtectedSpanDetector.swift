@@ -2,9 +2,10 @@ import Foundation
 
 enum ProtectedSpanDetector {
     private static let patterns: [(ProtectedSpanKind, NSRegularExpression)] = [
-        (.url, try! NSRegularExpression(pattern: #"https?://[^\s，。！？；：、]+"#)),
+        // URL and path bodies are ASCII-only so Han text glued to them is not swallowed.
+        (.url, try! NSRegularExpression(pattern: #"https?://[!-~]+"#)),
         (.email, try! NSRegularExpression(pattern: #"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"#)),
-        (.filePath, try! NSRegularExpression(pattern: #"(?:~|/Users|/usr|/opt|/var|/tmp|/private)/[^\s，。！？；：、]+"#)),
+        (.filePath, try! NSRegularExpression(pattern: #"(?:~|/Users|/usr|/opt|/var|/tmp|/private)/[!-~]+"#)),
         (.modelID, try! NSRegularExpression(pattern: #"(?<![A-Za-z0-9/])(?:[A-Z][A-Za-z0-9_.-]*/[A-Za-z0-9_.-]*[A-Z][A-Za-z0-9_.-]*|(?:anthropic|baai|cohere|deepseek-ai|facebook|google|huggingface|meta-llama|microsoft|mistralai|nvidia|openai|qwen|qwenlm|sentence-transformers|stabilityai|tiiuae)[A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*(?:-[A-Za-z0-9_.-]+)+)(?![A-Za-z0-9/])"#)),
         (.version, try! NSRegularExpression(pattern: #"(?<![A-Za-z0-9])v[0-9]+(?:\.[0-9]+)+(?![A-Za-z0-9])"#)),
         (.courseCode, try! NSRegularExpression(pattern: #"(?<![A-Za-z0-9])(?:STAT|ECON|MATH|CS|EE)[0-9]{2,6}(?![A-Za-z0-9])"#)),
@@ -26,9 +27,28 @@ enum ProtectedSpanDetector {
 
         let selectedSpans = selectPreferredSpans(from: spans)
 
-        return selectedSpans.sorted { lhs, rhs in
+        let codeSpans = CodeSpanDetector.ranges(in: text).map { ProtectedSpan(range: $0, kind: .code, text: String(text[$0])) }
+        let mathSpans = mathSpanRanges(in: text).map { ProtectedSpan(range: $0, kind: .mathSpan, text: String(text[$0])) }
+        let others = (selectedSpans + codeSpans).filter { span in !mathSpans.contains { rangesOverlap($0.range, span.range) } }
+        return (others + mathSpans).sorted { lhs, rhs in
             lhs.range.lowerBound < rhs.range.lowerBound
         }
+    }
+
+    /// Formulas rendered by MathStage: each one sits between its two sentinel characters
+    /// (design.md 8.1). Later stages copy these spans verbatim. Text without sentinels has none,
+    /// so the math-off path is unaffected.
+    static func mathSpanRanges(in text: String) -> [Range<String.Index>] {
+        guard text.contains(MathStage.openSentinel) else { return [] }
+        var result: [Range<String.Index>] = []
+        var index = text.startIndex
+        while let open = text[index...].firstIndex(of: MathStage.openSentinel) {
+            guard let close = text[text.index(after: open)...].firstIndex(of: MathStage.closeSentinel) else { break }
+            let end = text.index(after: close)
+            result.append(open..<end)
+            index = end
+        }
+        return result
     }
 
     private static func trimTrailingDelimiters(from range: NSRange, kind: ProtectedSpanKind, in source: NSString) -> NSRange {
@@ -54,7 +74,8 @@ enum ProtectedSpanDetector {
         switch kind {
         case .url, .filePath, .email:
             return CharacterSet(charactersIn: #".,，。！？；：、)]}"'"#)
-        case .command, .modelID, .version, .courseCode, .academicReference:
+        case .code, .command, .modelID, .version, .courseCode, .academicReference, .spelledLetters, .numericCandidate,
+             .knownTerm, .mathSpan:
             return nil
         }
     }
@@ -95,6 +116,10 @@ enum ProtectedSpanDetector {
 
     private static func priority(of kind: ProtectedSpanKind) -> Int {
         switch kind {
+        case .mathSpan:
+            return -2
+        case .code:
+            return -1
         case .url:
             return 0
         case .filePath:
@@ -107,10 +132,16 @@ enum ProtectedSpanDetector {
             return 4
         case .academicReference:
             return 5
+        case .numericCandidate:
+            return 9
+        case .spelledLetters:
+            return 8
         case .version:
             return 6
         case .command:
             return 7
+        case .knownTerm:
+            return 10
         }
     }
 

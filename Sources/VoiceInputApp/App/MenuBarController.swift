@@ -1,8 +1,14 @@
 import AppKit
 
-final class MenuBarController: NSObject {
+final class MenuBarController: NSObject, NSMenuDelegate {
     private var statusItem: NSStatusItem?
+    private var readinessItem: NSMenuItem?
+    private var readinessSeparator: NSMenuItem?
+    private var pasteLastTranscriptItem: NSMenuItem?
     private let settingsStore: SettingsStore
+    private let readinessSummary: () -> ReadinessSummary?
+    private let hasLastTranscript: () -> Bool
+    private let onMenuWillOpen: () -> Void
     private let onOpenHome: () -> Void
     private let onOpenDictionary: () -> Void
     private let onOpenModels: () -> Void
@@ -15,6 +21,9 @@ final class MenuBarController: NSObject {
 
     init(
         settingsStore: SettingsStore,
+        readinessSummary: @escaping () -> ReadinessSummary? = { nil },
+        hasLastTranscript: @escaping () -> Bool = { true },
+        onMenuWillOpen: @escaping () -> Void = {},
         onOpenHome: @escaping () -> Void = {},
         onOpenDictionary: @escaping () -> Void = {},
         onOpenModels: @escaping () -> Void = {},
@@ -26,6 +35,9 @@ final class MenuBarController: NSObject {
         onPasteLastTranscript: @escaping () -> Void = {}
     ) {
         self.settingsStore = settingsStore
+        self.readinessSummary = readinessSummary
+        self.hasLastTranscript = hasLastTranscript
+        self.onMenuWillOpen = onMenuWillOpen
         self.onOpenHome = onOpenHome
         self.onOpenDictionary = onOpenDictionary
         self.onOpenModels = onOpenModels
@@ -53,24 +65,83 @@ final class MenuBarController: NSObject {
         statusItem?.menu = makeMenu()
     }
 
+    /// Order (owner review, 2026-10-11): readiness first, then the most common recovery
+    /// action, then the main-window pages in sidebar order, then the other windows.
     private func makeMenu() -> NSMenu {
         let copy = AppCopy.texts(for: settingsStore.uiLanguage)
         let currentModel = VoiceInputModel.model(for: settingsStore.selectedModelID)
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: copy.menuShowHome, action: #selector(openHome), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: copy.menuShowDictionary, action: #selector(openDictionary), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: copy.currentModelMenuTitle(copy.modelRoleTitle(for: currentModel)), action: #selector(openModels), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: copy.menuShowPreferences, action: #selector(openPreferences), keyEquivalent: ""))
+        menu.autoenablesItems = false
+        menu.delegate = self
+
+        let readiness = NSMenuItem(title: "", action: #selector(openSetupStatus), keyEquivalent: "")
+        readiness.target = self
+        readiness.isHidden = true
+        menu.addItem(readiness)
+        readinessItem = readiness
+        let separator = NSMenuItem.separator()
+        separator.isHidden = true
+        menu.addItem(separator)
+        readinessSeparator = separator
+
+        let paste = item(copy.menuPasteLastTranscript, #selector(pasteLastTranscript))
+        menu.addItem(paste)
+        pasteLastTranscriptItem = paste
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: copy.menuSettings, action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(NSMenuItem(title: copy.menuSetupStatus, action: #selector(openSetupStatus), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: copy.onboardingMenuTitle, action: #selector(showOnboarding), keyEquivalent: ""))
+
+        menu.addItem(item(copy.menuShowHome, #selector(openHome)))
+        menu.addItem(item(copy.menuShowDictionary, #selector(openDictionary)))
+        menu.addItem(item(copy.currentModelMenuTitle(copy.modelRoleTitle(for: currentModel)), #selector(openModels)))
+        menu.addItem(item(copy.menuSetupStatus, #selector(openSetupStatus)))
+        menu.addItem(item(copy.menuShowPreferences, #selector(openPreferences)))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: copy.menuPasteLastTranscript, action: #selector(pasteLastTranscript), keyEquivalent: ""))
+        menu.addItem(item(copy.menuSettings, #selector(openSettings), key: ","))
+        menu.addItem(item(copy.onboardingMenuTitle, #selector(showOnboarding)))
+        menu.addItem(item(copy.menuHelp, #selector(showHelp)))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: copy.menuQuit, action: #selector(quit), keyEquivalent: "q"))
-        menu.items.forEach { $0.target = self }
+        menu.addItem(item(copy.menuQuit, #selector(quit), key: "q"))
+        updateDynamicItems()
         return menu
+    }
+
+    private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = self
+        return item
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        updateDynamicItems()
+        onMenuWillOpen()
+    }
+
+    /// Refreshes the readiness line and the paste item. Safe to call while the menu is open;
+    /// AppKit redraws changed items in place.
+    func updateDynamicItems() {
+        pasteLastTranscriptItem?.isEnabled = hasLastTranscript()
+        guard let readinessItem else { return }
+        guard let summary = readinessSummary() else {
+            readinessItem.isHidden = true
+            readinessSeparator?.isHidden = true
+            return
+        }
+        readinessItem.isHidden = false
+        readinessSeparator?.isHidden = false
+        readinessItem.title = summary.text
+        readinessItem.image = Self.statusDot(for: summary.tone)
+    }
+
+    private static func statusDot(for tone: ReadinessSummary.Tone) -> NSImage? {
+        let color: NSColor
+        switch tone {
+        case .ready: color = .systemGreen
+        case .working: color = .systemGray
+        case .attention: color = .systemOrange
+        }
+        let configuration = NSImage.SymbolConfiguration(pointSize: 8, weight: .regular)
+            .applying(NSImage.SymbolConfiguration(paletteColors: [color]))
+        return NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration)
     }
 
     private static func makeStatusIcon() -> NSImage? {

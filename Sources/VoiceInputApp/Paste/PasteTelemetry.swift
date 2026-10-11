@@ -5,6 +5,7 @@ struct PasteTelemetryEvent: Equatable, Sendable {
     let source: PasteSource
     let targetProcessIdentifier: pid_t?
     let targetBundleIdentifier: String?
+    let targetSource: PasteTargetSource?
     let outcome: PasteOutcome
     let pasteboardChangeCountBefore: Int
     let pasteboardChangeCountAfter: Int
@@ -22,8 +23,9 @@ final class PasteLoggerTelemetry: PasteTelemetryRecording {
         let targetPID = event.targetProcessIdentifier ?? -1
         let targetBundleIdentifier = event.targetBundleIdentifier ?? "missing"
         let frontmostMatch = event.frontmostMatch.map(String.init) ?? "unknown"
+        let targetSource = event.targetSource?.rawValue ?? "missing"
         AppLogger.paste.info(
-            "paste_attempt_result attempt_id=\(event.attemptID.uuidString, privacy: .public) source=\(event.source.rawValue, privacy: .public) target_pid=\(targetPID, privacy: .public) target_bundle=\(targetBundleIdentifier, privacy: .public) frontmost_match=\(frontmostMatch, privacy: .public) outcome=\(event.outcome.diagnosticName, privacy: .public) change_before=\(event.pasteboardChangeCountBefore, privacy: .public) change_after=\(event.pasteboardChangeCountAfter, privacy: .public) event_pair_count=\(event.eventPairCount, privacy: .public) elapsed_ms=\(event.elapsedMilliseconds, privacy: .public)"
+            "paste_attempt_result attempt_id=\(event.attemptID.uuidString, privacy: .public) source=\(event.source.rawValue, privacy: .public) target_pid=\(targetPID, privacy: .public) target_bundle=\(targetBundleIdentifier, privacy: .public) target_source=\(targetSource, privacy: .public) frontmost_match=\(frontmostMatch, privacy: .public) outcome=\(event.outcome.diagnosticName, privacy: .public) change_before=\(event.pasteboardChangeCountBefore, privacy: .public) change_after=\(event.pasteboardChangeCountAfter, privacy: .public) event_pair_count=\(event.eventPairCount, privacy: .public) elapsed_ms=\(event.elapsedMilliseconds, privacy: .public)"
         )
     }
 }

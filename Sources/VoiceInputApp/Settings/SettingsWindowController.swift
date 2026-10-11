@@ -7,6 +7,10 @@ final class SettingsWindowController: NSWindowController {
     private let onUsageStatsReset: () -> Void
     private let onUILanguageChange: (UILanguage) -> Void
     private var appThemeObserver: NSObjectProtocol?
+    /// Bumped whenever the view must start again from the stored settings. SwiftUI keeps a
+    /// view's `@State` across `rootView` swaps, so without a new identity the window kept
+    /// showing the language it was first built with after onboarding switched it.
+    private var contentGeneration = 0
 
     init(
         settingsStore: SettingsStore,
@@ -54,6 +58,7 @@ final class SettingsWindowController: NSWindowController {
     }
 
     func show() {
+        contentGeneration += 1
         applyWindowTheme()
         rebuildContent()
         showWindow(nil)
@@ -61,6 +66,13 @@ final class SettingsWindowController: NSWindowController {
         window?.makeKeyAndOrderFront(nil)
         window?.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Re-reads every setting after something outside this window changed one, such as the
+    /// interface language on the onboarding welcome page.
+    func reloadFromStore() {
+        contentGeneration += 1
+        rebuildContent()
     }
 
     private func applyWindowTheme() {
@@ -81,6 +93,7 @@ final class SettingsWindowController: NSWindowController {
     }
 
     private func rebuildContent() {
+        window?.title = SettingsCopy.texts(for: settingsStore.uiLanguage).windowTitle
         let rootView = SettingsView(
             settingsStore: settingsStore,
             usageStatsStore: usageStatsStore,
@@ -91,6 +104,7 @@ final class SettingsWindowController: NSWindowController {
             }
         )
         .flowtypeTheme(AppTheme.theme(for: settingsStore.appThemeID))
+        .id(contentGeneration)
 
         if let hostingView = window?.contentView as? NSHostingView<AnyView> {
             hostingView.rootView = AnyView(rootView)
@@ -102,12 +116,13 @@ final class SettingsWindowController: NSWindowController {
 
 private enum SettingsCopy {
     struct Texts {
-        let usesChineseUnits: Bool
         let windowTitle: String
         let subtitle: String
         let interfaceTitle: String
         let interfaceLanguageTitle: String
         let interfaceLanguageDetail: String
+        let textSizeTitle: String
+        let textSizeDetail: String
         let dictationTitle: String
         let microphoneTitle: String
         let microphoneDetail: String
@@ -118,8 +133,6 @@ private enum SettingsCopy {
         let primaryEngineDetail: String
         let fallbackTitle: String
         let fallbackDetail: String
-        let dictationLanguageModeTitle: String
-        let dictationLanguageModeDetail: String
         let recordingLimitTitle: String
         let recordingLimitDetail: String
         let privacyTitle: String
@@ -155,21 +168,19 @@ private enum SettingsCopy {
         let cancel: String
         let ok: String
 
-        func seconds(_ value: Int) -> String {
-            usesChineseUnits ? "\(value) 秒" : "\(value) sec"
-        }
     }
 
     static func texts(for language: UILanguage) -> Texts {
         switch language {
         case .chinese:
             return Texts(
-                usesChineseUnits: true,
-                windowTitle: "设备、存储与隐私",
-                subtitle: "管理输入设备、本地历史、数据存储位置和隐私选项。",
+                windowTitle: "设置与存储",
+                subtitle: "管理界面语言、麦克风、本地历史、数据存储位置和隐私选项。",
                 interfaceTitle: "界面",
                 interfaceLanguageTitle: "界面语言",
-                interfaceLanguageDetail: "选择此应用界面显示中文或英文。默认使用中文。",
+                interfaceLanguageDetail: "选择界面显示中文或英文。第一次打开时跟随 Mac 的系统语言。",
+                textSizeTitle: "文字大小",
+                textSizeDetail: "调整 Flowtype 所有窗口的字号。也可以按 ⌘+ 放大、⌘− 缩小。",
                 dictationTitle: "听写",
                 microphoneTitle: "麦克风",
                 microphoneDetail: "选择按住 Fn 听写时使用的输入设备。",
@@ -180,8 +191,6 @@ private enum SettingsCopy {
                 primaryEngineDetail: "按 Fn 听写时优先使用。",
                 fallbackTitle: "备用方案",
                 fallbackDetail: "仅在本地 Qwen 不可用时使用。",
-                dictationLanguageModeTitle: "听写语言模式",
-                dictationLanguageModeDetail: "针对中英文混合输入优化。",
                 recordingLimitTitle: "录音时长上限",
                 recordingLimitDetail: "接近上限时会提醒；超时后会直接转写已有录音，而不是丢弃音频。",
                 privacyTitle: "隐私",
@@ -219,12 +228,13 @@ private enum SettingsCopy {
             )
         case .english:
             return Texts(
-                usesChineseUnits: false,
-                windowTitle: "Device, Storage & Privacy",
-                subtitle: "Manage input devices, local history, storage locations, and privacy options.",
+                windowTitle: "Settings & Storage",
+                subtitle: "Manage the interface language, microphone, local history, storage locations, and privacy options.",
                 interfaceTitle: "Interface",
                 interfaceLanguageTitle: "Interface language",
-                interfaceLanguageDetail: "Choose whether the app UI appears in Chinese or English. Chinese is the default.",
+                interfaceLanguageDetail: "Choose whether the interface appears in Chinese or English. The first launch follows the Mac's system language.",
+                textSizeTitle: "Text size",
+                textSizeDetail: "Changes the text size in every Flowtype window. You can also press ⌘+ to enlarge and ⌘− to shrink.",
                 dictationTitle: "Dictation",
                 microphoneTitle: "Microphone",
                 microphoneDetail: "Choose the input device used for Fn dictation.",
@@ -235,8 +245,6 @@ private enum SettingsCopy {
                 primaryEngineDetail: "Used first for Fn dictation.",
                 fallbackTitle: "Fallback",
                 fallbackDetail: "Used only if local Qwen is unavailable.",
-                dictationLanguageModeTitle: "Dictation language mode",
-                dictationLanguageModeDetail: "Optimized for mixed Chinese-English input.",
                 recordingLimitTitle: "Recording limit",
                 recordingLimitDetail: "Warnings appear near the limit; timeout now transcribes instead of discarding audio.",
                 privacyTitle: "Privacy",
@@ -275,6 +283,18 @@ private enum SettingsCopy {
         }
     }
 
+    static func textSizeName(_ size: AppTextSize, in uiLanguage: UILanguage) -> String {
+        let isDefault = size == AppTextSize.defaultSize
+        switch (size, uiLanguage) {
+        case (.small, .chinese): return "小"
+        case (.standard, .chinese): return isDefault ? "标准（默认）" : "标准"
+        case (.large, .chinese): return "大"
+        case (.small, .english): return "Small"
+        case (.standard, .english): return isDefault ? "Standard (default)" : "Standard"
+        case (.large, .english): return "Large"
+        }
+    }
+
     static func languageName(_ language: UILanguage, in uiLanguage: UILanguage) -> String {
         switch (language, uiLanguage) {
         case (.chinese, .chinese):
@@ -287,29 +307,13 @@ private enum SettingsCopy {
             return "English"
         }
     }
-
-    static func dictationLanguageName(_ languageMode: LanguageMode, in uiLanguage: UILanguage) -> String {
-        switch (languageMode, uiLanguage) {
-        case (.mixedChineseEnglish, .chinese):
-            return "中英文混合"
-        case (.chinese, .chinese):
-            return "中文"
-        case (.english, .chinese):
-            return "英文"
-        case (.mixedChineseEnglish, .english):
-            return "Mixed Chinese-English"
-        case (.chinese, .english):
-            return "Chinese"
-        case (.english, .english):
-            return "English"
-        }
-    }
 }
 
 private struct SettingsView: View {
     @Environment(\.appTheme) private var theme
 
     @ObservedObject var settingsStore: SettingsStore
+    @ObservedObject private var textSizeModel = AppTextSizeModel.shared
     let usageStatsStore: UsageStatsStore?
     let onUsageStatsReset: () -> Void
     let onUILanguageChange: (UILanguage) -> Void
@@ -388,17 +392,17 @@ private struct SettingsView: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 Image(systemName: "waveform")
-                    .font(.system(size: 18, weight: .semibold))
+                    .scaledFont(size: 18, weight: .semibold)
                     .foregroundStyle(theme.accent)
                     .frame(width: 34, height: 34)
-                    .background(theme.accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
 
                 Text(copy.windowTitle)
-                    .font(.system(size: 32, weight: .semibold))
+                    .scaledFont(size: 32, weight: .semibold)
             }
 
             Text(copy.subtitle)
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(theme.secondaryInk)
         }
     }
@@ -412,7 +416,7 @@ private struct SettingsView: View {
                     Text(copy.interfaceLanguageTitle)
                         .fontWeight(.medium)
                     Text(copy.interfaceLanguageDetail)
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.secondaryInk)
                 }
 
@@ -425,7 +429,31 @@ private struct SettingsView: View {
                     }
                 }
                 .labelsHidden()
-                .frame(width: 180)
+                .frame(width: 180, alignment: .trailing)
+                // A tinted pop-up arrow box renders the accent as muddy gold; keep it neutral.
+                .tint(Color(nsColor: .systemGray))
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(copy.textSizeTitle)
+                        .fontWeight(.medium)
+                    Text(copy.textSizeDetail)
+                        .scaledFont(.caption)
+                        .foregroundStyle(theme.secondaryInk)
+                }
+
+                Spacer(minLength: 16)
+
+                Picker("", selection: textSizeBinding) {
+                    ForEach(AppTextSize.allCases, id: \.self) { size in
+                        Text(SettingsCopy.textSizeName(size, in: uiLanguage))
+                            .tag(size)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 180, alignment: .trailing)
+                .tint(Color(nsColor: .systemGray))
             }
         }
     }
@@ -450,14 +478,14 @@ private struct SettingsView: View {
                 detail: copy.primaryEngineDetail
             )
             SettingsValueRow(title: copy.fallbackTitle, value: "Apple Speech", detail: copy.fallbackDetail)
-            SettingsValueRow(title: copy.dictationLanguageModeTitle, value: displayName(for: settingsStore.languageMode), detail: copy.dictationLanguageModeDetail)
-            Stepper(value: maxRecordingDurationBinding, in: 30...600, step: 30) {
-                SettingsValueRow(
-                    title: copy.recordingLimitTitle,
-                    value: copy.seconds(maxRecordingDuration),
-                    detail: copy.recordingLimitDetail
-                )
-            }
+            SettingsMenuRow(
+                title: copy.recordingLimitTitle,
+                detail: copy.recordingLimitDetail,
+                selection: maxRecordingDurationBinding,
+                options: SettingsLimitOptions.recordingDurations(including: maxRecordingDuration).map {
+                    ($0, SettingsLimitOptions.durationLabel(seconds: $0, language: uiLanguage))
+                }
+            )
         }
     }
 
@@ -469,13 +497,18 @@ private struct SettingsView: View {
                 .flowtypeSwitch(theme)
 
             Text(isHistoryEnabled ? copy.historyEnabledDetail : copy.historyDisabledDetail)
-                .font(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(theme.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Stepper(value: historyLimitBinding, in: 1...500, step: 10) {
-                SettingsValueRow(title: copy.historyLimitTitle, value: "\(historyLimit)", detail: copy.historyLimitDetail)
-            }
+            SettingsMenuRow(
+                title: copy.historyLimitTitle,
+                detail: copy.historyLimitDetail,
+                selection: historyLimitBinding,
+                options: SettingsLimitOptions.historyLimits(including: historyLimit).map {
+                    ($0, SettingsLimitOptions.historyLabel(entries: $0, language: uiLanguage))
+                }
+            )
 
             Divider()
 
@@ -484,7 +517,7 @@ private struct SettingsView: View {
             } label: {
                 Label(copy.resetLocalStatsTitle, systemImage: "arrow.counterclockwise")
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
             .disabled(usageStatsStore == nil)
             .help(copy.resetLocalStatsHelp)
         }
@@ -557,6 +590,14 @@ private struct SettingsView: View {
         )
     }
 
+    /// Reads the shared model so a ⌘+ / ⌘− change shows here while the window is open.
+    private var textSizeBinding: Binding<AppTextSize> {
+        Binding(
+            get: { textSizeModel.size },
+            set: { settingsStore.textSize = $0 }
+        )
+    }
+
     private var uiLanguageBinding: Binding<UILanguage> {
         Binding(
             get: { uiLanguage },
@@ -621,13 +662,9 @@ private struct SettingsView: View {
             try usageStatsStore?.reset()
             onUsageStatsReset()
         } catch {
-            resetStatsErrorMessage = error.localizedDescription
+            resetStatsErrorMessage = UserFacingErrorMessage.message(for: error, language: uiLanguage)
             isShowingResetStatsError = true
         }
-    }
-
-    private func displayName(for languageMode: LanguageMode) -> String {
-        SettingsCopy.dictationLanguageName(languageMode, in: uiLanguage)
     }
 
     private static func transcriptHistoryPath() -> String {
@@ -666,7 +703,7 @@ private struct SettingsCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label(title, systemImage: systemImage)
-                .font(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(theme.ink)
 
             VStack(alignment: .leading, spacing: 13) {
@@ -693,7 +730,7 @@ private struct SettingsValueRow: View {
                 Text(title)
                     .fontWeight(.medium)
                 Text(detail)
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(theme.secondaryInk)
             }
 
@@ -702,6 +739,43 @@ private struct SettingsValueRow: View {
             Text(value)
                 .fontWeight(.semibold)
                 .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+/// A setting chosen from a pop-up menu, laid out like the language and microphone rows.
+/// Replaced the steppers, whose tiny arrows did not line up with the value (owner feedback,
+/// 2026-10-11).
+private struct SettingsMenuRow: View {
+    @Environment(\.appTheme) private var theme
+
+    let title: String
+    let detail: String
+    let selection: Binding<Int>
+    let options: [(value: Int, label: String)]
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .fontWeight(.medium)
+                Text(detail)
+                    .scaledFont(.caption)
+                    .foregroundStyle(theme.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 16)
+
+            Picker("", selection: selection) {
+                ForEach(options, id: \.value) { option in
+                    Text(option.label).tag(option.value)
+                }
+            }
+            .labelsHidden()
+            .frame(width: 180, alignment: .trailing)
+            // A tinted pop-up arrow box renders the accent as muddy gold; keep it neutral.
+            .tint(Color(nsColor: .systemGray))
         }
     }
 }
@@ -724,7 +798,7 @@ private struct MicrophonePickerRow: View {
                 Text(title)
                     .fontWeight(.medium)
                 Text(detail)
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(theme.secondaryInk)
             }
 
@@ -740,6 +814,8 @@ private struct MicrophonePickerRow: View {
                 }
                 .labelsHidden()
                 .frame(width: 260)
+                // A tinted pop-up arrow box renders the accent as muddy gold; keep it neutral.
+                .tint(Color(nsColor: .systemGray))
 
                 Button(action: refresh) {
                     Image(systemName: "arrow.clockwise")
@@ -768,7 +844,7 @@ private struct PathRow: View {
                     Text(title)
                         .fontWeight(.medium)
                     Text(detail)
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -794,7 +870,7 @@ private struct PathRow: View {
             }
 
             Text(path)
-                .font(.system(.caption, design: .monospaced))
+                .scaledFont(.caption, design: .monospaced)
                 .foregroundStyle(theme.secondaryInk)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -811,5 +887,51 @@ private struct PathRow: View {
 
         try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
         NSWorkspace.shared.open(folderURL)
+    }
+}
+
+/// Menu choices for the recording and history limits. A stored value that is not one of the
+/// presets (for example from the old 30-second stepper) is added so the menu still shows it.
+enum SettingsLimitOptions {
+    static let defaultRecordingDuration = 180
+    static let defaultHistoryLimit = 100
+    static let recordingDurationPresets = [30, 60, 90, 120, 180, 240, 300, 420, 600]
+    static let historyLimitPresets = [10, 25, 50, 100, 200, 300, 500]
+
+    static func recordingDurations(including current: Int) -> [Int] {
+        merged(recordingDurationPresets, current)
+    }
+
+    static func historyLimits(including current: Int) -> [Int] {
+        merged(historyLimitPresets, current)
+    }
+
+    static func durationLabel(seconds: Int, language: UILanguage) -> String {
+        let minutes = seconds / 60
+        let rest = seconds % 60
+        let chinese = language == .chinese
+        let text: String
+        switch (minutes, rest) {
+        case (0, _):
+            text = chinese ? "\(rest) 秒" : "\(rest) sec"
+        case (_, 0):
+            text = chinese ? "\(minutes) 分钟" : "\(minutes) min"
+        default:
+            text = chinese ? "\(minutes) 分 \(rest) 秒" : "\(minutes) min \(rest) sec"
+        }
+        return seconds == defaultRecordingDuration ? withDefaultMark(text, language: language) : text
+    }
+
+    static func historyLabel(entries: Int, language: UILanguage) -> String {
+        let text = language == .chinese ? "\(entries) 条" : "\(entries) entries"
+        return entries == defaultHistoryLimit ? withDefaultMark(text, language: language) : text
+    }
+
+    private static func merged(_ presets: [Int], _ current: Int) -> [Int] {
+        presets.contains(current) ? presets : (presets + [current]).sorted()
+    }
+
+    private static func withDefaultMark(_ text: String, language: UILanguage) -> String {
+        language == .chinese ? "\(text)（默认）" : "\(text) (default)"
     }
 }

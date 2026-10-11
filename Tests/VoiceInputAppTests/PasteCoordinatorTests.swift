@@ -180,6 +180,62 @@ final class PasteCoordinatorTests: XCTestCase {
     }
 
     @MainActor
+    func testTargetWithoutTextInputCopiesOnlyWithoutShortcut() async {
+        let pasteboard = TestPasteboardWriter()
+        let poster = TestPasteShortcutPoster()
+        let telemetry = TestPasteTelemetryRecorder()
+        let coordinator = makeCoordinator(pasteboard: pasteboard, poster: poster, telemetry: telemetry)
+        let finder = PasteTargetIdentity(processIdentifier: 42, bundleIdentifier: "com.apple.finder")
+
+        let outcome = await coordinator.perform(PasteAttempt(
+            id: UUID(),
+            source: .dictation,
+            text: "not a clipping",
+            target: finder,
+            targetSource: .focusedApplication
+        )) { $0 } validateTarget: { _ in
+            XCTFail("A target without text input must not reach dispatch")
+            return true
+        } acceptsText: { _ in
+            false
+        }
+
+        XCTAssertEqual(outcome, .copiedOnly(reason: .noTextInput))
+        XCTAssertEqual(outcome.diagnosticName, "copied_only_noTextInput")
+        XCTAssertEqual(pasteboard.value, "not a clipping")
+        XCTAssertTrue(poster.processIdentifiers.isEmpty)
+        XCTAssertEqual(telemetry.events.last?.targetBundleIdentifier, "com.apple.finder")
+        XCTAssertEqual(telemetry.events.last?.frontmostMatch, true)
+    }
+
+    @MainActor
+    func testTelemetryRecordsHowTheTargetWasFound() async {
+        let telemetry = TestPasteTelemetryRecorder()
+        let coordinator = makeCoordinator(
+            pasteboard: TestPasteboardWriter(),
+            poster: TestPasteShortcutPoster(),
+            telemetry: telemetry
+        )
+        let target = PasteTargetIdentity(processIdentifier: 42, bundleIdentifier: "com.example.Editor")
+
+        _ = await coordinator.perform(PasteAttempt(
+            id: UUID(),
+            source: .dictation,
+            text: "traced",
+            target: target,
+            targetSource: .focusedApplication
+        )) { $0 } validateTarget: { _ in true }
+        _ = await coordinator.perform(PasteAttempt(
+            id: UUID(),
+            source: .history,
+            text: "untraced",
+            target: target
+        )) { $0 } validateTarget: { _ in true }
+
+        XCTAssertEqual(telemetry.events.map(\.targetSource), [.focusedApplication, nil])
+    }
+
+    @MainActor
     private func makeCoordinator(
         pasteboard: TestPasteboardWriter,
         poster: TestPasteShortcutPoster,

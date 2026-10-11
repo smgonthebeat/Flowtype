@@ -73,7 +73,7 @@ struct FlowtypeSwitchToggleStyle: ToggleStyle {
 
                 ZStack(alignment: configuration.isOn ? .trailing : .leading) {
                     RoundedRectangle(cornerRadius: appearance.metrics.cornerRadius, style: .continuous)
-                        .fill(Color(hex: appearance.palette.trackHex))
+                        .fill(trackFill(appearance: appearance, isOn: configuration.isOn))
                         .overlay {
                             RoundedRectangle(cornerRadius: appearance.metrics.cornerRadius, style: .continuous)
                                 .stroke(theme.border.opacity(configuration.isOn ? 0.0 : 1.0), lineWidth: 1)
@@ -100,5 +100,14 @@ struct FlowtypeSwitchToggleStyle: ToggleStyle {
             configuration.isOn.toggle()
         }
         .accessibilityValue(configuration.isOn ? "On" : "Off")
+    }
+
+    /// The system theme's palette hex is the dark-appearance value, which drew a near-black off
+    /// track in light appearance; use the dynamic system fill there instead.
+    private func trackFill(appearance: FlowtypeSwitchAppearance, isOn: Bool) -> Color {
+        if !isOn && theme.usesSystemMaterials {
+            return Color(nsColor: .quaternaryLabelColor)
+        }
+        return Color(hex: appearance.palette.trackHex)
     }
 }

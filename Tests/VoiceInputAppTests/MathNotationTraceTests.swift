@@ -5,6 +5,7 @@ final class MathNotationTraceTests: XCTestCase {
     func testMathNotationStageEmitsEventWhenFormatterChangesText() {
         let options = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .unicode
@@ -22,7 +23,8 @@ final class MathNotationTraceTests: XCTestCase {
         XCTAssertEqual(mathStage.input, "variance x")
         XCTAssertEqual(mathStage.output, "Var(X)")
         XCTAssertFalse(mathStage.events.isEmpty)
-        XCTAssertTrue(mathStage.events.contains { $0.ruleID == "math.formatter.statistics-functions" })
+        // Math rebuild: one event per candidate span (design.md 8.7); formerly math.formatter.statistics-functions.
+        XCTAssertTrue(mathStage.events.contains { $0.ruleID == "math.span.accepted" && $0.before == "variance x" })
     }
 
     func testFormatWithEventsMatchesPlainFormatText() {
@@ -59,10 +61,15 @@ final class MathNotationTraceTests: XCTestCase {
     func testFormatWithEventsEmitsCompactASRNormalizationEvent() {
         let result = MathNotationFormatter.formatWithEvents("Nsubj", outputFormat: .unicode)
 
-        XCTAssertEqual(result.text, "Nⱼ")
+        // Math rebuild: compact splitting happens in the lexer and the span records one event
+        // (design.md 3 rule 4, 8.7); a sentence-initial letter is lower case (D5). Formerly Nⱼ with a
+        // math.formatter.compact-asr-normalization event.
+        XCTAssertEqual(result.text, "nⱼ")
         XCTAssertTrue(
-            result.events.contains { $0.ruleID == "math.formatter.compact-asr-normalization" }
+            result.events.contains { $0.ruleID == "math.span.accepted" && $0.before == "Nsubj" }
         )
+        // Owner decision 2026-10-10 (T11): lower case mid-sentence too; was "then Nⱼ".
+        XCTAssertEqual(MathNotationFormatter.format("then Nsubj", outputFormat: .unicode), "then nⱼ")
     }
 
     func testProtectedSpanEventsOnlyReflectUnprotectedChanges() {

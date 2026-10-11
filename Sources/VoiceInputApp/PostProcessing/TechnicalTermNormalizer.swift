@@ -34,12 +34,12 @@ enum TechnicalTermNormalizer {
         )
     ]
 
-    static func normalize(_ text: String) -> TechnicalTermNormalizationResult {
+    static func normalize(_ text: String, knownTerms: [String] = []) -> TechnicalTermNormalizationResult {
         var current = text
         var events: [PostProcessingEvent] = []
 
         for rule in rules {
-            let result = replaceMatches(in: current, using: rule)
+            let result = replaceMatches(in: current, using: rule, knownTerms: knownTerms)
             current = result.text
             events.append(contentsOf: result.events)
         }
@@ -47,16 +47,27 @@ enum TechnicalTermNormalizer {
         return TechnicalTermNormalizationResult(text: current, events: events)
     }
 
-    private static func replaceMatches(in text: String, using rule: Rule) -> TechnicalTermNormalizationResult {
+    private static func replaceMatches(
+        in text: String,
+        using rule: Rule,
+        knownTerms: [String]
+    ) -> TechnicalTermNormalizationResult {
         var result = ""
         var searchStart = text.startIndex
         var events: [PostProcessingEvent] = []
+        // URLs, e-mail, paths, code and hotwords keep their exact spelling. A hotword that is
+        // this rule's own canonical form does not block the rule.
+        let terms = knownTerms.filter {
+            $0.filter { !$0.isWhitespace }.lowercased() != rule.replacement.lowercased()
+        }
+        let protectedRanges = SharedProtection.ranges(in: text, knownTerms: terms)
         let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
 
         rule.regex.enumerateMatches(in: text, range: fullRange) { match, _, _ in
             guard let match,
                   let matchRange = Range(match.range, in: text),
-                  matchRange.lowerBound >= searchStart else {
+                  matchRange.lowerBound >= searchStart,
+                  !SharedProtection.overlaps(matchRange, protectedRanges) else {
                 return
             }
 

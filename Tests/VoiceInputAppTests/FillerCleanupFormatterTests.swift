@@ -1,7 +1,24 @@
+import Foundation
 import XCTest
 @testable import VoiceInputApp
 
 final class FillerCleanupFormatterTests: XCTestCase {
+    private struct EditExpectation: Decodable {
+        let before: String
+        let after: String
+    }
+
+    private struct GoldenCase: Decodable {
+        let id: String
+        let input: String
+        let onExpected: String
+        let offExpected: String
+        let eventCount: Int
+        let ruleIDs: [String]
+        let editBeforeAfter: [EditExpectation]
+        let classification: String
+    }
+
     func testRemovesShortChineseFillers() {
         XCTAssertEqual(
             FillerCleanupFormatter.format("嗯，我现在说呃，theta hat"),
@@ -9,10 +26,10 @@ final class FillerCleanupFormatterTests: XCTestCase {
         )
     }
 
-    func testRemovesMoreChineseFillers() {
+    func testRetiresUnsafeSemanticInterjectionDeletion() {
         XCTAssertEqual(
             FillerCleanupFormatter.format("哦，就是我现在啊发现哎这个问题"),
-            "就是我现在发现这个问题"
+            "哦，就是我现在啊发现哎这个问题"
         )
     }
 
@@ -76,5 +93,61 @@ final class FillerCleanupFormatterTests: XCTestCase {
             FillerCleanupFormatter.format("怎么说呢，就是说，然后呢，我们继续"),
             "怎么说呢，就是说，然后呢，我们继续"
         )
+    }
+
+    func testFrozenSafetyAndRecallCorpus() throws {
+        for testCase in try loadCases() {
+            XCTAssertEqual(
+                testCase.offExpected,
+                testCase.input,
+                "Off fixture must be identity: \(testCase.id)"
+            )
+            XCTAssertEqual(
+                FillerCleanupFormatter.format(testCase.input),
+                testCase.onExpected,
+                "Failed \(testCase.id) [\(testCase.classification)]"
+            )
+            XCTAssertEqual(
+                testCase.eventCount,
+                testCase.ruleIDs.count,
+                "Event/rule fixture mismatch: \(testCase.id)"
+            )
+            XCTAssertEqual(
+                testCase.eventCount,
+                testCase.editBeforeAfter.count,
+                "Event/edit fixture mismatch: \(testCase.id)"
+            )
+        }
+    }
+
+    func testEveryLegacyCaseHasAnExplicitClassification() throws {
+        let cases = try loadCases()
+        let classifications = Set(cases.map(\.classification))
+
+        XCTAssertEqual(
+            classifications,
+            Set(["still-supported", "intentionally-retired", "negative-preserved"])
+        )
+        XCTAssertTrue(cases.contains { $0.id == "legacy-short-chinese-start" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-short-chinese-trailing-edge" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-semantic-interjections-retired" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-english-core" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-english-before-han-titlecase" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-preserve-latin-a" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-preserve-filler-substrings" })
+        XCTAssertTrue(cases.contains { $0.id == "legacy-preserve-discourse-phrases" })
+    }
+
+    private func loadCases() throws -> [GoldenCase] {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures", isDirectory: true)
+            .appendingPathComponent("filler-cleanup-cases.jsonl")
+
+        let contents = try String(contentsOf: url, encoding: .utf8)
+        let decoder = JSONDecoder()
+        return try contents
+            .split(whereSeparator: \.isNewline)
+            .map { try decoder.decode(GoldenCase.self, from: Data($0.utf8)) }
     }
 }

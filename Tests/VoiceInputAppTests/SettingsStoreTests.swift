@@ -5,6 +5,11 @@ import XCTest
 final class SettingsStoreTests: XCTestCase {
     func testDefaultsPreferQwenAndMixedLanguage() {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        // The interface language now follows the Mac on first launch; pin a Chinese system so
+        // the remaining defaults are checked as before.
+        let previousProvider = SettingsStore.preferredLanguagesProvider
+        SettingsStore.preferredLanguagesProvider = { ["zh-Hans-GB"] }
+        defer { SettingsStore.preferredLanguagesProvider = previousProvider }
         let store = SettingsStore(defaults: defaults)
 
         XCTAssertEqual(store.engine, .qwenLocal)
@@ -15,7 +20,12 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.appThemeID, .oscurange)
         XCTAssertEqual(store.selectedModelID, "qwen3-asr-0.6b")
         XCTAssertTrue(store.isSmartNumericFormattingEnabled)
+        XCTAssertFalse(store.isAcademicReferenceFormattingEnabled)
+        // Was off for every install. Owner decision (2026-10-11): a fresh install starts with
+        // filler cleanup on; existing installs keep the safety migration's off state (tests below).
         XCTAssertTrue(store.isFillerCleanupEnabled)
+        XCTAssertFalse(store.isFillerCleanupSafetyNoticePending)
+        XCTAssertEqual(defaults.integer(forKey: "fillerCleanupSafetyMigrationVersion"), 1)
         XCTAssertFalse(store.isMathNotationEnabled)
         XCTAssertEqual(store.mathNotationOutputFormat, .latex)
         XCTAssertFalse(store.hasSeenReadinessSetupPrompt)
@@ -216,6 +226,7 @@ final class SettingsStoreTests: XCTestCase {
         let store = SettingsStore(defaults: defaults)
 
         store.isSmartNumericFormattingEnabled = false
+        store.isAcademicReferenceFormattingEnabled = true
         store.isFillerCleanupEnabled = false
         store.isMathNotationEnabled = true
         store.mathNotationOutputFormat = .unicode
@@ -223,10 +234,151 @@ final class SettingsStoreTests: XCTestCase {
 
         let reloaded = SettingsStore(defaults: defaults)
         XCTAssertFalse(reloaded.isSmartNumericFormattingEnabled)
+        XCTAssertTrue(reloaded.isAcademicReferenceFormattingEnabled)
         XCTAssertFalse(reloaded.isFillerCleanupEnabled)
         XCTAssertTrue(reloaded.isMathNotationEnabled)
         XCTAssertEqual(reloaded.mathNotationOutputFormat, .unicode)
         XCTAssertTrue(reloaded.hasSeenReadinessSetupPrompt)
+    }
+
+    func testExistingImplicitOnStateIsResetOffWithPendingNotice() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(UILanguage.english.rawValue, forKey: "uiLanguage")
+
+        let store = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertTrue(store.isFillerCleanupSafetyNoticePending)
+        XCTAssertEqual(defaults.store.integer(forKey: "fillerCleanupSafetyMigrationVersion"), 1)
+    }
+
+    func testPreV1StoredOffRemainsOffWithoutNotice() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(false, forKey: "isFillerCleanupEnabled")
+
+        let store = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertFalse(store.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testPreV1StoredOnIsResetOffWithPendingNotice() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(true, forKey: "isFillerCleanupEnabled")
+
+        let store = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertTrue(store.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testLegacyOnImportsBeforeSafetyReset() {
+        let current = isolatedDefaults(prefix: "current")
+        let legacy = isolatedDefaults(prefix: "legacy")
+        defer {
+            current.cleanup()
+            legacy.cleanup()
+        }
+        legacy.store.set(true, forKey: "isFillerCleanupEnabled")
+        legacy.store.set("qwen3-asr-1.7b", forKey: "selectedModelID")
+
+        let store = SettingsStore(defaults: current.store, legacyDefaults: legacy.store)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertTrue(store.isFillerCleanupSafetyNoticePending)
+        XCTAssertEqual(store.selectedModelID, "qwen3-asr-1.7b")
+    }
+
+    func testLegacyOffImportsWithoutNotice() {
+        let current = isolatedDefaults(prefix: "current")
+        let legacy = isolatedDefaults(prefix: "legacy")
+        defer {
+            current.cleanup()
+            legacy.cleanup()
+        }
+        legacy.store.set(false, forKey: "isFillerCleanupEnabled")
+
+        let store = SettingsStore(defaults: current.store, legacyDefaults: legacy.store)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertFalse(store.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testCurrentExplicitOffWinsOverLegacyOn() {
+        let current = isolatedDefaults(prefix: "current")
+        let legacy = isolatedDefaults(prefix: "legacy")
+        defer {
+            current.cleanup()
+            legacy.cleanup()
+        }
+        current.store.set(false, forKey: "isFillerCleanupEnabled")
+        legacy.store.set(true, forKey: "isFillerCleanupEnabled")
+
+        let store = SettingsStore(defaults: current.store, legacyDefaults: legacy.store)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertFalse(store.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testPendingNoticeSurvivesRepeatedInitializationUntilAcknowledged() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(true, forKey: "isFillerCleanupEnabled")
+
+        let first = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+        let second = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertFalse(first.isFillerCleanupEnabled)
+        XCTAssertTrue(second.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testReEnablingAcknowledgesNoticeAndPersistsChoice() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(true, forKey: "isFillerCleanupEnabled")
+        let store = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        store.isFillerCleanupEnabled = true
+        let reloaded = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertTrue(reloaded.isFillerCleanupEnabled)
+        XCTAssertFalse(reloaded.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testDismissingNoticeKeepsFeatureOffAndNeverReopensNotice() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(true, forKey: "isFillerCleanupEnabled")
+        let store = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        store.dismissFillerCleanupSafetyNotice()
+        let reloaded = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertFalse(reloaded.isFillerCleanupEnabled)
+        XCTAssertFalse(reloaded.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testLegacyMigrationMarkerCountsAsExistingImplicitOnEvidence() {
+        let defaults = isolatedDefaults(prefix: "current")
+        defer { defaults.cleanup() }
+        defaults.store.set(true, forKey: "hasMigratedVoiceInputDefaultsToFlowtype")
+
+        let store = SettingsStore(defaults: defaults.store, legacyDefaults: nil)
+
+        XCTAssertFalse(store.isFillerCleanupEnabled)
+        XCTAssertTrue(store.isFillerCleanupSafetyNoticePending)
+    }
+
+    func testSmartNumericDoesNotImplicitlyEnableAcademicReferenceFormatting() {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = SettingsStore(defaults: defaults)
+
+        store.isSmartNumericFormattingEnabled = true
+
+        XCTAssertFalse(store.isAcademicReferenceFormattingEnabled)
     }
 
     func testHistoryDefaultsAndPersistence() {
@@ -326,5 +478,46 @@ final class SettingsStoreTests: XCTestCase {
         store.isHistoryEnabled = true
         XCTAssertEqual(changeCount, 2)
         XCTAssertTrue(store.isHistoryEnabled)
+    }
+
+    private func isolatedDefaults(prefix: String) -> (
+        store: UserDefaults,
+        cleanup: () -> Void
+    ) {
+        let suiteName = "SettingsStoreTests.\(prefix).\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return (
+            defaults,
+            { defaults.removePersistentDomain(forName: suiteName) }
+        )
+    }
+
+    func testFirstLaunchInterfaceLanguageFollowsTheMac() {
+        XCTAssertEqual(SettingsStore.defaultUILanguage(preferredLanguages: ["zh-Hans-CN", "en-GB"]), .chinese)
+        XCTAssertEqual(SettingsStore.defaultUILanguage(preferredLanguages: ["zh-Hant-TW"]), .chinese)
+        XCTAssertEqual(SettingsStore.defaultUILanguage(preferredLanguages: ["zh-HK"]), .chinese)
+        XCTAssertEqual(SettingsStore.defaultUILanguage(preferredLanguages: ["en-GB", "zh-Hans"]), .english)
+        XCTAssertEqual(SettingsStore.defaultUILanguage(preferredLanguages: ["ja-JP"]), .english)
+
+        let previousProvider = SettingsStore.preferredLanguagesProvider
+        SettingsStore.preferredLanguagesProvider = { ["en-US"] }
+        defer { SettingsStore.preferredLanguagesProvider = previousProvider }
+
+        let fresh = isolatedDefaults(prefix: "fresh")
+        defer { fresh.cleanup() }
+        XCTAssertEqual(SettingsStore(defaults: fresh.store, legacyDefaults: nil).uiLanguage, .english)
+
+        // An install from before the setting existed keeps the Chinese interface it showed.
+        let existing = isolatedDefaults(prefix: "existing")
+        defer { existing.cleanup() }
+        existing.store.set("qwenLocal", forKey: "engine")
+        XCTAssertEqual(SettingsStore(defaults: existing.store, legacyDefaults: nil).uiLanguage, .chinese)
+
+        // A stored choice always wins.
+        let chosen = isolatedDefaults(prefix: "chosen")
+        defer { chosen.cleanup() }
+        chosen.store.set(UILanguage.chinese.rawValue, forKey: "uiLanguage")
+        XCTAssertEqual(SettingsStore(defaults: chosen.store, legacyDefaults: nil).uiLanguage, .chinese)
     }
 }

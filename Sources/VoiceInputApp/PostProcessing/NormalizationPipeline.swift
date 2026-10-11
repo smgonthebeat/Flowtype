@@ -1,24 +1,12 @@
 import Foundation
 
+/// Stable entry point of smart numeric formatting. See `NumericNormalizer`.
 enum NormalizationPipeline {
     static func normalize(_ text: String, knownTerms: [String] = []) -> String {
-        var normalized = text
-        var context = NormalizationContext(
-            knownTerms: knownTerms,
-            protectedSpans: ProtectedSpanDetector.detect(in: normalized)
-        )
+        NumericNormalizer.normalize(text, knownTerms: knownTerms).text
+    }
 
-        normalized = AcademicReferenceNormalizer.normalize(normalized, context: context)
-        context = NormalizationContext(
-            knownTerms: knownTerms,
-            protectedSpans: ProtectedSpanDetector.detect(in: normalized)
-        )
-        normalized = SemioticNumberNormalizer.normalize(normalized, context: context)
-        context = NormalizationContext(
-            knownTerms: knownTerms,
-            protectedSpans: ProtectedSpanDetector.detect(in: normalized)
-        )
-        normalized = EnglishNumberNormalizer.normalize(normalized, context: context)
-        return normalized
+    static func normalizeWithEvents(_ text: String, knownTerms: [String] = []) -> NumericNormalizationResult {
+        NumericNormalizer.normalize(text, knownTerms: knownTerms)
     }
 }

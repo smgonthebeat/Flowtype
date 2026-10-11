@@ -14,7 +14,9 @@ final class AppMainMenuTests: XCTestCase {
     }
 
     func testEditMenuProvidesStandardTextEditingCommands() {
-        let menu = AppMainMenu.make()
+        // design-spec 5.11: main-menu strings are localised, so the English titles are looked up
+        // in the English menu (the default menu follows the Chinese default UI language).
+        let menu = AppMainMenu.make(copy: AppCopy.texts(for: .english))
         let editMenu = menu.item(withTitle: "Edit")?.submenu
 
         XCTAssertNotNil(editMenu)
@@ -24,5 +26,10 @@ final class AppMainMenuTests: XCTestCase {
         XCTAssertEqual(editMenu?.item(withTitle: "Copy")?.action, #selector(NSText.copy(_:)))
         XCTAssertEqual(editMenu?.item(withTitle: "Paste")?.keyEquivalent, "v")
         XCTAssertEqual(editMenu?.item(withTitle: "Paste")?.action, #selector(NSText.paste(_:)))
+
+        let chineseEditMenu = AppMainMenu.make().item(withTitle: "编辑")?.submenu
+        XCTAssertEqual(chineseEditMenu?.item(withTitle: "全选")?.action, #selector(NSText.selectAll(_:)))
+        XCTAssertEqual(chineseEditMenu?.item(withTitle: "拷贝")?.keyEquivalent, "c")
+        XCTAssertNotNil(AppMainMenu.make().items.first?.submenu?.item(withTitle: "退出 Flowtype"))
     }
 }

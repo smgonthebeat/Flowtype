@@ -12,10 +12,12 @@ extension EnvironmentValues {
 }
 
 extension View {
+    /// Window-root styling: theme colours plus the interface text size.
     func flowtypeTheme(_ theme: AppTheme) -> some View {
         environment(\.appTheme, theme)
             .accentColor(theme.accent)
             .tint(theme.accent)
+            .flowtypeTextSize()
     }
 
     func flowtypeSwitch(_ theme: AppTheme) -> some View {

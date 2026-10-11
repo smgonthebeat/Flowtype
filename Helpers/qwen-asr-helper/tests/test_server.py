@@ -841,3 +841,112 @@ def test_main_rejects_startup_without_authentication_token(monkeypatch):
 
     with pytest.raises(RuntimeError, match="VOICEINPUT_HELPER_TOKEN must be set"):
         server.main()
+
+
+# 2026-10-08: a speech run a float hair longer than a multiple of MAX_SEGMENT_SECONDS used to
+# produce a 0-sample final piece; the model rejected it as empty audio and the whole long
+# dictation failed with HTTP 400 empty_audio.
+
+
+class RecordingChunkSession:
+    def __init__(self, fail_on_call=None, error=None):
+        self.frame_counts = []
+        self.fail_on_call = fail_on_call
+        self.error = error
+
+    def transcribe(self, path, context=""):
+        with wave.open(path, "rb") as handle:
+            frames = handle.getnframes()
+        self.frame_counts.append(frames)
+        if frames == 0:
+            raise ValueError("Cannot compute mel spectrogram of empty audio.")
+        if self.fail_on_call is not None and len(self.frame_counts) == self.fail_on_call:
+            raise self.error
+        return SimpleNamespace(text=f"piece{len(self.frame_counts)}")
+
+
+def window_run(start_window: int, length_windows: int) -> server.AudioSegment:
+    """A padded speech run exactly as speech_segments_for_wav computes it (0.1 s windows)."""
+    start = (start_window * 1600) / 16_000
+    end = ((start_window + length_windows) * 1600) / 16_000
+    return server.AudioSegment(start - server.SEGMENT_PADDING_SECONDS, end + server.SEGMENT_PADDING_SECONDS)
+
+
+def test_split_long_segment_has_no_degenerate_tail_at_any_float_boundary():
+    for length_windows in (95, 195, 295, 395, 595):
+        for start_window in range(3, 400):
+            run = window_run(start_window, length_windows)
+            pieces = server.split_long_segment(run)
+            assert pieces[0].start == run.start
+            assert pieces[-1].end == run.end
+            for left, right in zip(pieces, pieces[1:]):
+                assert left.end == right.start
+            for piece in pieces:
+                assert piece.end - piece.start >= server.MIN_SEGMENT_SECONDS
+                assert piece.end - piece.start <= server.MAX_SEGMENT_SECONDS + server.MIN_SEGMENT_SECONDS
+
+
+def test_split_long_segment_reproduction_case_from_the_failure():
+    pieces = server.split_long_segment(window_run(21, 195))
+    assert [(round(p.start, 6), round(p.end, 6)) for p in pieces] == [(1.85, 11.85), (11.85, 21.85)]
+
+
+def test_split_long_segment_folds_a_short_tail_and_keeps_a_real_one():
+    folded = server.split_long_segment(server.AudioSegment(0.0, 20.2))
+    assert [(p.start, p.end) for p in folded] == [(0.0, 10.0), (10.0, 20.2)]
+    kept = server.split_long_segment(server.AudioSegment(0.0, 20.5))
+    assert [(p.start, p.end) for p in kept] == [(0.0, 10.0), (10.0, 20.0), (20.0, 20.5)]
+    single = server.split_long_segment(server.AudioSegment(1.0, 4.0))
+    assert [(p.start, p.end) for p in single] == [(1.0, 4.0)]
+
+
+def test_chunked_transcription_of_the_failing_layout_succeeds(tmp_path):
+    path = tmp_path / "boundary.wav"
+    write_test_wav(path, [(2.1, 0), (19.5, 8000), (8.0, 0)])
+    session = RecordingChunkSession()
+
+    text = server.transcribe_file_in_chunks(str(path), session)
+
+    assert text == "piece1 piece2"
+    assert min(session.frame_counts) >= server.MIN_PIECE_FRAMES
+
+
+def test_chunked_transcription_skips_one_unusable_piece_and_keeps_the_rest(monkeypatch, tmp_path):
+    path = tmp_path / "three.wav"
+    write_test_wav(path, [(13.0, 8000)])
+    monkeypatch.setattr(server, "speech_segments_for_wav", lambda _: [
+        server.AudioSegment(0.0, 4.0), server.AudioSegment(4.0, 8.0), server.AudioSegment(8.0, 12.0)
+    ])
+    session = RecordingChunkSession(
+        fail_on_call=2,
+        error=ValueError("Audio too short for log-mel extraction after Whisper frame trim: 10 samples produced -2 STFT frame(s)."),
+    )
+
+    assert server.transcribe_file_in_chunks(str(path), session) == "piece1 piece3"
+
+
+def test_chunked_transcription_reraises_when_every_piece_is_unusable(monkeypatch, tmp_path):
+    path = tmp_path / "two.wav"
+    write_test_wav(path, [(13.0, 8000)])
+    monkeypatch.setattr(server, "speech_segments_for_wav", lambda _: [
+        server.AudioSegment(0.0, 4.0), server.AudioSegment(4.0, 8.0)
+    ])
+
+    class AlwaysEmpty:
+        def transcribe(self, path, context=""):
+            raise ValueError("Cannot compute mel spectrogram of empty audio.")
+
+    with pytest.raises(ValueError, match="empty audio"):
+        server.transcribe_file_in_chunks(str(path), AlwaysEmpty())
+
+
+def test_chunked_transcription_does_not_swallow_other_errors(monkeypatch, tmp_path):
+    path = tmp_path / "two.wav"
+    write_test_wav(path, [(13.0, 8000)])
+    monkeypatch.setattr(server, "speech_segments_for_wav", lambda _: [
+        server.AudioSegment(0.0, 4.0), server.AudioSegment(4.0, 8.0)
+    ])
+    session = RecordingChunkSession(fail_on_call=1, error=RuntimeError("metal device lost"))
+
+    with pytest.raises(RuntimeError, match="metal device lost"):
+        server.transcribe_file_in_chunks(str(path), session)

@@ -38,6 +38,7 @@ final class SettingsStore: ObservableObject {
         static let languageMode = "languageMode"
         static let uiLanguage = "uiLanguage"
         static let appThemeID = "appThemeID"
+        static let textSize = "textSize"
         static let appleSpeechLocaleIdentifier = "appleSpeechLocaleIdentifier"
         static let isHistoryEnabled = "isHistoryEnabled"
         static let historyLimit = "historyLimit"
@@ -45,6 +46,7 @@ final class SettingsStore: ObservableObject {
         static let selectedMicrophoneUID = "selectedMicrophoneUID"
         static let selectedModelID = "selectedModelID"
         static let isSmartNumericFormattingEnabled = "isSmartNumericFormattingEnabled"
+        static let isAcademicReferenceFormattingEnabled = "isAcademicReferenceFormattingEnabled"
         static let isFillerCleanupEnabled = "isFillerCleanupEnabled"
         static let isMathNotationEnabled = "isMathNotationEnabled"
         static let mathNotationOutputFormat = "mathNotationOutputFormat"
@@ -54,12 +56,15 @@ final class SettingsStore: ObservableObject {
         static let isDebugRecordingCaptureEnabled = "isDebugRecordingCaptureEnabled"
         static let forceNextTranscriptionIssue = "forceNextTranscriptionIssue"
         static let hasMigratedLegacyDefaults = "hasMigratedVoiceInputDefaultsToFlowtype"
+        static let fillerCleanupSafetyMigrationVersion = "fillerCleanupSafetyMigrationVersion"
+        static let fillerCleanupSafetyNoticePending = "fillerCleanupSafetyNoticePending"
 
         static let persistedKeys = [
             engine,
             languageMode,
             uiLanguage,
             appThemeID,
+            textSize,
             appleSpeechLocaleIdentifier,
             isHistoryEnabled,
             historyLimit,
@@ -67,6 +72,7 @@ final class SettingsStore: ObservableObject {
             selectedMicrophoneUID,
             selectedModelID,
             isSmartNumericFormattingEnabled,
+            isAcademicReferenceFormattingEnabled,
             isFillerCleanupEnabled,
             isMathNotationEnabled,
             mathNotationOutputFormat,
@@ -78,13 +84,20 @@ final class SettingsStore: ObservableObject {
     }
 
     private static let legacyBundleIdentifier = "com.smg.voiceinput"
+    private static let currentFillerCleanupSafetyMigrationVersion = 1
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
+        let legacyDefaults = defaults === UserDefaults.standard
+            ? UserDefaults(suiteName: Self.legacyBundleIdentifier)
+            : nil
         self.defaults = defaults
-        if defaults === UserDefaults.standard {
-            Self.migrateLegacyDefaultsIfNeeded(into: defaults)
-        }
+        Self.runMigrations(current: defaults, legacy: legacyDefaults)
+    }
+
+    init(defaults: UserDefaults, legacyDefaults: UserDefaults?) {
+        self.defaults = defaults
+        Self.runMigrations(current: defaults, legacy: legacyDefaults)
     }
 
     var engine: TranscriptionEngineKind {
@@ -122,7 +135,7 @@ final class SettingsStore: ObservableObject {
         get {
             guard let raw = defaults.string(forKey: Key.uiLanguage),
                   let value = UILanguage(rawValue: raw) else {
-                return .chinese
+                return Self.defaultUILanguage(preferredLanguages: Self.preferredLanguagesProvider())
             }
             return value
         }
@@ -130,13 +143,7 @@ final class SettingsStore: ObservableObject {
     }
 
     var appThemeID: AppThemeID {
-        get {
-            guard let raw = defaults.string(forKey: Key.appThemeID),
-                  let value = AppThemeID(rawValue: raw) else {
-                return .oscurange
-            }
-            return value
-        }
+        get { Self.storedAppThemeID(defaults: defaults) }
         set {
             let oldValue = appThemeID
             guard oldValue != newValue else { return }
@@ -148,6 +155,36 @@ final class SettingsStore: ObservableObject {
                 userInfo: [Self.appThemeIDUserInfoKey: newValue.rawValue]
             )
         }
+    }
+
+    /// The stored theme, for surfaces that hold no SettingsStore of their own (the recording capsule).
+    static func storedAppThemeID(defaults: UserDefaults = .standard) -> AppThemeID {
+        guard let raw = defaults.string(forKey: Key.appThemeID),
+              let value = AppThemeID(rawValue: raw) else {
+            return .oscurange
+        }
+        return value
+    }
+
+    /// Interface text size. Writing it also updates the shared model every window reads.
+    var textSize: AppTextSize {
+        get { Self.storedTextSize(defaults: defaults) }
+        set {
+            guard textSize != newValue else { return }
+            objectWillChange.send()
+            defaults.set(newValue.rawValue, forKey: Key.textSize)
+            if defaults === UserDefaults.standard {
+                AppTextSizeModel.shared.size = newValue
+            }
+        }
+    }
+
+    static func storedTextSize(defaults: UserDefaults = .standard) -> AppTextSize {
+        guard let raw = defaults.string(forKey: Key.textSize),
+              let value = AppTextSize(rawValue: raw) else {
+            return .defaultSize
+        }
+        return value
     }
 
     var appleSpeechLocaleIdentifier: String {
@@ -184,14 +221,34 @@ final class SettingsStore: ObservableObject {
         set { defaults.set(newValue, forKey: Key.isSmartNumericFormattingEnabled) }
     }
 
+    var isAcademicReferenceFormattingEnabled: Bool {
+        get { defaults.bool(forKey: Key.isAcademicReferenceFormattingEnabled) }
+        set { defaults.set(newValue, forKey: Key.isAcademicReferenceFormattingEnabled) }
+    }
+
     var isFillerCleanupEnabled: Bool {
-        get {
-            if defaults.object(forKey: Key.isFillerCleanupEnabled) == nil {
-                return true
+        get { defaults.bool(forKey: Key.isFillerCleanupEnabled) }
+        set {
+            let oldValue = isFillerCleanupEnabled
+            let hadPendingNotice = isFillerCleanupSafetyNoticePending
+            defaults.set(newValue, forKey: Key.isFillerCleanupEnabled)
+            if newValue {
+                defaults.set(false, forKey: Key.fillerCleanupSafetyNoticePending)
             }
-            return defaults.bool(forKey: Key.isFillerCleanupEnabled)
+            if oldValue != newValue || (newValue && hadPendingNotice) {
+                objectWillChange.send()
+            }
         }
-        set { defaults.set(newValue, forKey: Key.isFillerCleanupEnabled) }
+    }
+
+    var isFillerCleanupSafetyNoticePending: Bool {
+        defaults.bool(forKey: Key.fillerCleanupSafetyNoticePending)
+    }
+
+    func dismissFillerCleanupSafetyNotice() {
+        guard isFillerCleanupSafetyNoticePending else { return }
+        objectWillChange.send()
+        defaults.set(false, forKey: Key.fillerCleanupSafetyNoticePending)
     }
 
     var isMathNotationEnabled: Bool {
@@ -311,18 +368,104 @@ final class SettingsStore: ObservableObject {
         min(600, max(30, value))
     }
 
-    private static func migrateLegacyDefaultsIfNeeded(into defaults: UserDefaults) {
-        guard defaults.object(forKey: Key.hasMigratedLegacyDefaults) == nil else { return }
-        guard let legacyDefaults = UserDefaults(suiteName: legacyBundleIdentifier) else {
-            defaults.set(true, forKey: Key.hasMigratedLegacyDefaults)
-            return
-        }
+    private struct PreMigrationSnapshot {
+        let hasExistingInstallEvidence: Bool
+        let effectiveOldFillerState: Bool
+    }
 
-        for key in Key.persistedKeys where defaults.object(forKey: key) == nil {
-            if let value = legacyDefaults.object(forKey: key) {
-                defaults.set(value, forKey: key)
+    private static func runMigrations(current: UserDefaults, legacy: UserDefaults?) {
+        let snapshot = capturePreMigrationSnapshot(current: current, legacy: legacy)
+        migrateLegacyDefaultsIfNeeded(into: current, from: legacy)
+        migrateFillerCleanupSafetyIfNeeded(into: current, snapshot: snapshot)
+        resolveInitialUILanguageIfNeeded(into: current, snapshot: snapshot)
+    }
+
+    /// The Mac's preferred languages, replaceable in tests.
+    static var preferredLanguagesProvider: () -> [String] = { Locale.preferredLanguages }
+
+    /// First launch follows the Mac: any Chinese system language gives the Chinese
+    /// interface, everything else English (owner decision, 2026-10-11).
+    static func defaultUILanguage(preferredLanguages: [String]) -> UILanguage {
+        guard let first = preferredLanguages.first?.lowercased() else { return .chinese }
+        return first.hasPrefix("zh") ? .chinese : .english
+    }
+
+    /// Stores the interface language once. Installs from before this setting followed the
+    /// system keep the Chinese interface they already had; new installs take the system language.
+    private static func resolveInitialUILanguageIfNeeded(
+        into defaults: UserDefaults,
+        snapshot: PreMigrationSnapshot
+    ) {
+        guard defaults.string(forKey: Key.uiLanguage) == nil else { return }
+        let language: UILanguage = snapshot.hasExistingInstallEvidence
+            ? .chinese
+            : defaultUILanguage(preferredLanguages: preferredLanguagesProvider())
+        defaults.set(language.rawValue, forKey: Key.uiLanguage)
+    }
+
+    private static func capturePreMigrationSnapshot(
+        current: UserDefaults,
+        legacy: UserDefaults?
+    ) -> PreMigrationSnapshot {
+        let currentHasPersistedKey = Key.persistedKeys.contains {
+            current.object(forKey: $0) != nil
+        }
+        let legacyHasPersistedKey = legacy.map { legacyDefaults in
+            Key.persistedKeys.contains { legacyDefaults.object(forKey: $0) != nil }
+        } ?? false
+        let hasExistingInstallEvidence =
+            current.object(forKey: Key.hasMigratedLegacyDefaults) != nil ||
+            currentHasPersistedKey ||
+            legacyHasPersistedKey
+
+        let currentExplicitFiller = current.object(forKey: Key.isFillerCleanupEnabled) as? Bool
+        let legacyExplicitFiller = legacy?.object(forKey: Key.isFillerCleanupEnabled) as? Bool
+
+        return PreMigrationSnapshot(
+            hasExistingInstallEvidence: hasExistingInstallEvidence,
+            effectiveOldFillerState:
+                currentExplicitFiller ??
+                legacyExplicitFiller ??
+                hasExistingInstallEvidence
+        )
+    }
+
+    private static func migrateLegacyDefaultsIfNeeded(
+        into defaults: UserDefaults,
+        from legacyDefaults: UserDefaults?
+    ) {
+        guard defaults.object(forKey: Key.hasMigratedLegacyDefaults) == nil else { return }
+
+        if let legacyDefaults {
+            for key in Key.persistedKeys where defaults.object(forKey: key) == nil {
+                if let value = legacyDefaults.object(forKey: key) {
+                    defaults.set(value, forKey: key)
+                }
             }
         }
         defaults.set(true, forKey: Key.hasMigratedLegacyDefaults)
+    }
+
+    private static func migrateFillerCleanupSafetyIfNeeded(
+        into defaults: UserDefaults,
+        snapshot: PreMigrationSnapshot
+    ) {
+        guard defaults.integer(forKey: Key.fillerCleanupSafetyMigrationVersion) <
+                currentFillerCleanupSafetyMigrationVersion else {
+            return
+        }
+
+        // Existing installs are switched off by this safety migration. New installs start with
+        // filler cleanup on (owner decision, 2026-10-11): the revised rules only remove
+        // standalone pauses such as 嗯 / 呃 / um.
+        defaults.set(!snapshot.hasExistingInstallEvidence, forKey: Key.isFillerCleanupEnabled)
+        defaults.set(
+            snapshot.hasExistingInstallEvidence && snapshot.effectiveOldFillerState,
+            forKey: Key.fillerCleanupSafetyNoticePending
+        )
+        defaults.set(
+            currentFillerCleanupSafetyMigrationVersion,
+            forKey: Key.fillerCleanupSafetyMigrationVersion
+        )
     }
 }

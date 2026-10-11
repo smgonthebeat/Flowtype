@@ -11,6 +11,8 @@ SOURCE_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknow
 CODESIGN_IDENTITY ?= -
 
 -include local.mk
+# Optional maintainer-only targets; absent from public source checkouts.
+-include maintainer.mk
 
 .PHONY: build open run install dmg clean test verify-package
 

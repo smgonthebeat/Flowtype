@@ -68,20 +68,20 @@ struct HomeView: View {
         return VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(copy.mainHeadline)
-                    .font(.system(size: 34, weight: .semibold, design: .default))
+                    .scaledFont(size: 34, weight: .semibold, design: .default)
                     .lineLimit(2)
                     .foregroundStyle(theme.ink)
 
                 Text(copy.mainSubtitle)
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(theme.secondaryInk)
 
-                if !readinessPresentation.showsProminentCard {
+                if readinessPresentation.showsInlineStatus {
                     Label(
                         readinessInlineTitle(for: readinessPresentation, copy: copy),
                         systemImage: readinessSymbol(for: readinessPresentation)
                     )
-                    .font(.callout.weight(.medium))
+                    .scaledFont(.callout, weight: .medium)
                     .foregroundStyle(readinessColor(for: readinessPresentation))
                     .padding(.top, 4)
                 }
@@ -122,7 +122,7 @@ struct HomeView: View {
                         .controlSize(.small)
                 } else {
                     Image(systemName: readinessSymbol(for: presentation))
-                        .font(.system(size: 20, weight: .semibold))
+                        .scaledFont(size: 20, weight: .semibold)
                         .foregroundStyle(readinessColor(for: presentation))
                 }
             }
@@ -130,11 +130,11 @@ struct HomeView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(readinessTitle(for: presentation, copy: copy))
-                    .font(.headline)
+                    .scaledFont(.headline)
                     .foregroundStyle(theme.ink)
 
                 Text(readinessDetail(for: presentation, copy: copy))
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -147,7 +147,7 @@ struct HomeView: View {
                 Label(copy.readinessTitle, systemImage: "chevron.right")
                     .labelStyle(.titleAndIcon)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -264,7 +264,7 @@ struct HomeView: View {
                 .foregroundStyle(theme.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .font(.callout)
+        .scaledFont(.callout)
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(theme.controlSurface)
@@ -276,7 +276,7 @@ struct HomeView: View {
 
         return HStack(spacing: 14) {
             Text(copy.historySectionTitle)
-                .font(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(theme.ink)
 
             Spacer()
@@ -345,7 +345,7 @@ struct HomeView: View {
             reload()
             state.refresh()
         } catch {
-            clearHistoryErrorMessage = error.localizedDescription
+            clearHistoryErrorMessage = UserFacingErrorMessage.message(for: error, language: settingsStore.uiLanguage)
             isShowingClearHistoryError = true
         }
     }
@@ -365,6 +365,13 @@ enum HomeReadinessPresentation: Equatable {
         case .checking, .ready, .preparing:
             return false
         }
+    }
+
+    /// Owner feedback (2026-10-03): the green "ready" line under the headline was noise once
+    /// everything works. Only model preparation, which can take minutes, keeps an inline line;
+    /// the launch check is too brief to show without making the header jump when it ends.
+    var showsInlineStatus: Bool {
+        self == .preparing
     }
 
     static func presentation(
@@ -474,13 +481,13 @@ private struct UsageMetricCard: View {
             VStack(alignment: .leading, spacing: 7) {
                 HStack(spacing: 5) {
                     Text(title)
-                        .font(.system(size: 15, weight: .medium))
+                        .scaledFont(size: 15, weight: .medium)
                         .foregroundStyle(theme.ink)
                         .lineLimit(1)
 
                     if let infoHelp {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium)
                             .foregroundStyle(theme.tertiaryInk)
                             .help(infoHelp)
                             .accessibilityLabel(infoHelp)
@@ -508,11 +515,11 @@ private struct UsageMetricCard: View {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                 if segment.isUnit {
                     Text(segment.text)
-                        .font(.system(size: 18, weight: .medium, design: .rounded))
+                        .scaledFont(size: 18, weight: .medium, design: .rounded)
                         .foregroundStyle(theme.ink)
                 } else {
                     Text(segment.text)
-                        .font(.system(size: 30, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 30, weight: .semibold, design: .rounded)
                         .monospacedDigit()
                         .foregroundStyle(theme.ink)
                         .lineLimit(1)
@@ -741,7 +748,7 @@ private struct DictationCardArtwork: View {
             GlassDocument(tint: tint, width: 154, height: 108, rotation: .degrees(6))
                 .overlay(alignment: .topLeading) {
                     Image(systemName: "mic.fill")
-                        .font(.system(size: 26, weight: .semibold))
+                        .scaledFont(size: 26, weight: .semibold)
                         .foregroundStyle(tint.opacity(1.0))
                         .padding(.leading, 24)
                         .padding(.top, 22)
@@ -776,7 +783,7 @@ private struct DurationCardArtwork: View {
                 .overlay(alignment: .leading) {
                     HStack(spacing: 8) {
                         Image(systemName: "sparkles")
-                        .font(.system(size: 22, weight: .semibold))
+                        .scaledFont(size: 22, weight: .semibold)
                             .foregroundStyle(tint)
                         HStack(spacing: 7) {
                             ForEach([22, 38, 48, 34, 42, 28, 36], id: \.self) { height in
@@ -826,7 +833,7 @@ private struct WordsCardArtwork: View {
                         .frame(width: 28, height: 28)
                         .overlay {
                             Text("文")
-                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                                .scaledFont(size: 15, weight: .bold, design: .rounded)
                                 .foregroundStyle(.white.opacity(0.92))
                         }
                         .padding(.trailing, 22)
@@ -875,7 +882,7 @@ private struct SavedTimeCardArtwork: View {
                 .frame(width: 48, height: 48)
                 .overlay {
                     Image(systemName: "bolt.fill")
-                        .font(.system(size: 23, weight: .bold))
+                        .scaledFont(size: 23, weight: .bold)
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [tint.opacity(0.98), tint.opacity(0.64)],

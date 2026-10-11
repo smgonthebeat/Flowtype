@@ -1,12 +1,26 @@
 import AppKit
 import SwiftUI
 
+enum OnboardingLayout {
+    /// The window at the small text size. Only `large` lengthens it a little, so the
+    /// fixed-height pages keep their footer clear; the width and layout stay the same.
+    static let baseWindowSize = NSSize(width: 680, height: 660)
+
+    static func windowSize(for textSize: AppTextSize) -> NSSize {
+        let extraHeight: CGFloat = textSize == .large ? 40 : 0
+        return NSSize(width: baseWindowSize.width, height: baseWindowSize.height + extraHeight)
+    }
+}
+
 struct OnboardingView: View {
     @Environment(\.appTheme) private var theme
 
-    let copy: AppCopy.Texts
     let model: VoiceInputModel
     let actions: OnboardingActions
+    @ObservedObject var settingsStore: SettingsStore
+    @ObservedObject private var textSizeModel = AppTextSizeModel.shared
+    /// Fixed animation time for the offscreen snapshot harness; nil animates.
+    var illustrationStillTime: Double? = nil
 
     @State private var step: OnboardingStep = .welcome
     @State private var permissions: PermissionSnapshot?
@@ -14,21 +28,42 @@ struct OnboardingView: View {
     @State private var completedReadinessSnapshot: ReadinessSnapshot?
     @State private var downloadEstimator = DownloadTransferEstimator()
     @State private var downloadFeedback: DownloadTransferFeedback?
+    @State private var downloadRoute: OnboardingDownloadRoute?
+    @State private var practiceState: OnboardingPracticeState = .waiting
+    @State private var practiceHoldStart: Date?
+
+    /// Both tables follow the stored language, so the language switch redraws every page.
+    private var copy: AppCopy.Texts {
+        AppCopy.texts(for: settingsStore.uiLanguage)
+    }
+
+    private var guide: OnboardingCopy.Texts {
+        OnboardingCopy.texts(for: settingsStore.uiLanguage)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             stepContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 40)
-                .padding(.top, 36)
+                .padding(.top, 34)
 
             footer
                 .padding(.horizontal, 28)
                 .padding(.vertical, 20)
         }
-        .frame(width: 620, height: 560)
+        .frame(
+            width: OnboardingLayout.windowSize(for: textSizeModel.size).width,
+            height: OnboardingLayout.windowSize(for: textSizeModel.size).height
+        )
         .background(theme.surface)
         .onAppear(perform: refreshPermissions)
+        .onChange(of: step) { _, newStep in
+            updatePracticeListener(for: newStep)
+        }
+        .onDisappear {
+            actions.setPracticeListener(nil)
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissions()
             resumePreparationIfWaiting()
@@ -44,46 +79,83 @@ struct OnboardingView: View {
             welcomeStep
         case .prepare:
             prepareStep
-        case .howTo:
-            howToStep
+        case .holdFn:
+            holdFnStep
+        case .practice:
+            practiceStep
+        case .features:
+            featuresStep
         }
     }
 
     private var welcomeStep: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 24)
+            // Fixed gap under the corner switch; spare height goes below the content.
+            Color.clear.frame(height: 44)
 
             if let mark = FlowtypeLogoAsset.templateMark {
                 Image(nsImage: mark)
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 56)
+                    .frame(height: 46)
                     .foregroundStyle(theme.ink)
             }
 
             Text(copy.onboardingWelcomeTitle)
-                .font(.system(size: 40, weight: .semibold))
+                .scaledFont(size: 38, weight: .semibold)
                 .foregroundStyle(theme.ink)
-                .padding(.top, 26)
-
-            Text("Flowtype")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(theme.secondaryInk)
-                .padding(.top, 4)
+                .padding(.top, 20)
 
             Text(copy.onboardingWelcomeBody)
-                .font(.system(size: 15))
+                .scaledFont(size: 15)
                 .foregroundStyle(theme.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 22)
+                .padding(.top, 12)
+
+            WelcomeFlowIllustration(copy: guide, listeningText: copy.capsuleListening)
+                .padding(.vertical, 22)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity)
+                .themedCard(theme, cornerRadius: 14)
+                .padding(.top, 26)
 
             Label(copy.onboardingPrivacyNote, systemImage: "lock.shield")
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(theme.secondaryInk)
-                .padding(.top, 14)
+                .padding(.top, 16)
 
-            Spacer(minLength: 12)
+            Spacer(minLength: 0)
+        }
+        // The switch floats in the corner so it takes no height, and the content starts just
+        // below it instead of being centred, which made the page sink (owner feedback,
+        // 2026-10-11).
+        .overlay(alignment: .topTrailing) {
+            languageSwitch
+        }
+    }
+
+    /// First-launch language choice (owner decision, 2026-10-11). Each option is written in
+    /// its own language so it can be found whichever language is showing.
+    private var languageSwitch: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "globe")
+                .scaledFont(size: 13, weight: .medium)
+                .foregroundStyle(theme.secondaryInk)
+            FlowtypeSegmentedPicker(
+                theme: theme,
+                selection: Binding(
+                    get: { settingsStore.uiLanguage },
+                    set: { language in
+                        guard language != settingsStore.uiLanguage else { return }
+                        settingsStore.uiLanguage = language
+                        settingsStore.objectWillChange.send()
+                        actions.uiLanguageDidChange(language)
+                    }
+                ),
+                options: [(.chinese, "中文"), (.english, "English")]
+            )
+            .accessibilityLabel("Language / 语言")
         }
     }
 
@@ -115,6 +187,7 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .themedCard(theme, cornerRadius: 12)
+
         }
     }
 
@@ -127,8 +200,7 @@ struct OnboardingView: View {
             } label: {
                 Label(copy.readinessPrepareFlowtypeTitle, systemImage: "wand.and.stars")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(FlowtypeProminentButtonStyle(theme: theme, isLarge: true))
 
         case let .running(stage, progress):
             VStack(alignment: .leading, spacing: 10) {
@@ -136,44 +208,47 @@ struct OnboardingView: View {
                     ProgressView()
                         .controlSize(.small)
                     Text(stageTitle(stage))
-                        .font(.callout.weight(.medium))
+                        .scaledFont(.callout, weight: .medium)
                         .foregroundStyle(theme.ink)
                     Spacer(minLength: 8)
                     if let progress {
                         Text(progressPercentage(progress))
-                            .font(.caption.monospacedDigit())
+                            .scaledFont(.caption, monospacedDigit: true)
                             .foregroundStyle(theme.secondaryInk)
                     }
                 }
                 if let progress {
-                    ProgressView(value: min(max(progress, 0), 1))
+                    FlowtypeProgressBar(theme: theme, value: progress)
                 }
                 if let detail = stageDetail(stage) {
                     Text(detail)
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if stage == .downloadingModel, let downloadFeedback {
                     downloadFeedbackView(downloadFeedback)
                 }
+                if stage == .downloadingModel {
+                    downloadRouteView
+                }
             }
 
         case .ready:
             Label(copy.onboardingPrepareReadyTitle, systemImage: "checkmark.circle.fill")
-                .font(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(theme.success)
 
         case .waitingForPermissions:
             VStack(alignment: .leading, spacing: 12) {
                 Label(copy.onboardingPreparePermissionsHint, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
                 Button(copy.onboardingOpenSettingsTitle) {
                     openSettingsForMissingPermission()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
             }
 
         case let .failed(message):
@@ -184,41 +259,267 @@ struct OnboardingView: View {
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
                 }
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(theme.danger)
                 Button {
                     startPreparation()
                 } label: {
                     Label(copy.readinessRefreshTitle, systemImage: "arrow.clockwise")
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
             }
         }
     }
 
-    private var howToStep: some View {
+    private var holdFnStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            stepHeader(title: copy.onboardingHowToTitle, body: nil)
+            stepHeader(title: guide.holdTitle, body: guide.holdSubtitle)
 
-            howToRow(
-                symbol: "keyboard",
-                keycap: "fn",
-                title: copy.onboardingHowToHoldTitle,
-                detail: copy.onboardingHowToHoldDetail
-            )
-            howToRow(
-                symbol: "text.cursor",
-                keycap: nil,
-                title: copy.onboardingHowToReleaseTitle,
-                detail: copy.onboardingHowToReleaseDetail
-            )
-            howToRow(
-                symbol: "text.book.closed",
-                keycap: nil,
-                title: copy.onboardingHowToDictionaryTitle,
-                detail: copy.onboardingHowToDictionaryDetail
+            HoldFnAnimation(
+                copy: guide,
+                listeningText: copy.capsuleListening,
+                transcribingText: copy.capsuleTranscribing,
+                stillTime: illustrationStillTime
             )
         }
+    }
+
+    private var practiceStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            stepHeader(title: guide.practiceTitle, body: guide.practiceSubtitle)
+
+            if practiceState.isHoldingKey && illustrationStillTime == nil {
+                TimelineView(.animation) { context in
+                    practiceScene(now: context.date)
+                }
+            } else {
+                practiceScene(now: practiceHoldStart.map { $0.addingTimeInterval(illustrationStillTime ?? 0) } ?? Date())
+            }
+
+            practiceStatus
+
+            Spacer(minLength: 0)
+
+            Label(guide.holdExternalKeyboardNote, systemImage: "keyboard")
+                .scaledFont(.caption)
+                .foregroundStyle(theme.tertiaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Same scene as the hold-Fn page, driven by the real key: the drawn fn key sinks,
+    /// counts the seconds held and fills its ring while Fn is down.
+    private func practiceScene(now: Date) -> some View {
+        let held = practiceHoldStart.map { now.timeIntervalSince($0) } ?? 0
+        let capsule: MockCapsuleKind? = switch practiceState {
+        case .listening: .listening
+        case .transcribing: .transcribing
+        default: nil
+        }
+        return DictationScene(
+            text: practiceText,
+            placeholder: guide.practicePlaceholder,
+            capsule: capsule,
+            listeningText: copy.capsuleListening,
+            transcribingText: copy.capsuleTranscribing,
+            clock: now.timeIntervalSinceReferenceDate,
+            fnPressAmount: practiceState.isHoldingKey ? 1 : 0,
+            fingertipOpacity: practiceState.isHoldingKey ? 1 : 0,
+            holdProgress: practiceState.isHoldingKey ? held / Self.practiceRingSeconds : 0,
+            holdingText: practiceState.isHoldingKey ? guide.holdingText(seconds: held) : nil,
+            copy: guide
+        )
+        .animation(.easeInOut(duration: HoldFnAnimation.travel), value: practiceState.isHoldingKey)
+    }
+
+    /// Seconds of holding that fill the ring once; most sentences take about this long.
+    private static let practiceRingSeconds: Double = 3
+
+    private var practiceText: String {
+        if case let .succeeded(text) = practiceState { return text }
+        return ""
+    }
+
+    @ViewBuilder
+    private var practiceStatus: some View {
+        if prepareState.isRunning {
+            statusPill(practiceNotReadyText, symbol: "arrow.down.circle", color: theme.secondaryInk, showsProgress: true)
+        } else {
+            switch practiceState {
+            case .waiting:
+                statusPill(guide.practiceSuggestion, symbol: "quote.bubble", color: theme.secondaryInk)
+            case .listening:
+                statusPill(guide.practiceListening, symbol: "waveform", color: theme.voice)
+            case .transcribing:
+                statusPill(guide.practiceTranscribing, symbol: "ellipsis", color: theme.voice, showsProgress: true)
+            case .succeeded:
+                statusPill(guide.practiceSucceeded, symbol: "checkmark.circle.fill", color: theme.success)
+            case .tooShort:
+                statusPill(guide.practiceTooShort, symbol: "hand.raised.fill", color: theme.warning)
+            case let .failed(message):
+                statusPill(
+                    message.isEmpty ? guide.practiceFailed : guide.practiceFailedWithReason(message),
+                    symbol: "exclamationmark.triangle.fill",
+                    color: theme.danger
+                )
+            }
+        }
+    }
+
+    private var practiceNotReadyText: String {
+        if case let .running(_, progress?) = prepareState {
+            return "\(guide.practiceNotReady) · \(progressPercentage(progress))"
+        }
+        return guide.practiceNotReady
+    }
+
+    private func statusPill(_ text: String, symbol: String, color: Color, showsProgress: Bool = false) -> some View {
+        HStack(spacing: 9) {
+            if showsProgress {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: symbol)
+                    .scaledFont(size: 14, weight: .semibold)
+                    .foregroundStyle(color)
+            }
+            Text(text)
+                .scaledFont(size: 13.5, weight: .medium)
+                .foregroundStyle(theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Capsule().fill(color.opacity(0.12)))
+        .overlay(Capsule().strokeBorder(color.opacity(0.25), lineWidth: 1))
+        .clipShape(Capsule())
+    }
+
+    private var featuresStep: some View {
+        let preferences = PreferencesCopy.texts(for: settingsStore.uiLanguage)
+        return VStack(alignment: .leading, spacing: 14) {
+            stepHeader(title: guide.featuresTitle, body: guide.featuresSubtitle)
+
+            VStack(spacing: 0) {
+                featureRow(
+                    symbol: "number",
+                    title: preferences.numericFormattingTitle,
+                    examples: guide.numericExamples,
+                    isDefaultOn: true,
+                    isOn: settingBinding(\.isSmartNumericFormattingEnabled),
+                    accessibilityLabel: preferences.numericFormattingToggle
+                )
+                Divider().overlay(theme.divider)
+                featureRow(
+                    symbol: "scissors",
+                    title: preferences.fillerCleanupTitle,
+                    examples: guide.fillerExamples,
+                    isDefaultOn: true,
+                    isOn: settingBinding(\.isFillerCleanupEnabled),
+                    accessibilityLabel: preferences.fillerCleanupToggle
+                )
+                Divider().overlay(theme.divider)
+                featureRow(
+                    symbol: "list.number",
+                    title: preferences.academicReferenceFormattingTitle,
+                    examples: guide.academicExamples,
+                    isDefaultOn: false,
+                    isOn: settingBinding(\.isAcademicReferenceFormattingEnabled),
+                    accessibilityLabel: preferences.academicReferenceFormattingToggle
+                )
+                Divider().overlay(theme.divider)
+                featureRow(
+                    symbol: "function",
+                    title: preferences.mathNotationTitle,
+                    examples: guide.mathExamples(for: settingsStore.mathNotationOutputFormat),
+                    isDefaultOn: false,
+                    isOn: settingBinding(\.isMathNotationEnabled),
+                    accessibilityLabel: preferences.mathNotationToggle
+                ) {
+                    if settingsStore.isMathNotationEnabled {
+                        FlowtypeSegmentedPicker(
+                            theme: theme,
+                            selection: Binding(
+                                get: { settingsStore.mathNotationOutputFormat },
+                                set: {
+                                    settingsStore.mathNotationOutputFormat = $0
+                                    settingsStore.objectWillChange.send()
+                                }
+                            ),
+                            options: [(.latex, preferences.latex), (.unicode, preferences.unicode)]
+                        )
+                        .accessibilityLabel(preferences.mathOutputFormatTitle)
+                    }
+                }
+            }
+            .themedCard(theme, cornerRadius: 14)
+        }
+    }
+
+    private func settingBinding(_ keyPath: ReferenceWritableKeyPath<SettingsStore, Bool>) -> Binding<Bool> {
+        Binding(
+            get: { settingsStore[keyPath: keyPath] },
+            set: {
+                settingsStore[keyPath: keyPath] = $0
+                // These setters only write UserDefaults; publish so the switch redraws.
+                settingsStore.objectWillChange.send()
+            }
+        )
+    }
+
+    private func featureRow<Extra: View>(
+        symbol: String,
+        title: String,
+        examples: [OnboardingExample],
+        isDefaultOn: Bool,
+        isOn: Binding<Bool>,
+        accessibilityLabel: String,
+        @ViewBuilder extra: () -> Extra = { EmptyView() }
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: symbol)
+                    .scaledFont(size: 14, weight: .semibold)
+                    .foregroundStyle(theme.accent)
+                    .frame(width: 28, height: 28)
+                    .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Text(title)
+                    .scaledFont(.headline)
+                    .foregroundStyle(theme.ink)
+                if isDefaultOn {
+                    Text(guide.defaultOnBadge)
+                        .scaledFont(size: 11, weight: .semibold)
+                        .foregroundStyle(theme.success)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(theme.success.opacity(0.14)))
+                }
+                Spacer(minLength: 8)
+                extra()
+                Toggle(isOn: isOn) { EmptyView() }
+                    .flowtypeSwitch(theme)
+                    .accessibilityLabel(accessibilityLabel)
+            }
+
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
+                ForEach(examples.indices, id: \.self) { index in
+                    GridRow {
+                        Text(examples[index].spoken)
+                            .foregroundStyle(theme.tertiaryInk)
+                        Image(systemName: "arrow.right")
+                            .scaledFont(size: 9, weight: .bold)
+                            .foregroundStyle(theme.tertiaryInk)
+                        Text(examples[index].written)
+                            .foregroundStyle(theme.ink)
+                            .fontWeight(.medium)
+                    }
+                    .lineLimit(1)
+                }
+            }
+            .scaledFont(size: 12.5)
+            .padding(.leading, 40)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Shared pieces
@@ -226,11 +527,11 @@ struct OnboardingView: View {
     private func stepHeader(title: String, body: String?) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 28, weight: .semibold))
+                .scaledFont(size: 28, weight: .semibold)
                 .foregroundStyle(theme.ink)
             if let body {
                 Text(body)
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -247,17 +548,17 @@ struct OnboardingView: View {
     ) -> some View {
         HStack(spacing: 14) {
             Image(systemName: symbol)
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold)
                 .foregroundStyle(theme.accent)
                 .frame(width: 30, height: 30)
-                .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.headline)
+                    .scaledFont(.headline)
                     .foregroundStyle(theme.ink)
                 Text(state == .denied ? copy.onboardingDeniedTitle : detail)
-                    .font(.callout)
+                    .scaledFont(.callout)
                     .foregroundStyle(state == .denied ? theme.danger : theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -266,58 +567,16 @@ struct OnboardingView: View {
 
             if state == .granted {
                 Label(copy.onboardingGrantedTitle, systemImage: "checkmark.circle.fill")
-                    .font(.callout.weight(.semibold))
+                    .scaledFont(.callout, weight: .semibold)
                     .foregroundStyle(theme.success)
             } else {
                 Image(systemName: "circle.dashed")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(theme.tertiaryInk)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
-    }
-
-    private func howToRow(
-        symbol: String,
-        keycap: String?,
-        title: String,
-        detail: String
-    ) -> some View {
-        HStack(spacing: 14) {
-            if let keycap {
-                Text(keycap)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(theme.ink)
-                    .frame(width: 34, height: 34)
-                    .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(theme.border, lineWidth: 1)
-                    }
-            } else {
-                Image(systemName: symbol)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(theme.accent)
-                    .frame(width: 34, height: 34)
-                    .background(theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(theme.ink)
-                Text(detail)
-                    .font(.callout)
-                    .foregroundStyle(theme.secondaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .themedCard(theme, cornerRadius: 12)
     }
 
     private var footer: some View {
@@ -340,7 +599,7 @@ struct OnboardingView: View {
                 Button(copy.onboardingBackTitle) {
                     step = previous
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme, isLarge: true))
             }
 
             Button {
@@ -353,9 +612,9 @@ struct OnboardingView: View {
                 Text(step.isLast ? copy.onboardingFinishTitle : copy.onboardingContinueTitle)
                     .frame(minWidth: 96)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(FlowtypeProminentButtonStyle(theme: theme, isLarge: true))
             .keyboardShortcut(.defaultAction)
-            .disabled(step == .prepare && !prepareState.isReady)
+            .disabled(step == .prepare && !prepareState.allowsContinue)
         }
     }
 
@@ -376,6 +635,20 @@ struct OnboardingView: View {
         permissions = actions.permissionSnapshot()
     }
 
+    /// Only the practice page captures dictation; every other page leaves
+    /// Fn working as normal, pasting into the previous app.
+    private func updatePracticeListener(for step: OnboardingStep) {
+        guard step == .practice else {
+            actions.setPracticeListener(nil)
+            return
+        }
+        practiceState = .waiting
+        actions.setPracticeListener { event in
+            if event == .listening { practiceHoldStart = Date() }
+            practiceState = practiceState.applying(event)
+        }
+    }
+
     private func startPreparation() {
         runPreparation(intent: .interactiveSetup)
     }
@@ -394,19 +667,21 @@ struct OnboardingView: View {
         completedReadinessSnapshot = nil
         downloadEstimator.reset()
         downloadFeedback = nil
+        downloadRoute = nil
 
         Task { @MainActor in
             let result = await actions.prepareFlowtype(intent, model.modelID) { snapshot in
                 prepareState = .running(snapshot.stage, snapshot.progress)
                 if snapshot.stage == .downloadingModel, let transfer = snapshot.transfer {
                     downloadFeedback = downloadEstimator.update(transfer)
+                    downloadRoute = OnboardingDownloadRoute(source: transfer.source) ?? downloadRoute
                 } else {
                     downloadEstimator.reset()
                     downloadFeedback = nil
                 }
                 refreshPermissions()
             }
-            prepareState = OnboardingPrepareState.state(for: result.outcome)
+            prepareState = OnboardingPrepareState.state(for: result.outcome, language: settingsStore.uiLanguage)
             completedReadinessSnapshot = result.verifiedSnapshot
             downloadEstimator.reset()
             downloadFeedback = nil
@@ -424,7 +699,7 @@ struct OnboardingView: View {
     }
 
     private func stageTitle(_ stage: PreparationStage) -> String {
-        let usesChinese = copy.timesUnit == "次"
+        let usesChinese = copy.usesChinese
         switch stage {
         case .inspecting: return usesChinese ? "正在检查 Flowtype…" : "Checking Flowtype…"
         case .preparingRuntime: return usesChinese ? "正在准备本地运行环境…" : "Preparing local runtime…"
@@ -439,7 +714,7 @@ struct OnboardingView: View {
     }
 
     private func stageDetail(_ stage: PreparationStage) -> String? {
-        let usesChinese = copy.timesUnit == "次"
+        let usesChinese = copy.usesChinese
         switch stage {
         case .preparingRuntime, .startingHelper:
             return usesChinese
@@ -474,12 +749,27 @@ struct OnboardingView: View {
     private func downloadFeedbackView(_ feedback: DownloadTransferFeedback) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(downloadedBytesText(feedback))
-                .font(.caption.monospacedDigit())
+                .scaledFont(.caption, monospacedDigit: true)
                 .foregroundStyle(theme.secondaryInk)
             Text(downloadActivityText(feedback.activity))
-                .font(.caption.monospacedDigit())
+                .scaledFont(.caption, monospacedDigit: true)
                 .foregroundStyle(theme.secondaryInk)
         }
+    }
+
+    private var downloadRouteView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let downloadRoute {
+                Label(guide.downloadRouteText(downloadRoute), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    .scaledFont(.caption, weight: .medium)
+                    .foregroundStyle(theme.secondaryInk)
+            }
+            Label(guide.prepareVPNHint, systemImage: "network")
+                .scaledFont(.caption)
+                .foregroundStyle(theme.secondaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.top, 2)
     }
 
     private func downloadedBytesText(_ feedback: DownloadTransferFeedback) -> String {
@@ -491,13 +781,13 @@ struct OnboardingView: View {
             fromByteCount: feedback.totalBytes,
             countStyle: .file
         )
-        return copy.timesUnit == "次"
+        return copy.usesChinese
             ? "已下载 \(downloaded) / \(total)"
             : "Downloaded \(downloaded) / \(total)"
     }
 
     private func downloadActivityText(_ activity: DownloadTransferActivity) -> String {
-        let usesChinese = copy.timesUnit == "次"
+        let usesChinese = copy.usesChinese
         switch activity {
         case .estimating:
             return usesChinese
@@ -540,7 +830,7 @@ struct OnboardingView: View {
 
     private var onboardingPrepareBody: String {
         guard model != .qwen3ASR06B else { return copy.onboardingPrepareBody }
-        if copy.timesUnit == "次" {
+        if copy.usesChinese {
             return "一键完成全部准备：开启麦克风与辅助功能权限，并下载当前所选的 \(model.displayName) 本地模型（仅首次需要，也可以稍后在“准备状态”页完成）。"
         }
         return "One click does everything: grants Microphone and Accessibility permissions and downloads the selected \(model.displayName) local model (first run only — you can also do this later from Setup & Status)."

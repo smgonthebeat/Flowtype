@@ -1,0 +1,77 @@
+{"id":"sheet-exercise-001","family":"sheet_exercise","input":"sheet 一 exercise 四","expected":"Sheet 1 Exercise 4"}
+{"id":"sheet-exercise-002","family":"sheet_exercise","input":"sheet one 的 exercise 四 b and c","expected":"Sheet 1 Exercise 4(b) and (c)"}
+{"id":"sheet-exercise-003","family":"sheet_exercise","input":"Sheet One的Exercise四B和C","expected":"Sheet 1 Exercise 4(b) and (c)"}
+{"id":"sheet-exercise-004","family":"sheet_exercise","input":"SSheet One的Exercise四B和C","expected":"Sheet 1 Exercise 4(b) and (c)"}
+{"id":"sheet-exercise-005","family":"sheet_exercise","input":"sheet e Exercise 4","expected":"Sheet 1 Exercise 4"}
+{"id":"sheet-exercise-006","family":"sheet_exercise","input":"Sheet 1 的 exercise。四B和C","expected":"Sheet 1 Exercise 4(b) and (c)"}
+{"id":"sheet-exercise-007","family":"sheet_exercise","input":"cheat twelve exercise five","expected":"Sheet 12 Exercise 5"}
+{"id":"sheet-exercise-008","family":"sheet_exercise","input":"cheat 1 Exercise 4","expected":"Sheet 1 Exercise 4"}
+{"id":"sheet-exercise-009","family":"sheet_exercise","input":"cheat fifty exercise twenty one","expected":"Sheet 50 Exercise 21"}
+{"id":"exercise-sheet-001","family":"exercise_sheet","input":"exercise sheet four","expected":"Exercise Sheet 4"}
+{"id":"exercise-sheet-002","family":"exercise_sheet","input":"exercise cheat four","expected":"Exercise Sheet 4"}
+{"id":"exercise-sheet-003","family":"exercise_sheet","input":"exercise sheet ninety nine","expected":"Exercise Sheet 99"}
+{"id":"exercise-sheet-004","family":"exercise_sheet","input":"sheet exercise四","expected":"Sheet Exercise 4"}
+{"id":"exercise-001","family":"exercise","input":"Exercise four B and C.","expected":"Exercise 4(b) and (c)."}
+{"id":"exercise-002","family":"exercise","input":"Exercise 4B and C.","expected":"Exercise 4(b) and (c)."}
+{"id":"exercise-question-001","family":"exercise_question","input":"Exercise 3 Q 1","expected":"Exercise 3 Q1"}
+{"id":"exercise-question-002","family":"exercise_question","input":"Exercise three Q one","expected":"Exercise 3 Q1"}
+{"id":"exercise-question-003","family":"exercise_question","input":"Exercise 12 Q twenty","expected":"Exercise 12 Q20"}
+{"id":"exercise-question-004","family":"exercise_question","input":"Exercise 3 Q 1 b","expected":"Exercise 3 Q1(b)"}
+{"id":"exercise-question-005","family":"exercise_question","input":"Exercise 3 Q two H","expected":"Exercise 3 Q2(h)"}
+{"id":"question-sheet-001","family":"question_sheet","input":"question sheet one","expected":"Question Sheet 1"}
+{"id":"question-sheet-002","family":"question_sheet","input":"Question Sheet 20","expected":"Question Sheet 20"}
+{"id":"sheet-001","family":"sheet","input":"Sheet one.","expected":"Sheet 1."}
+{"id":"sheet-002","family":"sheet","input":"Sheet十二.","expected":"Sheet 12."}
+{"id":"sheet-003","family":"sheet","input":"cheat five.","expected":"Sheet 5."}
+{"id":"command-sheet-001","family":"command_sheet","input":"请打开 cheat two。","expected":"请打开 Sheet 2。"}
+{"id":"command-sheet-002","family":"command_sheet","input":"打开 cheat four.","expected":"打开 Sheet 4."}
+{"id":"question-001","family":"question","input":"q 四 b and c","expected":"Q4(b) and (c)"}
+{"id":"question-002","family":"question","input":"Q4 BNC","expected":"Q4(b) and (c)"}
+{"id":"question-003","family":"question","input":"question 一","expected":"Question 1"}
+{"id":"academic-list-001","family":"academic_list","input":"A one，一, A two，二。","expected":"A1，1, A2，2。"}
+{"id":"academic-list-002","family":"academic_list","input":"A 一 B and C","expected":"A1(b) and (c)"}
+{"id":"academic-list-003","family":"academic_list","input":"A1 BNC","expected":"A1(b) and (c)"}
+{"id":"study-section-001","family":"study_section","input":"B one的题。","expected":"B1的题。"}
+{"id":"study-section-002","family":"study_section","input":"OK，我们现在来讲 B一的题。","expected":"OK，我们现在来讲 B1的题。"}
+{"id":"study-section-003","family":"study_section","input":"我们现在来讲 B two 的题。","expected":"我们现在来讲 B2 的题。"}
+{"id":"study-section-004","family":"study_section","input":"A five的 cheat sheet。","expected":"A5的 cheat sheet。"}
+{"id":"study-section-005","family":"study_section","input":"A五的 cheat sheet。","expected":"A5的 cheat sheet。"}
+{"id":"study-section-006","family":"study_section","input":"A two 就不可以。","expected":"A2 就不可以。"}
+{"id":"study-section-007","family":"study_section","input":"A one可以，然后 A two就不可以吧？","expected":"A1可以，然后 A2就不可以吧？"}
+{"id":"study-section-008","family":"study_section","input":"C十二要背，X five 的 cheat sheet。","expected":"C12要背，X5 的 cheat sheet。"}
+{"id":"study-section-009","family":"study_section","input":"x五的cheat sheet。c十二要背，b一的题，a one的题，a two的题。","expected":"X5的cheat sheet。C12要背，B1的题，A1的题，A2的题。"}
+{"id":"study-section-010","family":"study_section","input":"bit六，bit一的cheat sheet。","expected":"B6，B1的cheat sheet。"}
+{"id":"memo-context-001","family":"memo_context","input":"就是 A four要背的内容。","expected":"就是 A4要背的内容。"}
+{"id":"memo-context-002","family":"memo_context","input":"就是A四要背的内容。","expected":"就是A4要背的内容。"}
+{"id":"legacy-negative-001","family":"legacy_negative","input":"I like sheet music","expected":"I like sheet music"}
+{"id":"legacy-negative-002","family":"legacy_negative","input":"B and C are variables","expected":"B and C are variables"}
+{"id":"legacy-negative-003","family":"legacy_negative","input":"我有四个要背的内容。","expected":"我有四个要背的内容。"}
+{"id":"legacy-negative-004","family":"legacy_negative","input":"a one-time reminder","expected":"a one-time reminder"}
+{"id": "part-001", "family": "part_marker", "input": "I'm stuck on question five part A", "expected": "I'm stuck on Question 5(a)"}
+{"id": "part-002", "family": "part_marker", "input": "Question 5 part a is hard", "expected": "Question 5(a) is hard"}
+{"id": "part-003", "family": "part_marker", "input": "Q3 part B", "expected": "Q3(b)"}
+{"id": "part-004", "family": "part_marker", "input": "Exercise 2 part C and D", "expected": "Exercise 2(c) and (d)"}
+{"id": "range-001", "family": "subpart_range", "input": "Sheet two Q four A to D", "expected": "Sheet 2 Q4(a)–(d)"}
+{"id": "range-002", "family": "subpart_range", "input": "Question 2 part A through C", "expected": "Question 2(a)–(c)"}
+{"id": "range-003", "family": "subpart_range", "input": "Q4 A到D", "expected": "Q4(a)–(d)"}
+{"id": "roman-001", "family": "subpart_roman", "input": "Q three part B two", "expected": "Q3(b)(ii)"}
+{"id": "roman-002", "family": "subpart_roman", "input": "Q3 part B roman two", "expected": "Q3(b)(ii)"}
+{"id": "roman-003", "family": "subpart_roman", "input": "Q3 part B, Romance 2.", "expected": "Q3(b)(ii)."}
+{"id": "roman-004", "family": "subpart_roman", "input": "Q3 B ii", "expected": "Q3(b)(ii)"}
+{"id": "roman-005", "family": "subpart_roman", "input": "Q3 part B two is hard", "expected": "Q3(b)(ii) is hard"}
+{"id": "roman-006", "family": "subpart_roman", "input": "Exercise 4 A roman one", "expected": "Exercise 4(a)(i)"}
+{"id": "dotted-001", "family": "dotted_number", "input": "Let's look at Exercise 1.2 B", "expected": "Let's look at Exercise 1.2(b)"}
+{"id": "dotted-002", "family": "dotted_number", "input": "Exercise one point two B", "expected": "Exercise 1.2(b)"}
+{"id": "dotted-003", "family": "dotted_number", "input": "Exercise 1.2", "expected": "Exercise 1.2"}
+{"id": "dotted-004", "family": "dotted_number", "input": "Question 2.3 part A", "expected": "Question 2.3(a)"}
+{"id": "dotted-005", "family": "dotted_number", "input": "Q2.3b", "expected": "Q2.3(b)"}
+{"id": "dotted-006", "family": "dotted_number", "input": "Exercise 1.05 A", "expected": "Exercise 1.05(a)"}
+{"id": "part-negative-001", "family": "part_negative", "input": "Question 5 part of the plan", "expected": "Question 5 part of the plan"}
+{"id": "range-negative-001", "family": "range_negative", "input": "B to B.", "expected": "B to B."}
+{"id": "range-negative-002", "family": "range_negative", "input": "Q4 B to B", "expected": "Q4 B to B"}
+{"id": "range-negative-003", "family": "range_negative", "input": "Q4 A to do it", "expected": "Q4(a) to do it"}
+{"id": "roman-negative-001", "family": "roman_negative", "input": "Q3 B two marks", "expected": "Q3(b) 2 marks"}
+{"id": "roman-negative-002", "family": "roman_negative", "input": "Q3 B I think", "expected": "Q3(b) I think"}
+{"id": "roman-negative-003", "family": "roman_negative", "input": "Q3 B twelve", "expected": "Q3(b) 12"}
+{"id": "dotted-negative-001", "family": "dotted_negative", "input": "Exercise 1. Then B.", "expected": "Exercise 1. Then B."}
+{"id": "dotted-negative-002", "family": "dotted_negative", "input": "Exercise 2 point of view", "expected": "Exercise 2 point of view"}

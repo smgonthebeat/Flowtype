@@ -12,13 +12,15 @@ struct TranscriptHistorySectionView: View {
     let copy: AppCopy.Texts
     let actions: MainWindowActions
 
-    private let timestampWidth: CGFloat = 56
+    @ObservedObject private var textSizeModel = AppTextSizeModel.shared
+
+    private var timestampWidth: CGFloat { textSizeModel.size.scaledWidth(56) }
 
     var body: some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title.uppercased())
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .fontWeight(.bold)
                     .foregroundStyle(theme.secondaryInk)
 

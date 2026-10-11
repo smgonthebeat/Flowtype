@@ -48,6 +48,9 @@ SILENCE_MERGE_SECONDS = 0.7
 SEGMENT_PADDING_SECONDS = 0.25
 MIN_SEGMENT_SECONDS = 0.35
 MAX_SEGMENT_SECONDS = 10.0
+SEGMENT_SPLIT_TOLERANCE_SECONDS = 0.001
+# The model cannot extract features from fewer than about 200 samples (12.5 ms at 16 kHz).
+MIN_PIECE_FRAMES = 400
 
 app = FastAPI(title="Flowtype Qwen ASR Helper")
 _session: Any | None = None
@@ -720,14 +723,30 @@ def speech_segments_for_wav(path: str) -> list[AudioSegment]:
 
     split_segments: list[AudioSegment] = []
     for segment in padded:
-        start = segment.start
-        while segment.end - start > MAX_SEGMENT_SECONDS:
-            end = start + MAX_SEGMENT_SECONDS
-            split_segments.append(AudioSegment(start, end))
-            start = end
-        split_segments.append(AudioSegment(start, segment.end))
+        split_segments.extend(split_long_segment(segment))
 
     return split_segments or [AudioSegment(0.0, duration)]
+
+
+def split_long_segment(segment: AudioSegment) -> list[AudioSegment]:
+    """Cut a speech run into pieces of at most MAX_SEGMENT_SECONDS without a degenerate tail.
+
+    Float arithmetic can leave a run a hair longer than a multiple of MAX_SEGMENT_SECONDS
+    (for example 20.000000000000004 s), which used to produce a final 0-sample piece; the
+    model rejects that as empty audio and the whole dictation failed (2026-10-08). A tail
+    shorter than MIN_SEGMENT_SECONDS is folded into the previous piece instead.
+    """
+    pieces: list[AudioSegment] = []
+    start = segment.start
+    while segment.end - start > MAX_SEGMENT_SECONDS + SEGMENT_SPLIT_TOLERANCE_SECONDS:
+        end = start + MAX_SEGMENT_SECONDS
+        pieces.append(AudioSegment(start, end))
+        start = end
+    if pieces and segment.end - start < MIN_SEGMENT_SECONDS:
+        pieces[-1] = AudioSegment(pieces[-1].start, segment.end)
+    else:
+        pieces.append(AudioSegment(start, segment.end))
+    return pieces
 
 
 def write_wav_segment(source_path: str, segment: AudioSegment) -> str:
@@ -831,20 +850,40 @@ def transcribe_file_in_chunks(path: str, session: Any, context: str = "") -> str
         return result.text.strip()
 
     texts: list[str] = []
+    skipped_error: Exception | None = None
     for segment in segments:
         segment_path = write_wav_segment(path, segment)
         try:
+            if wav_frame_count(segment_path) < MIN_PIECE_FRAMES:
+                continue
             result = session.transcribe(segment_path, context=context)
             text = result.text.strip()
             if text:
                 texts.append(text)
+        except ValueError as exc:
+            # One unusable piece must not discard the rest of a long dictation.
+            if not is_unusable_audio_error(exc):
+                raise
+            skipped_error = exc
         finally:
             clear_mlx_cache()
             try:
                 os.unlink(segment_path)
             except FileNotFoundError:
                 pass
+    if not texts and skipped_error is not None:
+        raise skipped_error
     return join_transcript_segments(texts)
+
+
+def wav_frame_count(path: str) -> int:
+    with wave.open(path, "rb") as handle:
+        return handle.getnframes()
+
+
+def is_unusable_audio_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "empty audio" in message or "audio too short" in message
 
 
 def transcription_http_error(exc: Exception) -> HTTPException:

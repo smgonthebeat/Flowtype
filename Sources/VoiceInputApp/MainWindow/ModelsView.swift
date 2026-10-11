@@ -109,7 +109,7 @@ struct ModelsView: View {
             }
             .buttonStyle(.borderless)
         }
-        .font(.callout)
+        .scaledFont(.callout)
         .padding(14)
         .themedInset(theme, cornerRadius: 10)
     }
@@ -117,10 +117,10 @@ struct ModelsView: View {
     private func header(copy: AppCopy.Texts) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(copy.modelsTitle)
-                .font(.system(size: 34, weight: .semibold))
+                .scaledFont(size: 34, weight: .semibold)
                 .foregroundStyle(theme.ink)
             Text(copy.modelsSubtitle)
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(theme.secondaryInk)
         }
     }
@@ -138,25 +138,25 @@ struct ModelsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 10) {
                         Text(copy.modelRoleTitle(for: model))
-                            .font(.title2)
+                            .scaledFont(.title2)
                             .fontWeight(.semibold)
                             .foregroundStyle(theme.ink)
                         statusBadge(model: model, state: state, copy: copy)
                     }
 
                     Text(copy.modelRoleDescription(for: model))
-                        .font(.callout)
+                        .scaledFont(.callout)
                         .foregroundStyle(theme.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(copy.modelProvenance(for: model))
-                        .font(.caption)
+                        .scaledFont(.caption)
                         .foregroundStyle(theme.tertiaryInk)
                         .help(model.modelID)
 
                     if let advisory = inlineSuitabilityAdvisory(for: model) {
                         Label(copy.modelSuitabilityDetail(for: advisory), systemImage: "exclamationmark.triangle")
-                            .font(.callout)
+                            .scaledFont(.callout)
                             .foregroundStyle(.orange)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -187,7 +187,8 @@ struct ModelsView: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            isSelected ? theme.accent.opacity(0.05) : Color.clear,
+            // No accent wash on the selected card (it read as muddy gold); the accent outline marks it.
+            Color.clear,
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
         .themedCard(theme)
@@ -221,12 +222,12 @@ struct ModelsView: View {
         case .downloading(let progress):
             VStack(alignment: .leading, spacing: 8) {
                 if let progress {
-                    ProgressView(value: progress)
+                    FlowtypeProgressBar(theme: theme, value: progress)
                 } else {
                     ProgressView()
                 }
                 Text(progressText(progress, copy: copy))
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(theme.secondaryInk)
                 if let status,
                    let downloadedBytes = status.downloadedBytes,
@@ -237,17 +238,17 @@ struct ModelsView: View {
                         total: formattedSize(totalBytes),
                         source: downloadSourceTitle(status.downloadSource)
                     ))
-                    .font(.caption.monospacedDigit())
+                    .scaledFont(.caption, monospacedDigit: true)
                     .foregroundStyle(theme.secondaryInk)
                 }
             }
         case .repairNeeded:
             Text(copy.modelRepairMessage)
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(.orange)
         case .failed(let message):
             Text(message)
-                .font(.callout)
+                .scaledFont(.callout)
                 .foregroundStyle(.red)
         case .notInstalled, .ready:
             EmptyView()
@@ -275,7 +276,7 @@ struct ModelsView: View {
                 } label: {
                     Label(copy.modelUseTitle, systemImage: "checkmark.circle")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(FlowtypeProminentButtonStyle(theme: theme))
                 .help(copy.modelUseHelp)
             } else if !isDownloaded {
                 Button {
@@ -286,14 +287,14 @@ struct ModelsView: View {
                         systemImage: needsRepair ? "gearshape.2" : "arrow.down.circle"
                     )
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(FlowtypeProminentButtonStyle(theme: theme))
                 .disabled(isBusy(model, state: state))
                 .help(needsRepair ? copy.modelRepairHelp : copy.modelDownloadHelp)
             }
 
             if !isDownloading(state), let bytes = storageSizes[model.id] {
                 Text(copy.modelStorageUsage(formattedSize(bytes)))
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(theme.secondaryInk)
             }
 
@@ -352,7 +353,7 @@ struct ModelsView: View {
             reloadStorageSizes()
             state.refresh()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = UserFacingErrorMessage.message(for: error, language: settingsStore.uiLanguage)
             isShowingError = true
         }
     }
@@ -449,21 +450,22 @@ struct ModelsView: View {
 
     private func badge(_ title: String, tint: Color) -> some View {
         Text(title)
-            .font(.caption)
+            .scaledFont(.caption)
             .fontWeight(.semibold)
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(tint.opacity(0.14), in: Capsule())
+            // An accent-tinted pill turns muddy over the dark card; accent text sits on neutral grey.
+            .background(tint == theme.accent ? theme.controlSurface : tint.opacity(0.14), in: Capsule())
     }
 
     /// The one accent-filled badge on the page: the model Fn dictation uses now.
     private func inUseBadge(_ title: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: "checkmark")
-                .font(.system(size: 9, weight: .bold))
+                .scaledFont(size: 9, weight: .bold)
             Text(title)
-                .font(.caption)
+                .scaledFont(.caption)
                 .fontWeight(.semibold)
         }
         .foregroundStyle(theme.onAccent)
@@ -608,7 +610,7 @@ struct ModelsView: View {
     }
 
     private func fail(_ error: Error, for model: VoiceInputModel) {
-        let message = error.localizedDescription
+        let message = UserFacingErrorMessage.message(for: error, language: settingsStore.uiLanguage)
         downloadStates[model.id] = .failed(message)
         errorMessage = message
         isShowingError = true
@@ -690,7 +692,7 @@ private struct QwenLogoIcon: View {
                 .scaledToFit()
         } else {
             Image(systemName: "sparkle.magnifyingglass")
-                .font(.system(size: 24, weight: .semibold))
+                .scaledFont(size: 24, weight: .semibold)
                 .foregroundStyle(theme.skill)
         }
     }

@@ -4,6 +4,7 @@ import Foundation
 final class PasteCoordinator {
     typealias TargetResolver = @MainActor (PasteTargetIdentity) async -> PasteTargetIdentity?
     typealias TargetValidator = @MainActor (PasteTargetIdentity) -> Bool
+    typealias TextInputCheck = @MainActor (PasteTargetIdentity) -> Bool
 
     private let injector: PasteInjector
     private let telemetry: PasteTelemetryRecording
@@ -17,7 +18,8 @@ final class PasteCoordinator {
     func perform(
         _ attempt: PasteAttempt,
         resolveTarget: TargetResolver,
-        validateTarget: TargetValidator
+        validateTarget: TargetValidator,
+        acceptsText: TextInputCheck = { _ in true }
     ) async -> PasteOutcome {
         let startedAt = ProcessInfo.processInfo.systemUptime
         guard consumedAttemptIDs.insert(attempt.id).inserted else {
@@ -45,6 +47,16 @@ final class PasteCoordinator {
                 frontmostMatch: false
             )
             log(attempt: attempt, resolvedTarget: nil, result: result, startedAt: startedAt)
+            return result.outcome
+        }
+
+        guard acceptsText(resolvedTarget) else {
+            let result = injector.copyOnly(
+                attempt.text,
+                reason: .noTextInput,
+                frontmostMatch: true
+            )
+            log(attempt: attempt, resolvedTarget: resolvedTarget, result: result, startedAt: startedAt)
             return result.outcome
         }
 
@@ -78,6 +90,7 @@ final class PasteCoordinator {
             source: attempt.source,
             targetProcessIdentifier: target?.processIdentifier,
             targetBundleIdentifier: target?.bundleIdentifier,
+            targetSource: attempt.targetSource,
             outcome: result.outcome,
             pasteboardChangeCountBefore: result.pasteboardChangeCountBefore,
             pasteboardChangeCountAfter: result.pasteboardChangeCountAfter,

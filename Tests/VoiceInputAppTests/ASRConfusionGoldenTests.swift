@@ -15,6 +15,7 @@ final class ASRConfusionGoldenTests: XCTestCase {
     func testGeneralProfileGoldenCases() throws {
         let options = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: false,
             mathNotationOutputFormat: .unicode
@@ -29,6 +30,7 @@ final class ASRConfusionGoldenTests: XCTestCase {
     func testUnicodeMathProfileGoldenCases() throws {
         let options = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .unicode
@@ -43,6 +45,7 @@ final class ASRConfusionGoldenTests: XCTestCase {
     func testLatexMathProfileGoldenCases() throws {
         let options = TranscriptProcessingOptions(
             isSmartNumericFormattingEnabled: false,
+            isAcademicReferenceFormattingEnabled: false,
             isFillerCleanupEnabled: false,
             isMathNotationEnabled: true,
             mathNotationOutputFormat: .latex

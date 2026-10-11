@@ -3,7 +3,9 @@ import SwiftUI
 
 @MainActor
 final class MainWindowController: NSWindowController, NSWindowDelegate {
-    private let state = MainWindowState()
+    /// Internal (not private) so the offscreen UI snapshot harness can select
+    /// a section without calling `show(section:)`, which presents the window.
+    let state = MainWindowState()
     let readinessStore: MainWindowReadinessStore
     private let hotwordStore: HotwordStore
     private let historyStore: TranscriptHistoryStore
@@ -48,7 +50,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         // Keep the window title for Mission Control/accessibility, but hide it
         // in the titlebar: the sidebar identity row already carries the brand.
         window.title = "Flowtype"
-        window.titleVisibility = .hidden
+        WindowChrome.configure(window)
         window.minSize = NSSize(width: 1100, height: 680)
         window.isReleasedWhenClosed = false
         window.contentViewController = hostingController
@@ -106,17 +108,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private func applyWindowTheme() {
         guard let window else { return }
 
-        let theme = AppTheme.theme(for: settingsStore.appThemeID)
-        if theme.usesSystemMaterials {
-            window.titlebarAppearsTransparent = false
-            window.backgroundColor = .windowBackgroundColor
-            window.appearance = nil
-        } else {
-            window.titlebarAppearsTransparent = true
-            window.backgroundColor = NSColor(theme.surface)
-            window.appearance = NSAppearance(named: .darkAqua)
-        }
-        window.contentView?.needsDisplay = true
+        WindowChrome.applyTheme(AppTheme.theme(for: settingsStore.appThemeID), to: window)
         window.displayIfNeeded()
     }
 
