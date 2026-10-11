@@ -13,7 +13,6 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/Flowtype-button.svg`
 - `Resources/Flowtype-logo.svg`
 - `Resources/Flowtype-logo.png`
-- `Resources/Flowtype.icns`
 - `Resources/DMGBackground.svg`
 - `Resources/DMGBackground.png`
 - `Resources/DMGBackground@2x.png`
@@ -24,7 +23,18 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/HomeCardArtwork-clock.png`
 - `website/assets/download-apple-silicon.svg`
 
-The static website embeds the Flowtype logo shape and includes
+## App Icon
+
+Since October 2026, `Resources/Flowtype.icns` is a new app icon. It was rendered
+in Blender from the unchanged Flowtype glyph (`Resources/Flowtype-logo.svg`, see
+above), a frosted glass body and a soft colour field. Its look was matched by
+measurement to a reference image that the project owner created with an
+image-generation tool and selected; the reference image itself is not shipped.
+`website/assets/flowtype-app-icon.png` and `website/assets/favicon.png` are
+resized copies of the same 1024 px render. The earlier app icon, a white rounded
+tile carrying the black glyph, was also generated using ChatGPT.
+
+The static website shows the app icon and includes
 `website/assets/flowtype-home-real-usage.png`, a macOS screenshot captured by
 the project owner from the Flowtype app. The owner explicitly selected its real
 aggregate usage figures (4,680 dictations, 15 hours 19 minutes dictated,
@@ -110,7 +120,7 @@ derivative of the corrected 1920×1080, native-60fps silent master with SHA-256
 It uses a fully synthetic recreation of
 the public Codex `New chat` empty state as an ordinary third-party text target,
 a synthetic demonstration sentence, and a Flowtype-branded closing frame that
-references the canonical local app icon extracted from `Resources/Flowtype.icns`.
+references the then-current local app icon extracted from `Resources/Flowtype.icns`.
 The complete icon preserves its white rounded tile and optically inset
 microphone-waveform-speech-bubble mark. The GIF does not embed a screenshot,
 real conversation, History text, Hotwords, recording, account identifier, or

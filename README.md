@@ -1,16 +1,20 @@
+<p align="center">
+  <img src="website/assets/flowtype-app-icon.png" alt="Flowtype 图标" width="160">
+</p>
+
 # Flowtype
 
 [English](README.en.md) · 简体中文
 
-> **Release status:** [`v0.1.0-preview.6`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) Apple Silicon DMG 已开放下载。它使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**；macOS 会拦截首次启动，需要用户在 System Settings → Privacy & Security 中明确选择 Open Anyway。
+> **Release status:** [`v0.1.0-preview.7`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.7) Apple Silicon DMG 已开放下载。它使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**；macOS 会拦截首次启动，需要用户在 System Settings → Privacy & Security 中明确选择 Open Anyway。
 >
 > [首次打开指引 ↓](#first-launch)
 
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.6/Flowtype.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.7/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 
-[校验 SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.6/Flowtype.dmg.sha256) · [查看 Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
+[校验 SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.7/Flowtype.dmg.sha256) · [查看 Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.7) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开后完成本地转写，并把结果粘贴到刚才使用的 App 中。它重点处理中文、English、technical terms 与 spoken mathematics 混合出现的真实口述场景。
 
@@ -57,7 +61,7 @@ Flowtype 是一款 local-first macOS 听写工具。按住 `Fn` 说话，松开�
 
 ## 开始使用
 
-普通用户不需要安装 Swift 或自己编译。请只从官方 [`v0.1.0-preview.6` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) 下载 `Flowtype.dmg`，打开后按照窗口中的箭头把 `Flowtype.app` 拖进 Applications。
+普通用户不需要安装 Swift 或自己编译。请只从官方 [`v0.1.0-preview.7` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.7) 下载 `Flowtype.dmg`，打开后按照窗口中的箭头把 `Flowtype.app` 拖进 Applications。
 
 <a id="first-launch"></a>
 

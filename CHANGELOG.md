@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.7` introduces the new Flowtype app icon: a frosted glass tile
+  with soft warm and blue light, carrying the same microphone, sound-wave and
+  speech-bubble mark. The website and README use the same icon. App behaviour
+  is unchanged from Preview 6.
 - `v0.1.0-preview.6` rebuilds first run as an illustrated five-page guide:
   choose Chinese or English for the whole interface on the first page, prepare
   the model and permissions before continuing, then practise holding `Fn` on a

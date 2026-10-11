@@ -1,16 +1,20 @@
+<p align="center">
+  <img src="website/assets/flowtype-app-icon.png" alt="Flowtype app icon" width="160">
+</p>
+
 # Flowtype
 
 English · [简体中文](README.md)
 
-> **Release status:** The [`v0.1.0-preview.6`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
+> **Release status:** The [`v0.1.0-preview.7`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.7) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
 >
 > [First-launch guide ↓](#first-launch)
 
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.6/Flowtype.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.7/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 
-[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.6/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
+[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.7/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.7) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
 
@@ -57,7 +61,7 @@ On first launch, a five-page illustrated guide walks you through choosing the in
 
 ## Getting Started
 
-Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.6` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.6), open it, and follow the arrow to drag `Flowtype.app` to Applications.
+Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.7` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.7), open it, and follow the arrow to drag `Flowtype.app` to Applications.
 
 <a id="first-launch"></a>
 
