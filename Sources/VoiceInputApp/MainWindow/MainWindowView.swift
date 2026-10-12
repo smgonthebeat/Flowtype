@@ -195,17 +195,9 @@ struct MainWindowView: View {
             detailView
                 .frame(minWidth: 620)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(alignment: .top) {
-                    // Content scrolls under the transparent titlebar; a short scrim keeps it legible.
-                    GeometryReader { proxy in
-                        LinearGradient(colors: [theme.surface, theme.surface.opacity(0)], startPoint: .top, endPoint: .bottom)
-                            .frame(height: proxy.safeAreaInsets.top + AppSpacing.x2)
-                            .ignoresSafeArea(edges: .top)
-                    }
-                    .allowsHitTesting(false)
-                }
+                .titlebarFade(theme)
         }
-        .background(theme.surface)
+        .background(ThemeBackdropView(theme: theme))
         .flowtypeTheme(theme)
         .task {
             await readinessStore.refreshLive()
@@ -257,4 +249,25 @@ struct MainWindowView: View {
         }
     }
 
+}
+
+private extension View {
+    /// Content scrolls under the transparent titlebar. A flat theme covers the top edge with a short
+    /// scrim of its surface colour. A backdrop theme has artwork there, and a flat band would cut
+    /// through it, so the content itself fades out toward the top edge instead.
+    @ViewBuilder
+    func titlebarFade(_ theme: AppTheme) -> some View {
+        if theme.backdrop == nil {
+            overlay(alignment: .top) {
+                GeometryReader { proxy in
+                    LinearGradient(colors: [theme.surface, theme.surface.opacity(0)], startPoint: .top, endPoint: .bottom)
+                        .frame(height: proxy.safeAreaInsets.top + AppSpacing.x2)
+                        .ignoresSafeArea(edges: .top)
+                }
+                .allowsHitTesting(false)
+            }
+        } else {
+            backdropTitlebarFade(theme)
+        }
+    }
 }

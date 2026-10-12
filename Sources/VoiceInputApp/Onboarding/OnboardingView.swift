@@ -56,7 +56,7 @@ struct OnboardingView: View {
             width: OnboardingLayout.windowSize(for: textSizeModel.size).width,
             height: OnboardingLayout.windowSize(for: textSizeModel.size).height
         )
-        .background(theme.surface)
+        .background(ThemeBackdropView(theme: theme))
         .onAppear(perform: refreshPermissions)
         .onChange(of: step) { _, newStep in
             updatePracticeListener(for: newStep)
@@ -349,9 +349,9 @@ struct OnboardingView: View {
             case .waiting:
                 statusPill(guide.practiceSuggestion, symbol: "quote.bubble", color: theme.secondaryInk)
             case .listening:
-                statusPill(guide.practiceListening, symbol: "waveform", color: theme.voice)
+                statusPill(guide.practiceListening, symbol: "waveform", color: theme.voiceInk)
             case .transcribing:
-                statusPill(guide.practiceTranscribing, symbol: "ellipsis", color: theme.voice, showsProgress: true)
+                statusPill(guide.practiceTranscribing, symbol: "ellipsis", color: theme.voiceInk, showsProgress: true)
             case .succeeded:
                 statusPill(guide.practiceSucceeded, symbol: "checkmark.circle.fill", color: theme.success)
             case .tooShort:
@@ -599,7 +599,7 @@ struct OnboardingView: View {
                 Button(copy.onboardingBackTitle) {
                     step = previous
                 }
-                .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme, isLarge: true))
+                .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme, isLarge: true, onPage: true))
             }
 
             Button {
@@ -622,7 +622,7 @@ struct OnboardingView: View {
         HStack(spacing: 7) {
             ForEach(OnboardingStep.allCases) { candidate in
                 Circle()
-                    .fill(candidate == step ? theme.accent : theme.controlSurface)
+                    .fill(candidate == step ? theme.accentFill : AnyShapeStyle(theme.controlSurface))
                     .frame(width: 7, height: 7)
             }
         }

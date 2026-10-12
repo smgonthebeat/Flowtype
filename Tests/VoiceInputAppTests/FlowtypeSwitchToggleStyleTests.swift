@@ -20,6 +20,21 @@ final class FlowtypeSwitchToggleStyleTests: XCTestCase {
         XCTAssertEqual(palette.thumbHex, "#FFFFFF")
     }
 
+    func testFlowtypeThemeUsesAccentGradientForOnTrackAndInkTintForOffTrack() {
+        let theme = AppTheme.theme(for: .flowtype)
+
+        let on = FlowtypeSwitchPalette.palette(for: theme, isOn: true)
+        let off = FlowtypeSwitchPalette.palette(for: theme, isOn: false)
+
+        XCTAssertEqual(on.trackHex, theme.accentHex)
+        XCTAssertEqual(on.trackGradientHexes, FlowtypeAccent.fillStops)
+        XCTAssertNil(off.trackGradientHexes)
+        XCTAssertEqual(on.thumbHex, "#FFFFFF")
+        // Ink at 6% (not the 4% neutral surface, which was too faint), with a 7% ink border.
+        XCTAssertEqual(off.trackHex, "#2F30340F")
+        XCTAssertEqual(off.thumbHex, "#FFFFFF")
+    }
+
     func testAppearanceUsesSharedMetrics() {
         let theme = AppTheme.theme(for: .oscurange)
 
@@ -30,6 +45,7 @@ final class FlowtypeSwitchToggleStyleTests: XCTestCase {
         XCTAssertEqual(appearance.metrics.thumbSize, 20)
         XCTAssertEqual(appearance.metrics.cornerRadius, 11)
         XCTAssertEqual(appearance.palette.trackHex, theme.accentHex)
+        XCTAssertNil(appearance.palette.trackGradientHexes)
         XCTAssertEqual(appearance.palette.thumbHex, "#FFFFFF")
     }
 

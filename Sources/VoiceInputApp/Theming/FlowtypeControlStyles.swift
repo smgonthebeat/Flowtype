@@ -26,10 +26,13 @@ struct FlowtypeProminentButtonStyle: ButtonStyle {
                 .foregroundStyle(isEnabled ? theme.onAccent : theme.tertiaryInk)
                 .padding(.horizontal, isLarge ? 16 : 10)
                 .frame(minHeight: isLarge ? 30 : 22)
-                .background(
-                    isEnabled ? theme.accent : theme.controlSurface,
-                    in: RoundedRectangle(cornerRadius: 6, style: .continuous)
-                )
+                .background {
+                    if isEnabled {
+                        AccentSurface(theme: theme, shape: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    } else {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous).fill(theme.controlSurface)
+                    }
+                }
                 .opacity(configuration.isPressed ? 0.82 : 1)
                 .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
@@ -40,6 +43,9 @@ struct FlowtypeProminentButtonStyle: ButtonStyle {
 struct FlowtypeNeutralButtonStyle: ButtonStyle {
     let theme: AppTheme
     var isLarge = false
+    /// True for a button that sits directly on the page rather than inside a card; a backdrop
+    /// theme draws it white like a card.
+    var onPage = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -48,9 +54,15 @@ struct FlowtypeNeutralButtonStyle: ButtonStyle {
             .padding(.horizontal, isLarge ? 16 : 10)
             .frame(minHeight: isLarge ? 30 : 22)
             .background(
-                configuration.isPressed ? theme.hoverSurface : theme.controlSurface,
+                configuration.isPressed ? theme.hoverSurface : (onPage ? theme.pageStripSurface : theme.controlSurface),
                 in: RoundedRectangle(cornerRadius: 6, style: .continuous)
             )
+            .overlay {
+                if onPage && theme.backdrop != nil {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(theme.cardEdge, lineWidth: 1)
+                }
+            }
             .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
@@ -75,10 +87,7 @@ struct FlowtypeSegmentedPicker<Value: Hashable>: View {
                         .foregroundStyle(textColor(isSelected: isSelected))
                         .padding(.horizontal, 14)
                         .frame(minHeight: 22)
-                        .background(
-                            fillColor(isSelected: isSelected),
-                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        )
+                        .background { selectedBackground(isSelected: isSelected) }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -90,9 +99,16 @@ struct FlowtypeSegmentedPicker<Value: Hashable>: View {
     }
 
     // Disabled uses neutral greys: a faded accent over the dark surface reads as muddy brown.
-    private func fillColor(isSelected: Bool) -> Color {
-        guard isSelected else { return .clear }
-        return isEnabled ? theme.accent : theme.hoverSurface
+    @ViewBuilder
+    private func selectedBackground(isSelected: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 5, style: .continuous)
+        if !isSelected {
+            Color.clear
+        } else if isEnabled {
+            AccentSurface(theme: theme, shape: shape)
+        } else {
+            shape.fill(theme.hoverSurface)
+        }
     }
 
     private func textColor(isSelected: Bool) -> Color {
@@ -111,7 +127,7 @@ struct FlowtypeProgressBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(theme.controlSurface)
                 Capsule()
-                    .fill(theme.accent)
+                    .fill(theme.accentFill)
                     .frame(width: proxy.size.width * min(max(value, 0), 1))
             }
         }

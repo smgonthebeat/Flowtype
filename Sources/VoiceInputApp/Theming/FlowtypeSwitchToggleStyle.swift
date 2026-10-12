@@ -3,13 +3,18 @@ import SwiftUI
 struct FlowtypeSwitchPalette: Equatable {
     let trackHex: String
     let thumbHex: String
+    /// Set for an on track that is drawn as a gradient (Flowtype); `trackHex` is then its solid fallback.
+    var trackGradientHexes: [String]? = nil
 
     static func palette(for theme: AppTheme, isOn: Bool) -> FlowtypeSwitchPalette {
         // White thumb on every track, matching the system switch convention,
         // so light accents (Oscurange peach) keep a visible thumb edge.
-        FlowtypeSwitchPalette(
-            trackHex: isOn ? theme.accentHex : theme.controlSurfaceHex,
-            thumbHex: "#FFFFFF"
+        // The Flowtype off track is ink at 6%: the 4% neutral surface was too faint on a white card.
+        let offTrackHex = theme.backdrop != nil ? "#2F30340F" : theme.controlSurfaceHex
+        return FlowtypeSwitchPalette(
+            trackHex: isOn ? theme.accentHex : offTrackHex,
+            thumbHex: "#FFFFFF",
+            trackGradientHexes: isOn ? theme.accentGradientHexes : nil
         )
     }
 }
@@ -104,10 +109,13 @@ struct FlowtypeSwitchToggleStyle: ToggleStyle {
 
     /// The system theme's palette hex is the dark-appearance value, which drew a near-black off
     /// track in light appearance; use the dynamic system fill there instead.
-    private func trackFill(appearance: FlowtypeSwitchAppearance, isOn: Bool) -> Color {
+    private func trackFill(appearance: FlowtypeSwitchAppearance, isOn: Bool) -> AnyShapeStyle {
         if !isOn && theme.usesSystemMaterials {
-            return Color(nsColor: .quaternaryLabelColor)
+            return AnyShapeStyle(Color(nsColor: .quaternaryLabelColor))
         }
-        return Color(hex: appearance.palette.trackHex)
+        if let stops = appearance.palette.trackGradientHexes {
+            return AnyShapeStyle(LinearGradient(colors: stops.map { Color(hex: $0) }, startPoint: .leading, endPoint: .trailing))
+        }
+        return AnyShapeStyle(Color(hex: appearance.palette.trackHex))
     }
 }

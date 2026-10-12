@@ -33,7 +33,7 @@ struct PreferencesView: View {
                 .frame(maxWidth: MainWindowDetailLayout.preferencesContentMaxWidth, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(theme.surface)
+            .themedPageBackground(theme)
         }
     }
 
@@ -76,10 +76,15 @@ struct PreferencesView: View {
                     .scaledFont(size: 17, weight: .bold)
                     .foregroundStyle(Color(hex: ThemeOptionPreviewPresentation.iconAccentHex(for: themeID)))
                     .frame(width: 38, height: 34)
-                    .background(
-                        candidate.usesSystemMaterials ? theme.controlSurface : candidate.surface,
-                        in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    )
+                    .background {
+                        if candidate.backdrop != nil {
+                            // A miniature of the theme's backdrop instead of a flat swatch.
+                            ThemeBackdropArtwork(theme: candidate)
+                        } else {
+                            candidate.usesSystemMaterials ? theme.controlSurface : candidate.surface
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 9, style: .continuous)
                             .stroke(candidate.usesSystemMaterials ? theme.border : candidate.border, lineWidth: 1)
@@ -93,29 +98,29 @@ struct PreferencesView: View {
                 Spacer()
 
                 HStack(spacing: 4) {
-                    swatch(candidate.accent)
+                    swatch(candidate.accentFill)
                     swatch(candidate.surface)
                     swatch(candidate.ink)
                 }
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? theme.accent : theme.secondaryInk)
+                    .foregroundStyle(isSelected ? theme.accentFill : AnyShapeStyle(theme.secondaryInk))
             }
             .padding(12)
             .foregroundStyle(theme.ink)
             .themedInset(theme, cornerRadius: 12)
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? theme.accent : theme.border, lineWidth: isSelected ? 1.4 : 1)
+                    .stroke(isSelected ? theme.accentFill : AnyShapeStyle(theme.border), lineWidth: isSelected ? 1.4 : 1)
             }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(copy.appearanceThemeTitle): \(candidate.displayName)")
     }
 
-    private func swatch(_ color: Color) -> some View {
+    private func swatch(_ style: some ShapeStyle) -> some View {
         Circle()
-            .fill(color)
+            .fill(style)
             .frame(width: 13, height: 13)
             .overlay {
                 Circle()

@@ -79,6 +79,7 @@ final class SettingsWindowController: NSWindowController {
         guard let window else { return }
 
         let theme = AppTheme.theme(for: settingsStore.appThemeID)
+        WindowChrome.applyBackdropLayout(theme, to: window)
         if theme.usesSystemMaterials {
             window.titlebarAppearsTransparent = false
             window.backgroundColor = .windowBackgroundColor
@@ -86,7 +87,7 @@ final class SettingsWindowController: NSWindowController {
         } else {
             window.titlebarAppearsTransparent = true
             window.backgroundColor = NSColor(theme.surface)
-            window.appearance = NSAppearance(named: .darkAqua)
+            window.appearance = theme.windowAppearance
         }
         window.contentView?.needsDisplay = true
         window.displayIfNeeded()
@@ -364,7 +365,8 @@ private struct SettingsView: View {
             .padding(34)
             .frame(maxWidth: 680, alignment: .topLeading)
         }
-        .background(theme.surface)
+        .backdropTitlebarFade(theme)
+        .background(ThemeBackdropView(theme: theme))
         .onAppear {
             onTitleChange(copy.windowTitle)
         }

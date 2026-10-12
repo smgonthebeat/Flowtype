@@ -22,6 +22,10 @@ import XCTest
 /// Optional: `FLOWTYPE_UI_SNAPSHOT_TEXT_SIZE` is `small`, `standard` or `large`
 /// (the interface text size); it defaults to the app's default size.
 ///
+/// Optional: `FLOWTYPE_UI_SNAPSHOT_PLAN=asset-library` renders the set used by the
+/// launch-video asset library instead of the review set: each Flowtype Dawn
+/// page in Chinese and English (`public-release/marketing/flowtype-asset-library`).
+///
 /// Always pass `--filter UISnapshotRenderTests` when the variable is set: the
 /// harness redirects the process home directory, which would leak into any
 /// other test running later in the same process.
@@ -59,7 +63,15 @@ final class UISnapshotRenderTests: XCTestCase {
             filters: filters
         )
         defer { renderer.tearDown() }
-        try renderer.renderAll()
+        switch environment["FLOWTYPE_UI_SNAPSHOT_PLAN"] ?? "review" {
+        case "review":
+            try renderer.renderAll()
+        case "asset-library":
+            try renderer.renderAssetLibrary()
+        default:
+            XCTFail("FLOWTYPE_UI_SNAPSHOT_PLAN must be review or asset-library.")
+            return
+        }
 
         XCTAssertFalse(renderer.rendered.isEmpty, "No snapshot matched the filter.")
         XCTAssertTrue(renderer.problems.isEmpty, renderer.problems.joined(separator: "\n"))
@@ -257,6 +269,12 @@ private final class SnapshotRenderer {
             "Resources/HomeCardArtwork-wave.png",
             "Resources/HomeCardArtwork-docs.png",
             "Resources/HomeCardArtwork-clock.png",
+            "Resources/HomeCardArtwork-mic-light.png",
+            "Resources/HomeCardArtwork-wave-light.png",
+            "Resources/HomeCardArtwork-docs-light.png",
+            "Resources/HomeCardArtwork-clock-light.png",
+            "Resources/FlowtypeBackdrop-topLeading.png",
+            "Resources/FlowtypeBackdrop-bottomTrailing.png",
             "Resources/Flowtype-logo.svg",
             "Resources/Qwen-logo.svg"
         ] {
@@ -305,6 +323,22 @@ private final class SnapshotRenderer {
         try renderOnboarding(variant: natural)
         try renderCapsule(variant: natural)
 
+        let flowtypeVariants = [SnapshotVariant.minimumSize, SnapshotVariant.comfortableSize].map {
+            SnapshotVariant(theme: .flowtype, appearance: nil, language: .chinese, size: $0)
+        }
+        for variant in flowtypeVariants {
+            for screen in MainScreen.primary {
+                try renderMainWindow(screen, variant: variant, includeFullHeight: true)
+            }
+        }
+
+        let flowtypeNatural = SnapshotVariant(theme: .flowtype, appearance: nil, language: .chinese, size: nil)
+        try renderSettingsWindow(variant: flowtypeNatural)
+        try renderHelpWindow(variant: flowtypeNatural)
+        try renderOnboarding(variant: flowtypeNatural)
+        try renderCapsule(variant: flowtypeNatural)
+        try renderAccentStrip(variant: flowtypeNatural)
+
         let secondary: [(SnapshotVariant, [MainScreen])] = [
             (
                 SnapshotVariant(theme: .codex, appearance: nil, language: .chinese, size: SnapshotVariant.comfortableSize),
@@ -321,6 +355,10 @@ private final class SnapshotRenderer {
             (
                 SnapshotVariant(theme: .oscurange, appearance: nil, language: .english, size: SnapshotVariant.comfortableSize),
                 [.home, .preferences]
+            ),
+            (
+                SnapshotVariant(theme: .flowtype, appearance: nil, language: .english, size: SnapshotVariant.comfortableSize),
+                [.home, .preferences]
             )
         ]
         for (variant, screens) in secondary {
@@ -329,6 +367,26 @@ private final class SnapshotRenderer {
             }
         }
 
+        if filters.isEmpty {
+            try writeIndex()
+        }
+    }
+
+    /// Launch-video asset library: each Flowtype Dawn page as it first opens, Chinese and English,
+    /// at the comfortable window size. Curated and renamed afterwards by the library's build script.
+    func renderAssetLibrary() throws {
+        let pages: [MainScreen] = [.home, .dictionary, .models, .readiness, .preferences]
+        for language in [UILanguage.chinese, .english] {
+            let window = SnapshotVariant(theme: .flowtype, appearance: nil, language: language, size: SnapshotVariant.comfortableSize)
+            for screen in pages {
+                try renderMainWindow(screen, variant: window, includeFullHeight: false)
+            }
+            let natural = SnapshotVariant(theme: .flowtype, appearance: nil, language: language, size: nil)
+            try renderSettingsWindow(variant: natural)
+            try renderHelpWindow(variant: natural)
+            try renderOnboarding(variant: natural)
+            try renderCapsule(variant: natural)
+        }
         if filters.isEmpty {
             try writeIndex()
         }
@@ -673,6 +731,27 @@ private final class SnapshotRenderer {
                 summary: summary + " Placed on a flat dark backdrop. The body shows AppKit's flat grey fallback because the live HUD blur material needs an on-screen window; the real capsule is darker and translucent."
             )
         }
+    }
+
+    /// The accent-painted controls side by side on a white card, for comparing accent variants.
+    private func renderAccentStrip(variant: SnapshotVariant) throws {
+        let name = "accent-strip"
+        guard wants(variant, name) else { return }
+        let size = NSSize(width: 760, height: 150)
+        let host = NSHostingView(rootView: AccentStripView(theme: AppTheme.theme(for: variant.theme)))
+        host.frame = NSRect(origin: .zero, size: size)
+        let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        window.appearance = NSAppearance(named: .aqua)
+        retained.append(window)
+        KeyWindowEmulation.apply(to: window)
+        settle(0.3)
+        try write(
+            try capture(host),
+            variant: variant,
+            name: name,
+            summary: "The accent-painted controls on a white card: prominent and neutral buttons, segmented picker, progress bar, switches on and off, and the in-use badge."
+        )
     }
 
     /// The capsule is a borderless, transparent panel. Place the capture on a
@@ -1389,5 +1468,48 @@ private final class FixtureEnvironment {
         ]
 
         return ReadinessReport(generatedAt: Date(), checks: checks)
+    }
+}
+
+
+private struct AccentStripView: View {
+    let theme: AppTheme
+    @State private var selection = 1
+    @State private var isOn = true
+    @State private var isOff = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 14) {
+                Button("使用此模型") {}
+                    .buttonStyle(FlowtypeProminentButtonStyle(theme: theme))
+                Button("打开文件夹") {}
+                    .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
+                FlowtypeSegmentedPicker(
+                    theme: theme,
+                    selection: $selection,
+                    options: [(0, "小"), (1, "标准"), (2, "大")]
+                )
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark").font(.system(size: 9, weight: .bold))
+                    Text("正在使用").font(.caption).fontWeight(.semibold)
+                }
+                .foregroundStyle(theme.onAccent)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background { AccentSurface(theme: theme, shape: Capsule()) }
+            }
+            HStack(spacing: 24) {
+                FlowtypeProgressBar(theme: theme, value: 0.6).frame(width: 200)
+                Toggle("", isOn: $isOn).toggleStyle(FlowtypeSwitchToggleStyle(theme: theme)).labelsHidden()
+                Toggle("", isOn: $isOff).toggleStyle(FlowtypeSwitchToggleStyle(theme: theme)).labelsHidden()
+                Label("词典热词", systemImage: "book")
+                    .foregroundStyle(theme.accent)
+            }
+        }
+        .padding(20)
+        .frame(width: 760, height: 150, alignment: .leading)
+        .background(theme.elevatedSurface)
+        .flowtypeTheme(theme)
     }
 }

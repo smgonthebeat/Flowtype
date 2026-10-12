@@ -49,6 +49,34 @@ enum WaveformResponse {
     static let bounceHeight: CGFloat = 6
     static let bouncePeriod: CFTimeInterval = 1.0
     static let bounceStagger: CFTimeInterval = 0.15
+
+    /// Gradient themes (owner choice "3", 2026-10-12): a soft glow in each bar's own colour.
+    static let glowRadius: CGFloat = 3
+    static let glowOpacity: Float = 1
+}
+
+/// Spreads a theme's gradient stops across the bars, leading to trailing: the first bar takes the
+/// first stop, the last bar the last stop, and the bars between blend evenly.
+enum WaveformPalette {
+    static func colors(stops hexes: [String], count: Int) -> [HexColor.Components] {
+        let stops = hexes.map(HexColor.components)
+        guard count > 0, let first = stops.first else { return [] }
+        guard stops.count > 1, count > 1 else { return Array(repeating: first, count: count) }
+        let segments = Double(stops.count - 1)
+        return (0..<count).map { index in
+            let position = Double(index) / Double(count - 1) * segments
+            let lower = min(Int(position), stops.count - 2)
+            let fraction = position - Double(lower)
+            let from = stops[lower]
+            let to = stops[lower + 1]
+            return HexColor.Components(
+                red: from.red + (to.red - from.red) * fraction,
+                green: from.green + (to.green - from.green) * fraction,
+                blue: from.blue + (to.blue - from.blue) * fraction,
+                alpha: from.alpha + (to.alpha - from.alpha) * fraction
+            )
+        }
+    }
 }
 
 final class WaveformView: NSView {
@@ -82,8 +110,37 @@ final class WaveformView: NSView {
     func setBarColor(_ color: NSColor) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        (barLayers + dotLayers).forEach { $0.backgroundColor = color.cgColor }
+        (barLayers + dotLayers).forEach { layer in
+            layer.backgroundColor = color.cgColor
+            layer.shadowOpacity = 0
+        }
         CATransaction.commit()
+    }
+
+    /// Gradient themes: bars and dots each take their place along the stops and glow in that colour.
+    func setBarGradient(stops: [String]) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        for (layers, count) in [(barLayers, WaveformResponse.barCount), (dotLayers, WaveformResponse.dotCount)] {
+            let colors = WaveformPalette.colors(stops: stops, count: count).map(Self.cgColor)
+            for (layer, color) in zip(layers, colors) {
+                layer.backgroundColor = color
+                layer.shadowColor = color
+                layer.shadowOffset = .zero
+                layer.shadowRadius = WaveformResponse.glowRadius
+                layer.shadowOpacity = WaveformResponse.glowOpacity
+            }
+        }
+        CATransaction.commit()
+    }
+
+    private static func cgColor(_ components: HexColor.Components) -> CGColor {
+        NSColor(
+            srgbRed: components.red,
+            green: components.green,
+            blue: components.blue,
+            alpha: components.alpha
+        ).cgColor
     }
 
     /// Drops the bars to their resting height, for states without live audio.
@@ -137,6 +194,8 @@ final class WaveformView: NSView {
     }
 
     private func setupLayers() {
+        // The glow on a full-height bar reaches a few points past the view's edges.
+        layer?.masksToBounds = false
         for _ in 0..<WaveformResponse.barCount {
             let bar = CALayer()
             bar.backgroundColor = NSColor.white.withAlphaComponent(0.9).cgColor

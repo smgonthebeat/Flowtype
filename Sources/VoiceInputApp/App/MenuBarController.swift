@@ -144,7 +144,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             .withSymbolConfiguration(configuration)
     }
 
-    private static func makeStatusIcon() -> NSImage? {
+    /// Internal (not private) so the asset-library renderer can export the exact menu bar icon.
+    static func makeStatusIcon() -> NSImage? {
         let sourceImage: NSImage?
         if let url = Bundle.main.url(forResource: "Flowtype-logo", withExtension: "svg") {
             sourceImage = NSImage(contentsOf: url)

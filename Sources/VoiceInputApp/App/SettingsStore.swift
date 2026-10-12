@@ -161,7 +161,7 @@ final class SettingsStore: ObservableObject {
     static func storedAppThemeID(defaults: UserDefaults = .standard) -> AppThemeID {
         guard let raw = defaults.string(forKey: Key.appThemeID),
               let value = AppThemeID(rawValue: raw) else {
-            return .oscurange
+            return .flowtype
         }
         return value
     }

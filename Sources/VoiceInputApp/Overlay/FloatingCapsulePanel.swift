@@ -166,8 +166,8 @@ final class FloatingCapsulePanel {
         return panel.contentView
     }
 
-    /// Kind decides the colours (design-spec 5.10): voice-coloured live bars while listening,
-    /// warning bars for the countdown, pulsing dots while transcribing, a success check for
+    /// Kind decides the colours (design-spec 5.10): voice-coloured live bars while listening (the
+    /// accent gradient with a glow for a gradient theme such as Flowtype), warning bars for the countdown, pulsing dots while transcribing, a success check for
     /// confirmations and a warning triangle plus a thin warning outline for failures.
     private func apply(_ presentation: CapsulePresentation) {
         let theme = themeProvider()
@@ -186,7 +186,11 @@ final class FloatingCapsulePanel {
         case .warning:
             waveformView.setBarColor(NSColor(theme.warning))
         default:
-            waveformView.setBarColor(NSColor(theme.voice))
+            if let stops = theme.accentGradientHexes {
+                waveformView.setBarGradient(stops: stops)
+            } else {
+                waveformView.setBarColor(NSColor(theme.voice))
+            }
         }
         if kindChanged || !presentation.pulsesWaveform {
             waveformView.setPulsing(presentation.pulsesWaveform, reduceMotion: shouldReduceMotion)

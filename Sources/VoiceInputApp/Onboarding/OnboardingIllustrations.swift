@@ -2,7 +2,7 @@ import SwiftUI
 
 // Pictures for the onboarding pages. They redraw the real capsule, the fn key and a
 // text field so a user can follow the pages without reading (owner request,
-// 2026-10-10). The capsule reuses `WaveformResponse` and the theme's voice colour,
+// 2026-10-10). The capsule reuses `WaveformResponse` and the theme's voice colours,
 // so it moves and looks like the real recording capsule.
 
 // MARK: - Capsule
@@ -48,26 +48,34 @@ struct MockCapsuleView: View {
         switch kind {
         case .listening:
             let fractions = WaveformResponse.barFractions(for: CGFloat(level), at: time)
+            let colors = theme.voiceColors(count: fractions.count)
             HStack(spacing: WaveformResponse.barGap * scale) {
                 ForEach(fractions.indices, id: \.self) { index in
                     Capsule()
-                        .fill(theme.voice)
+                        .fill(colors[index])
                         .frame(
                             width: WaveformResponse.barWidth * scale,
                             height: max(3, 32 * scale * fractions[index])
                         )
+                        .shadow(color: glow(colors[index]), radius: WaveformResponse.glowRadius * scale)
                 }
             }
         case .transcribing:
+            let colors = theme.voiceColors(count: WaveformResponse.dotCount)
             HStack(spacing: WaveformResponse.dotGap * scale) {
                 ForEach(0..<WaveformResponse.dotCount, id: \.self) { index in
                     Circle()
-                        .fill(theme.voice)
+                        .fill(colors[index])
                         .frame(width: WaveformResponse.dotSize * scale, height: WaveformResponse.dotSize * scale)
+                        .shadow(color: glow(colors[index]), radius: WaveformResponse.glowRadius * scale)
                         .offset(y: -dotLift(index: index) * scale)
                 }
             }
         }
+    }
+
+    private func glow(_ color: Color) -> Color {
+        theme.voiceGlows ? color.opacity(Double(WaveformResponse.glowOpacity)) : .clear
     }
 
     private func dotLift(index: Int) -> CGFloat {
@@ -109,7 +117,7 @@ struct MacKeycap: View {
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(LinearGradient(colors: [Color(white: 0.115), Color(white: 0.075)], startPoint: .top, endPoint: .bottom))
             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(LinearGradient(colors: [theme.voice, theme.voice.opacity(0.85)], startPoint: .top, endPoint: .bottom))
+                .fill(heldFill)
                 .opacity(amount)
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .strokeBorder(
@@ -134,8 +142,16 @@ struct MacKeycap: View {
         .frame(width: width, height: height)
         .offset(y: 2.5 * amount)
         .shadow(color: .black.opacity(0.7 * (1 - amount)), radius: 0, x: 0, y: 2.5 * (1 - amount))
-        .shadow(color: theme.voice.opacity(0.55 * amount), radius: 18)
+        .shadow(color: theme.voiceGlow.opacity(0.55 * amount), radius: 18)
         .opacity(isDimmed ? 0.7 : 1)
+    }
+
+    /// The held key lights up in the recording colour: the blend for a gradient theme.
+    private var heldFill: AnyShapeStyle {
+        guard theme.voiceGlows else {
+            return AnyShapeStyle(LinearGradient(colors: [theme.voice, theme.voice.opacity(0.85)], startPoint: .top, endPoint: .bottom))
+        }
+        return theme.voiceFill
     }
 
     @ViewBuilder
@@ -241,7 +257,7 @@ struct MacKeyboardCorner: View {
             .background {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .trim(from: 0, to: min(max(holdProgress, 0), 1))
-                    .stroke(theme.voice, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .stroke(theme.voiceFill, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .frame(width: keyWidth + 10, height: keyHeight + 10)
                     .offset(y: 1)
                     .opacity(amount)
@@ -292,17 +308,17 @@ struct MockTextWindow: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(theme.surface)
+                .fill(theme.backdrop == nil ? theme.surface : theme.elevatedSurface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(theme.border, lineWidth: 1)
+                .strokeBorder(theme.cardEdge, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.25), radius: 14, y: 6)
     }
 
     private var caret: Text {
-        Text("|").foregroundColor(theme.voice).fontWeight(.light)
+        Text("|").foregroundColor(theme.voiceInk).fontWeight(.light)
     }
 
     private var visibleText: String {
@@ -451,7 +467,7 @@ struct DictationScene: View {
                         .foregroundStyle(theme.onAccent)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(theme.voice))
+                        .background(Capsule().fill(theme.voiceFill))
                 } else {
                     Label(copy.holdKeyPointer, systemImage: "arrow.up")
                         .foregroundStyle(theme.secondaryInk)

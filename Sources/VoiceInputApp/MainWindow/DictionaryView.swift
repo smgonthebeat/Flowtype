@@ -14,6 +14,9 @@ struct DictionaryView: View {
     @State private var errorMessage = ""
     @State private var isShowingError = false
     @State private var duplicateFeedback: String?
+    @State private var isControlsPinned = false
+
+    private static let scrollSpace = "dictionaryScroll"
 
     private let columns = [
         GridItem(.adaptive(minimum: 190, maximum: 280), spacing: 16, alignment: .topLeading)
@@ -35,7 +38,7 @@ struct DictionaryView: View {
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 10)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .background(theme.pageStripSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                                     .transition(.opacity)
                             }
                         }
@@ -48,7 +51,24 @@ struct DictionaryView: View {
                     } header: {
                         dictionaryControls
                             .padding(.vertical, 8)
-                            .background(theme.surface)
+                            // Pinned over scrolling rows, so it must stay opaque enough to hide them.
+                            // A backdrop theme has no flat page colour: it gets a soft frosted wash that
+                            // only appears once the bar is pinned, so it is not a grey block at rest.
+                            .background {
+                                if theme.backdrop == nil {
+                                    theme.surface
+                                } else {
+                                    PinnedFrostedWash(isPinned: isControlsPinned)
+                                }
+                            }
+                            .background {
+                                GeometryReader { proxy in
+                                    Color.clear.preference(
+                                        key: PinnedControlsOffsetKey.self,
+                                        value: proxy.frame(in: .named(Self.scrollSpace)).minY
+                                    )
+                                }
+                            }
                     }
                 }
                 .padding(.horizontal, MainWindowDetailLayout.horizontalPadding(forWidth: geometry.size.width))
@@ -57,7 +77,14 @@ struct DictionaryView: View {
                 .frame(maxWidth: MainWindowDetailLayout.dictionaryContentMaxWidth, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(theme.surface)
+            .coordinateSpace(name: Self.scrollSpace)
+            .onPreferenceChange(PinnedControlsOffsetKey.self) { minY in
+                // A pinned section header stays at the top of the scroll view (minY 0); in the
+                // normal flow it sits lower. A little slack absorbs rounding.
+                let pinned = minY <= 1
+                if pinned != isControlsPinned { isControlsPinned = pinned }
+            }
+            .themedPageBackground(theme)
         }
         .onAppear(perform: reload)
         .onChange(of: state.refreshID) {
@@ -93,7 +120,7 @@ struct DictionaryView: View {
                 .foregroundStyle(theme.secondaryInk)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(theme.controlSurface, in: Capsule())
+                .background(theme.pageStripSurface, in: Capsule())
         }
     }
 
@@ -277,5 +304,34 @@ private struct HotwordCard: View {
         .contextMenu {
             Button(copy.deleteHotwordTitle, role: .destructive, action: deleteAction)
         }
+    }
+}
+
+private struct PinnedControlsOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = .greatestFiniteMagnitude
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+/// The backdrop themes' stand-in for a flat page colour behind the pinned dictionary controls.
+/// It is invisible until rows scroll under the bar, and its edges are feathered so it never reads
+/// as a rectangle on the artwork.
+private struct PinnedFrostedWash: View {
+    let isPinned: Bool
+
+    var body: some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .padding(-24)
+            .mask {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .padding(-8)
+                    .blur(radius: 6)
+            }
+            .opacity(isPinned ? 1 : 0)
+            .animation(.easeOut(duration: 0.15), value: isPinned)
+            .allowsHitTesting(false)
     }
 }

@@ -59,8 +59,9 @@ final class HelpWindowController: NSWindowController {
         let theme = AppTheme.theme(for: settingsStore.appThemeID)
 
         window?.title = copy.windowTitle
+        if let window { WindowChrome.applyBackdropLayout(theme, to: window) }
         window?.backgroundColor = theme.usesSystemMaterials ? .windowBackgroundColor : NSColor(theme.surface)
-        window?.appearance = theme.usesSystemMaterials ? nil : NSAppearance(named: .darkAqua)
+        window?.appearance = theme.windowAppearance
         window?.contentView = NSHostingView(
             rootView: HelpWindowView(copy: copy, actions: actions, initialExpandedID: expandedProblemID)
                 .flowtypeTheme(theme)
@@ -117,7 +118,8 @@ private struct HelpWindowView: View {
             .padding(28)
             .frame(maxWidth: 720, alignment: .topLeading)
         }
-        .background(theme.surface)
+        .backdropTitlebarFade(theme)
+        .background(ThemeBackdropView(theme: theme))
     }
 
     // MARK: Basics
@@ -141,7 +143,7 @@ private struct HelpWindowView: View {
                             .scaledFont(size: 11, weight: .semibold)
                             .foregroundStyle(theme.onAccent)
                             .frame(width: 18, height: 18)
-                            .background(theme.accent, in: Circle())
+                            .background { AccentSurface(theme: theme, shape: Circle()) }
                         Text(rule)
                             .scaledFont(.callout)
                             .foregroundStyle(theme.ink)

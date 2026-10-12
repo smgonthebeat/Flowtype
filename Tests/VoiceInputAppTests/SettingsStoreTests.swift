@@ -17,7 +17,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.appleSpeechLocaleIdentifier, "zh-CN")
         XCTAssertEqual(store.maxRecordingDuration, 180)
         XCTAssertEqual(store.uiLanguage, .chinese)
-        XCTAssertEqual(store.appThemeID, .oscurange)
+        XCTAssertEqual(store.appThemeID, .flowtype)
         XCTAssertEqual(store.selectedModelID, "qwen3-asr-0.6b")
         XCTAssertTrue(store.isSmartNumericFormattingEnabled)
         XCTAssertFalse(store.isAcademicReferenceFormattingEnabled)
@@ -124,17 +124,29 @@ final class SettingsStoreTests: XCTestCase {
 
         defaults.set("missing-theme", forKey: "appThemeID")
 
-        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .oscurange)
+        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .flowtype)
     }
 
-    func testRemovedThemeValuesFallBackToOscurange() {
+    func testPersistsFlowtypeThemeAndReloadsIt() {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let store = SettingsStore(defaults: defaults)
+
+        // Flowtype is the default, so pick another theme first to make the write observable.
+        store.appThemeID = .oscurange
+        store.appThemeID = .flowtype
+
+        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .flowtype)
+        XCTAssertEqual(defaults.string(forKey: "appThemeID"), "flowtype")
+    }
+
+    func testRemovedThemeValuesFallBackToFlowtype() {
         let defaults = UserDefaults(suiteName: UUID().uuidString)!
 
         defaults.set("tokyo-night", forKey: "appThemeID")
-        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .oscurange)
+        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .flowtype)
 
         defaults.set("catppuccin", forKey: "appThemeID")
-        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .oscurange)
+        XCTAssertEqual(SettingsStore(defaults: defaults).appThemeID, .flowtype)
     }
 
     func testAppThemeIDPostsChangeNotificationOnlyWhenValueChanges() {

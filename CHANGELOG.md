@@ -31,6 +31,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.8` introduces Flowtype Dawn, a light appearance and the new
+  default theme: a clean white window with soft peach and sky light in the
+  corners, white cards with a faint violet shadow, a peach-to-lilac-to-sky
+  accent, and light glass stat-card artwork on Home. The recording capsule's
+  waveform and transcribing dots follow the same gradient with a soft glow, and
+  the onboarding recording illustrations match. New installs open in Flowtype
+  Dawn; a theme you already chose is kept, and the Apple, Codex and Oscurange
+  themes are unchanged. Dictation behaviour is unchanged from Preview 7.
 - `v0.1.0-preview.7` introduces the new Flowtype app icon: a frosted glass tile
   with soft warm and blue light, carrying the same microphone, sound-wave and
   speech-bubble mark. The website and README use the same icon. App behaviour

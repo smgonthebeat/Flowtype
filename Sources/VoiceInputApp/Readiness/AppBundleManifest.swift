@@ -11,7 +11,8 @@ struct AppBundleManifest: Decodable {
         "helper-manifest",
         "flowtype-icon",
         "home-card-artwork",
-        "qwen-logo"
+        "qwen-logo",
+        "theme-backdrop"
     ]
 
     struct Entry: Decodable {

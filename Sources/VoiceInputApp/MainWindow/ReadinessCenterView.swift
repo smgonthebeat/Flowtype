@@ -143,7 +143,7 @@ struct ReadinessCenterView: View {
                         .foregroundStyle(theme.danger)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .themedInset(theme, cornerRadius: 8)
+                        .themedPageStrip(theme, cornerRadius: 8)
                     }
                 }
                 .padding(.horizontal, MainWindowDetailLayout.horizontalPadding(forWidth: geometry.size.width))
@@ -152,7 +152,7 @@ struct ReadinessCenterView: View {
                 .frame(maxWidth: MainWindowDetailLayout.readinessContentMaxWidth, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(theme.surface)
+            .themedPageBackground(theme)
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             if isAwaitingExternalPermission, activeAction == nil {
@@ -205,7 +205,12 @@ struct ReadinessCenterView: View {
             .tint(theme.ink)
             .padding(.horizontal, 10)
             .frame(minHeight: 22)
-            .background(theme.controlSurface, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .background(theme.pageStripSurface, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .overlay {
+                if theme.backdrop != nil {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(theme.cardEdge, lineWidth: 1)
+                }
+            }
             .fixedSize()
 
             Button {
@@ -215,7 +220,7 @@ struct ReadinessCenterView: View {
             } label: {
                 Label(copy.readinessRefreshTitle, systemImage: "arrow.clockwise")
             }
-            .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme))
+            .buttonStyle(FlowtypeNeutralButtonStyle(theme: theme, onPage: true))
             .disabled(availability.isRefreshDisabled)
         }
     }

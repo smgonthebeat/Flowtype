@@ -23,6 +23,18 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/HomeCardArtwork-clock.png`
 - `website/assets/download-apple-silicon.svg`
 
+## Flowtype Dawn Theme Images
+
+`Resources/FlowtypeBackdrop-topLeading.png` and
+`Resources/FlowtypeBackdrop-bottomTrailing.png` are the corner light of the
+Flowtype Dawn window background. They were cut from the colour field of the
+same owner-created image-generation reference used for the app icon (see
+below), with its line work removed; the reference image itself is not shipped.
+`Resources/HomeCardArtwork-mic-light.png`, `-wave-light.png`, `-docs-light.png`
+and `-clock-light.png` are light glass versions of the ChatGPT-generated Home
+card artwork listed above, produced from those originals by a local
+image-processing script without adding new generated content.
+
 ## App Icon
 
 Since October 2026, `Resources/Flowtype.icns` is a new app icon. It was rendered

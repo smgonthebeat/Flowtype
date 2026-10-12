@@ -522,6 +522,11 @@ private struct HelperRuntimeFixture {
             atomically: true,
             encoding: .utf8
         )
+        try "backdrop".write(
+            to: resourceURL.appendingPathComponent("FlowtypeBackdrop-topLeading.png"),
+            atomically: true,
+            encoding: .utf8
+        )
         let uvLockHash = try HelperManifest.uvLockHash(forHelperRoot: bundled)
         try HelperManifest(
             helperSchema: 1,
@@ -574,6 +579,11 @@ private struct HelperRuntimeFixture {
                 id: "home-card-artwork-mic",
                 path: "Contents/Resources/HomeCardArtwork-mic.png",
                 group: "home-card-artwork"
+            ),
+            entry(
+                id: "theme-backdrop-top-leading",
+                path: "Contents/Resources/FlowtypeBackdrop-topLeading.png",
+                group: "theme-backdrop"
             ),
             entry(id: "qwen-logo", path: "Contents/Resources/Qwen-logo.svg", group: "qwen-logo"),
             entry(

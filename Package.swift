@@ -21,7 +21,13 @@ let package = Package(
                 .copy("../../Resources/HomeCardArtwork-mic.png"),
                 .copy("../../Resources/HomeCardArtwork-wave.png"),
                 .copy("../../Resources/HomeCardArtwork-docs.png"),
-                .copy("../../Resources/HomeCardArtwork-clock.png")
+                .copy("../../Resources/HomeCardArtwork-clock.png"),
+                .copy("../../Resources/HomeCardArtwork-mic-light.png"),
+                .copy("../../Resources/HomeCardArtwork-wave-light.png"),
+                .copy("../../Resources/HomeCardArtwork-docs-light.png"),
+                .copy("../../Resources/HomeCardArtwork-clock-light.png"),
+                .copy("../../Resources/FlowtypeBackdrop-topLeading.png"),
+                .copy("../../Resources/FlowtypeBackdrop-bottomTrailing.png")
             ],
             linkerSettings: [
                 .linkedFramework("AppKit"),

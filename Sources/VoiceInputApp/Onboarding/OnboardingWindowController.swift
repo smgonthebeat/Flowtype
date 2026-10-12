@@ -72,8 +72,9 @@ final class OnboardingWindowController: NSWindowController, NSWindowDelegate {
             self?.close()
         }
 
+        if let window { WindowChrome.applyBackdropLayout(theme, to: window) }
         window?.backgroundColor = theme.usesSystemMaterials ? .windowBackgroundColor : NSColor(theme.surface)
-        window?.appearance = theme.usesSystemMaterials ? nil : NSAppearance(named: .darkAqua)
+        window?.appearance = theme.windowAppearance
         window?.contentView = NSHostingView(
             rootView: OnboardingView(
                 model: VoiceInputModel.model(for: settingsStore.selectedModelID),

@@ -60,10 +60,11 @@ struct MainSidebarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(
-                    isSelected ? theme.accent : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                )
+                .background {
+                    if isSelected {
+                        AccentSurface(theme: theme, shape: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                }
         }
         .buttonStyle(.plain)
     }

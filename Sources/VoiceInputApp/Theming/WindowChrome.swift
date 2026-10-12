@@ -11,10 +11,21 @@ enum WindowChrome {
         window.titlebarSeparatorStyle = .none
     }
 
+    /// Settings, Help and onboarding are ordinary titled windows. A theme with a backdrop paints it
+    /// under the titlebar as well, so a flat titlebar strip does not cut through the artwork.
+    /// Other themes keep the standard layout.
+    static func applyBackdropLayout(_ theme: AppTheme, to window: NSWindow) {
+        if theme.backdrop != nil {
+            window.styleMask.insert(.fullSizeContentView)
+        } else {
+            window.styleMask.remove(.fullSizeContentView)
+        }
+    }
+
     static func applyTheme(_ theme: AppTheme, to window: NSWindow) {
         window.titlebarAppearsTransparent = true
         window.backgroundColor = theme.usesSystemMaterials ? .windowBackgroundColor : NSColor(theme.surface)
-        window.appearance = theme.usesSystemMaterials ? nil : NSAppearance(named: .darkAqua)
+        window.appearance = theme.windowAppearance
         window.contentView?.needsDisplay = true
     }
 }

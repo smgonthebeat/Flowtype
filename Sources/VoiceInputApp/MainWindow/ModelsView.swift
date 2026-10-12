@@ -43,7 +43,7 @@ struct ModelsView: View {
                 .frame(maxWidth: MainWindowDetailLayout.modelsContentMaxWidth, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(theme.surface)
+            .themedPageBackground(theme)
         }
         .onAppear {
             loadHardwareSummaryIfNeeded()
@@ -111,7 +111,7 @@ struct ModelsView: View {
         }
         .scaledFont(.callout)
         .padding(14)
-        .themedInset(theme, cornerRadius: 10)
+        .themedPageStrip(theme, cornerRadius: 10)
     }
 
     private func header(copy: AppCopy.Texts) -> some View {
@@ -195,7 +195,7 @@ struct ModelsView: View {
         .overlay {
             if isSelected {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(theme.accent.opacity(0.7), lineWidth: 1.5)
+                    .stroke(theme.accentOutline(solidOpacity: 0.7), lineWidth: 1.5)
             }
         }
         .contextMenu {
@@ -471,7 +471,7 @@ struct ModelsView: View {
         .foregroundStyle(theme.onAccent)
         .padding(.horizontal, 9)
         .padding(.vertical, 4)
-        .background(theme.accent, in: Capsule())
+        .background { AccentSurface(theme: theme, shape: Capsule()) }
     }
 
     private func manager(for model: VoiceInputModel) -> ModelManager {

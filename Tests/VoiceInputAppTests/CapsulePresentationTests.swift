@@ -113,4 +113,34 @@ final class CapsulePresentationTests: XCTestCase {
         XCTAssertFalse(presentation.showsWaveform)
         XCTAssertFalse(presentation.animatesWaveform)
     }
+
+    func testGradientPaletteRunsFromFirstToLastStopAcrossTheBars() {
+        // Owner choice "3" (2026-10-12): bars take the Flowtype blend leading to trailing.
+        let stops = FlowtypeAccent.fillStops
+        let bars = WaveformPalette.colors(stops: stops, count: WaveformResponse.barCount)
+
+        XCTAssertEqual(bars.count, 9)
+        XCTAssertEqual(bars.first, HexColor.components(stops[0]))
+        XCTAssertEqual(bars[4], HexColor.components(stops[1]))
+        XCTAssertEqual(bars.last, HexColor.components(stops[2]))
+        // Between stops the blend moves steadily: bar 2 sits halfway from peach to lilac.
+        let peach = HexColor.components(stops[0])
+        let lilac = HexColor.components(stops[1])
+        XCTAssertEqual(bars[2].red, (peach.red + lilac.red) / 2, accuracy: 1e-9)
+        XCTAssertEqual(bars[2].blue, (peach.blue + lilac.blue) / 2, accuracy: 1e-9)
+    }
+
+    func testGradientPaletteGivesEachTranscribingDotOneStop() {
+        let stops = FlowtypeAccent.fillStops
+        let dots = WaveformPalette.colors(stops: stops, count: WaveformResponse.dotCount)
+
+        XCTAssertEqual(dots, stops.map(HexColor.components))
+    }
+
+    func testGradientPaletteHandlesDegenerateInput() {
+        XCTAssertEqual(WaveformPalette.colors(stops: ["#FBD8C3"], count: 3), Array(repeating: HexColor.components("#FBD8C3"), count: 3))
+        XCTAssertEqual(WaveformPalette.colors(stops: FlowtypeAccent.fillStops, count: 1), [HexColor.components("#FBD8C3")])
+        XCTAssertTrue(WaveformPalette.colors(stops: [], count: 9).isEmpty)
+        XCTAssertTrue(WaveformPalette.colors(stops: FlowtypeAccent.fillStops, count: 0).isEmpty)
+    }
 }

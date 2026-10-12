@@ -30,7 +30,7 @@ struct HomeView: View {
                     .frame(maxWidth: MainWindowDetailLayout.homeContentMaxWidth, alignment: .topLeading)
                     .frame(maxWidth: .infinity, alignment: .top)
             }
-            .background(theme.surface)
+            .themedPageBackground(theme)
         }
         .onAppear(perform: reload)
         .onChange(of: state.refreshID) {
@@ -267,8 +267,7 @@ struct HomeView: View {
         .scaledFont(.callout)
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.controlSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .themedPageStrip(theme, cornerRadius: 8)
     }
 
     private var historyControls: some View {
@@ -460,7 +459,7 @@ private struct UsageMetricCard: View {
         ZStack(alignment: .bottom) {
             MetricCardSurface(tint: tint, theme: theme)
 
-            UsageCardIllustration(kind: illustration, tint: tint)
+            UsageCardIllustration(kind: illustration, tint: tint, theme: theme)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(.trailing, -18)
                 .padding(.bottom, -18)
@@ -505,8 +504,10 @@ private struct UsageMetricCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(theme.border.opacity(0.8), lineWidth: 1)
+                .stroke(theme.backdrop == nil ? theme.border.opacity(0.8) : theme.cardEdge, lineWidth: 1)
         }
+        // The same Dawn-violet lift as `themedCard`; a no-op for themes without a backdrop.
+        .themedCardShadow(theme)
     }
 
     /// Numbers large, units small, aligned on a shared text baseline.
@@ -536,6 +537,23 @@ private struct MetricCardSurface: View {
     let theme: AppTheme
 
     var body: some View {
+        if theme.backdrop != nil {
+            // Opaque white, with only the faint tint glow in the bottom-trailing corner.
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(theme.elevatedSurface)
+                .overlay(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(tint.opacity(0.10))
+                        .frame(width: 190, height: 190)
+                        .blur(radius: 46)
+                        .offset(x: 76, y: 72)
+                }
+        } else {
+            flatThemeSurface
+        }
+    }
+
+    private var flatThemeSurface: some View {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
             .fill(
                 LinearGradient(
@@ -568,9 +586,18 @@ private struct MetricCardSurface: View {
 private struct UsageCardIllustration: View {
     let kind: UsageMetricCard.Illustration
     let tint: Color
+    let theme: AppTheme
+
+    /// The glass in the original artwork is baked in as dark pixels. Light custom themes get a
+    /// frosted-white version of the same artwork instead; every other theme keeps the original.
+    private var usesLightArtwork: Bool {
+        !theme.isDark && !theme.usesSystemMaterials
+    }
 
     var body: some View {
-        if let image = HomeCardArtworkResource.image(named: kind.artworkResourceName) {
+        if let image = HomeCardArtworkResource.image(
+            named: kind.artworkResourceName + (usesLightArtwork ? "-light" : "")
+        ) {
             GeometryReader { geometry in
                 let artworkSize = kind.artworkSize(in: geometry.size)
 
@@ -582,7 +609,7 @@ private struct UsageCardIllustration: View {
                     .frame(width: artworkSize.width, height: artworkSize.height)
                     .position(kind.artworkPosition(in: geometry.size, artworkSize: artworkSize))
                     .shadow(color: tint.opacity(0.16), radius: 18, x: 0, y: 8)
-                    .shadow(color: .black.opacity(0.28), radius: 16, x: 0, y: 10)
+                    .shadow(color: .black.opacity(usesLightArtwork ? 0.10 : 0.28), radius: 16, x: 0, y: 10)
             }
         } else {
             fallbackArtwork
