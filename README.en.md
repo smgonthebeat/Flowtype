@@ -78,7 +78,7 @@ More examples:
 | x follows a normal distribution with mean mu and variance sigma squared | X ∼ N(μ, σ²) | $X \sim N(\mu, \sigma^2)$ |
 | the confidence interval is x bar plus or minus z sub alpha over two times sigma over root n | the confidence interval is x̄ ± z_{α/2}·σ/√n | the confidence interval is $\bar{x} \pm z_{\alpha/2} \cdot \frac{\sigma}{\sqrt{n}}$ |
 | so theta hat is an unbiased estimator of theta | so θ̂ is an unbiased estimator of θ | so $\hat{\theta}$ is an unbiased estimator of $\theta$ |
-| the variance of beta one hat equals sigma squared over n | Var(β̂₁) = σ²/n | $\operatorname{Var}(\hat{\beta}_1) = \frac{\sigma^2}{n}$ |
+| the variance of beta one hat equals sigma squared over n | Var(β̂₁) = σ²/n | $\mathrm{Var}(\hat{\beta}_1) = \frac{\sigma^2}{n}$ |
 | probability of A given B equals probability of B given A times probability of A over probability of B | P(A \| B) = P(B \| A)·P(A)/P(B) | $P(A \mid B) = P(B \mid A) \cdot \frac{P(A)}{P(B)}$ |
 | the sum from k equals one to infinity of one over k squared equals pi squared over six | ∑_{k=1}^{∞} 1/k² = π²/6 | $\sum_{k=1}^{\infty} \frac{1}{k^2} = \frac{\pi^2}{6}$ |
 | integral from negative infinity to infinity of e to the minus x squared dx equals root pi | ∫_{−∞}^{∞} e^{−x²} dx = √π | $\int_{-\infty}^{\infty} e^{-x^2}\\,dx = \sqrt{\pi}$ |

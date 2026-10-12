@@ -78,7 +78,7 @@ Flowtype 用在本机运行的 Qwen3-ASR 识别中英混合语音。把你常用
 | x 服从均值为 mu 方差为 sigma squared 的正态分布 | X ∼ N(μ, σ²) | $X \sim N(\mu, \sigma^2)$ |
 | 所以置信区间是 x bar 加减 z sub alpha over two 乘以 sigma over root n | 所以置信区间是 x̄ ± z_{α/2}·σ/√n | 所以置信区间是 $\bar{x} \pm z_{\alpha/2} \cdot \frac{\sigma}{\sqrt{n}}$ |
 | 我们拒绝 h zero，因为 p value 小于零点零五 | 我们拒绝 H₀，因为 p < 0.05 | 我们拒绝 $H_0$，因为 $p \lt 0.05$ |
-| beta one hat 的方差等于 sigma squared 除以 n | Var(β̂₁) = σ²/n | $\operatorname{Var}(\hat{\beta}_1) = \frac{\sigma^2}{n}$ |
+| beta one hat 的方差等于 sigma squared 除以 n | Var(β̂₁) = σ²/n | $\mathrm{Var}(\hat{\beta}_1) = \frac{\sigma^2}{n}$ |
 | probability of A given B equals probability of B given A times probability of A over probability of B | P(A \| B) = P(B \| A)·P(A)/P(B) | $P(A \mid B) = P(B \mid A) \cdot \frac{P(A)}{P(B)}$ |
 | 面积就是 integral from zero to one of f of x dx | 面积就是 ∫₀¹ f(x) dx | 面积就是 $\int_{0}^{1} f(x)\\,dx$ |
 | integral from negative infinity to infinity of e to the minus x squared dx equals root pi | ∫_{−∞}^{∞} e^{−x²} dx = √π | $\int_{-\infty}^{\infty} e^{-x^2}\\,dx = \sqrt{\pi}$ |
