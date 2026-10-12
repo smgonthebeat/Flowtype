@@ -7,8 +7,9 @@
       <stop offset="1" stop-color="#090b10"/>
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#ffb17d"/>
-      <stop offset="1" stop-color="#ff8068"/>
+      <stop offset="0" stop-color="#FBD8C3"/>
+      <stop offset="0.5" stop-color="#E3CFE0"/>
+      <stop offset="1" stop-color="#ACCDF2"/>
     </linearGradient>
   </defs>
   <rect x="1" y="1" width="458" height="110" rx="22" fill="url(#background)" stroke="#3b414d" stroke-width="2"/>
@@ -18,5 +19,5 @@
   <text x="114" y="67" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="28" font-weight="750">Apple Silicon</text>
   <text x="116" y="89" fill="#aeb5c2" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="13" font-weight="500">macOS 14+ · Preview</text>
   <rect x="381" y="42" width="57" height="28" rx="14" fill="url(#accent)"/>
-  <text x="409.5" y="61" text-anchor="middle" fill="#17100d" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="12" font-weight="800" letter-spacing="0.6">DMG</text>
+  <text x="409.5" y="61" text-anchor="middle" fill="#2F3034" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="12" font-weight="800" letter-spacing="0.6">DMG</text>
 </svg>

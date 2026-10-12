@@ -38,7 +38,7 @@ image-processing script without adding new generated content.
 ## README Images
 
 The `website/assets/readme/*.webp` images shown in `README.md` and
-`README.en.md` were produced locally from project-owned material only. The page
+`README.zh-CN.md` were produced locally from project-owned material only. The page
 screenshots (`dictionary`, `models`, `onboarding`) are offscreen
 renders of the Flowtype interface made by the project's own test harness, with
 synthetic demo history, hotwords and statistics. The composed cards (`hero`,
