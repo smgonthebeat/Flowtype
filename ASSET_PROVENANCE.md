@@ -35,6 +35,22 @@ and `-clock-light.png` are light glass versions of the ChatGPT-generated Home
 card artwork listed above, produced from those originals by a local
 image-processing script without adding new generated content.
 
+## README Images
+
+The `website/assets/readme/*.webp` images shown in `README.md` and
+`README.en.md` were produced locally from project-owned material only. The page
+screenshots (`dictionary`, `models`, `onboarding`) are offscreen
+renders of the Flowtype interface made by the project's own test harness, with
+synthetic demo history, hotwords and statistics. The composed cards (`hero`,
+`video`, `flow`, `stats`, `math`) are local HTML layouts rendered to images; they
+combine the app icon, the Flowtype Dawn backdrop and Home card artwork above,
+renders of the recording capsule and onboarding welcome picture, and text. The
+`stats` cards carry the project owner's real aggregate usage as of 2026-10-12
+(21,578 dictations, 63 hours 9 minutes dictated, 1,005,000 characters and words,
+251 hours 37 minutes estimated saved), which the owner chose to publish; no
+transcript content is shown. The `video` image is a placeholder for a launch
+video. No new generated imagery was added.
+
 ## App Icon
 
 Since October 2026, `Resources/Flowtype.icns` is a new app icon. It was rendered

@@ -1,71 +1,140 @@
 <p align="center">
-  <img src="website/assets/flowtype-app-icon.png" alt="Flowtype app icon" width="160">
+  <img src="website/assets/readme/hero-en.webp" alt="Flowtype icon and tagline: Hold Fn. Speak. It lands at your cursor. Recognised on your Mac · Chinese + English · Spoken math · Free and open source" width="100%">
 </p>
 
-# Flowtype
+<p align="center">
+  English · <a href="README.md">简体中文</a>
+</p>
 
-English · [简体中文](README.md)
-
-> **Release status:** The [`v0.1.0-preview.8`](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8) Apple Silicon DMG is available. It uses a local development signature and is **not signed with an Apple Developer ID or notarized by Apple**. macOS will block the first launch until the user explicitly chooses Open Anyway in System Settings → Privacy & Security.
->
-> [First-launch guide ↓](#first-launch)
-
+<p align="center">
 <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.8/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
+</p>
 
-[Verify SHA-256](https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.8/Flowtype.dmg.sha256) · [Release notes](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8) · [GitHub Repository](https://github.com/smgonthebeat/Flowtype)
+<p align="center">
+  <a href="https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8"><code>v0.1.0-preview.8</code></a> ·
+  <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.8/Flowtype.dmg.sha256">Verify SHA-256</a> ·
+  <a href="#first-launch">First-launch guide</a>
+</p>
 
-Flowtype is a local-first macOS dictation app. Hold `Fn` to speak, release it to transcribe locally, and the result is pasted into the app you were using. It is designed for real speech that mixes Chinese, English, technical terms, and spoken mathematics.
+> [!NOTE]
+> This is a Preview. The DMG uses an ad-hoc local development signature: it is **not signed with an Apple Developer ID and not notarized by Apple**. macOS blocks the first launch until you choose Open Anyway in System Settings → Privacy & Security; see the [first-launch guide](#first-launch).
 
-### Full Product Tour (37 seconds)
+Flowtype is a local-first macOS dictation app. Hold `Fn` and speak; release it, and Flowtype transcribes on this Mac and places the whole sentence at the cursor of the app you were using. It is built for the way people actually talk: Chinese mixed with English, plenty of technical terms, and even formulas read aloud.
 
-![Flowtype product tour: dictate locally with Fn and explore the main features](website/assets/flowtype-workflow.gif)
+<!-- LAUNCH VIDEO: replace the placeholder below with the Flowtype Dawn launch video when it is ready. -->
+<p align="center">
+  <img src="website/assets/readme/video-en.webp" alt="Flowtype launch video coming soon" width="100%">
+</p>
 
-This 37-second tour shows the `Fn` dictation flow and Flowtype's main pages. It is a privacy-safe product demonstration with no real transcript history, recording, or account information; the opening asset is owned or cleared for public use by the author.
+## How it works
 
-### Quick Workflow Demo (10 seconds)
+<p align="center">
+  <img src="website/assets/readme/flow-en.webp" alt="You speak → recognised on this Mac → text lands at your cursor" width="100%">
+</p>
 
-![Flowtype quick workflow: hold Fn, speak, transcribe locally, and place text at the cursor](website/assets/flowtype-workflow-quick.gif)
+1. Put the cursor where you want to type, in any app.
+2. Hold `Fn` and speak. The recording capsule appears at the bottom of the screen, its Dawn waveform following your voice.
+3. Release `Fn`. Flowtype transcribes on your Mac and the whole sentence lands at the cursor in one go.
 
-This synthetic demo uses the Codex `New chat` screen to illustrate an ordinary text-paste workflow. It contains no real conversation, recording, or account information and does not imply integration, affiliation, sponsorship, or endorsement by OpenAI.
+No window switching, no copy and paste.
 
-![The Flowtype author's real usage screen showing 4,680 dictations, 15 hours 19 minutes dictated, 246,000 characters, and 60 hours 37 minutes saved](website/assets/flowtype-home-real-usage.png)
+## Faster than typing
 
-This is not mock data. The author explicitly chose to publish this real-use capture from 2026-07-23: **4,680 dictations**, **15 hours 19 minutes** dictated, **246,000 characters** transcribed, and an estimated **60 hours 37 minutes** saved. The transcript-history rows are heavily blurred for privacy while the aggregate usage cards remain unchanged from the original capture. Flowtype was a tool used every day before it became an open-source project.
+<p align="center">
+  <img src="website/assets/readme/stats-en.webp" alt="The author's real usage: 21,578 dictations, 63 h 9 min dictated, 1.005 million characters and words, an estimated 251 h 37 min saved, about 5 times faster than typing" width="100%">
+</p>
 
-## Why Flowtype
+These are the author's own everyday numbers as of 2026-10-12: **21,578 dictations**, **63 h 9 min** of speech, **1.005 million** characters and words. Typing the same text would take an estimated 315 hours, so Flowtype saved about **251 h 37 min**. Flowtype was a tool its author used every day before it became an open-source project.
 
-General-purpose dictation often interrupts technical thought when languages, terminology, and mathematical notation appear in the same sentence. Flowtype aims to place what you already said at the cursor quickly and faithfully; it is not an automatic writing service.
+<sub>Typing time is estimated at 55 Chinese characters or 35 English words per minute, minus the speaking time. Chinese is counted by character, English by word.</sub>
 
-## Highlights
+## Chinese and English in one breath, technical terms included
 
-- **Hold, speak, release, paste:** use `Fn` from the current app to record, transcribe, and paste.
-- **Mixed language and terminology:** local Qwen3-ASR with user-controlled terminology context.
-- **Spoken mathematics:** render mathematical expressions as Unicode or LaTeX.
-- **Smart formatting:** tidy numbers, percentages, dates, and question parts; optionally remove spoken fillers such as "um" and "uh".
-- **Chinese or English interface:** pick the interface language on first launch and the menus, main window, and Settings follow; reading text comes in three sizes.
-- **Local-first:** the primary engine runs on Apple Silicon without a required cloud ASR subscription.
-- **Recoverable failures:** History, up to three local retry recordings, model status, and diagnostics.
-- **Native macOS workflow:** an illustrated onboarding guide with `Fn` practice, a recording capsule with a live waveform, menu bar readiness, and one-step diagnostics in Help.
+Real speech is rarely one language at a time. For example:
 
-## Requirements
+> 帮我看一下这个 SwiftUI view，为什么 onAppear 会触发两次？
 
-- macOS 14 or later;
-- an Apple Silicon Mac;
+Flowtype recognises mixed Chinese and English with Qwen3-ASR running on your Mac. Add the product names, people and terms you use to the **Dictionary**; those hotwords are passed to the local model as context, so names and capitalisation come out right the first time more often.
+
+<p align="center">
+  <img src="website/assets/readme/dictionary-en.webp" alt="The Flowtype Dictionary page listing hotwords such as SwiftUI, Qwen3-ASR and PostgreSQL" width="100%">
+</p>
+
+## Say it. Get the formula.
+
+Turn on spoken math and read formulas aloud; Flowtype turns them into real mathematical notation on your Mac. Choose **Unicode** (plain text symbols that work anywhere) or **LaTeX** (for Markdown, Obsidian and papers).
+
+<p align="center">
+  <img src="website/assets/readme/math-en.webp" alt="Reading the sample mean aloud; Flowtype writes it in Unicode and in LaTeX" width="100%">
+</p>
+
+More examples:
+
+| You say | Unicode output | LaTeX output (rendered) |
+|---|---|---|
+| the regression model is y equals beta zero plus beta one x plus epsilon | the regression model is y = β₀ + β₁x + ε | the regression model is $y = \beta_0 + \beta_1 x + \epsilon$ |
+| x follows a normal distribution with mean mu and variance sigma squared | X ∼ N(μ, σ²) | $X \sim N(\mu, \sigma^2)$ |
+| the confidence interval is x bar plus or minus z sub alpha over two times sigma over root n | the confidence interval is x̄ ± z_{α/2}·σ/√n | the confidence interval is $\bar{x} \pm z_{\alpha/2} \cdot \frac{\sigma}{\sqrt{n}}$ |
+| so theta hat is an unbiased estimator of theta | so θ̂ is an unbiased estimator of θ | so $\hat{\theta}$ is an unbiased estimator of $\theta$ |
+| the variance of beta one hat equals sigma squared over n | Var(β̂₁) = σ²/n | $\operatorname{Var}(\hat{\beta}_1) = \frac{\sigma^2}{n}$ |
+| probability of A given B equals probability of B given A times probability of A over probability of B | P(A \| B) = P(B \| A)·P(A)/P(B) | $P(A \mid B) = P(B \mid A) \cdot \frac{P(A)}{P(B)}$ |
+| the sum from k equals one to infinity of one over k squared equals pi squared over six | ∑_{k=1}^{∞} 1/k² = π²/6 | $\sum_{k=1}^{\infty} \frac{1}{k^2} = \frac{\pi^2}{6}$ |
+| integral from negative infinity to infinity of e to the minus x squared dx equals root pi | ∫_{−∞}^{∞} e^{−x²} dx = √π | $\int_{-\infty}^{\infty} e^{-x^2}\\,dx = \sqrt{\pi}$ |
+| 面积就是 integral from zero to one of f of x dx | 面积就是 ∫₀¹ f(x) dx | 面积就是 $\int_{0}^{1} f(x)\\,dx$ |
+
+<sub>Every output above was produced by Flowtype's local converter, assuming speech recognition heard the sentence correctly. Spoken math is optional and off by default; turn it on in Formatting & Appearance.</sub>
+
+## Recognised on your Mac
+
+Flowtype does not rely on an “upload, then delete” promise for routine dictation. It keeps that path out of cloud ASR processing in the first place:
+
+- **Local transcription:** Qwen3-ASR runs on Apple Silicon through a session-token-protected helper bound only to `127.0.0.1`. Once the model is installed, routine dictation does not upload the recording.
+- **Temporary local audio, deleted after transcription:** each dictation's temporary WAV is removed when the transcription task ends. With History enabled, only the three most recent recordings are kept locally for manual retry, and clearing History clears them too.
+- **History under your control:** transcript text is stored only in Flowtype History on this Mac, 100 entries by default; you can turn it off, resize it or clear it.
+- **On-device fallback:** Apple Speech runs only when on-device recognition is supported and sets `requiresOnDeviceRecognition`.
+- **Explicit network boundary:** first-time setup downloads a model of about 1.9 GB. That is an explicit network step; routine transcription stays on the Mac.
+
+<p align="center">
+  <img src="website/assets/readme/models-en.webp" alt="The Flowtype Models page with Everyday Dictation (Qwen3-ASR 0.6B) in use" width="100%">
+</p>
+
+Mainstream dictation products including Wispr Flow, Typeless, Qianwen IME, and Doubao IME send audio to cloud services in some or all reviewed transcription paths. Some provide encryption, immediate deletion, Privacy Mode, or zero-retention controls; those are meaningful privacy measures. Flowtype's distinction is avoiding the routine transcription upload, not alleging that another product uploads every keystroke. Local-capable products such as Shandianshuo are not cloud-only comparisons.
+
+See [Privacy & Local Data](docs/PRIVACY.md) for Flowtype's boundaries and [Local And Cloud Dictation Comparison](docs/PRIVACY-COMPARISON.md) for the dated, versioned evidence notes.
+
+## And also
+
+- **Smart formatting:** numbers, percentages, dates and question parts are tidied, for example "three point five percent" → `3.5%`; optionally remove fillers such as "um" and "uh".
+- **Flowtype Dawn:** the default light theme; other themes are one click away.
+- **Chinese or English interface:** pick the interface language on first launch and the menus, main window and Settings follow; reading text comes in three sizes.
+- **Recoverable failures:** History, up to three local retry recordings, model status and diagnostics help you recover text and find the cause.
+- **Guided start:** a five-page illustrated onboarding with a page for practising `Fn`.
+
+<p align="center">
+  <img src="website/assets/readme/onboarding-en.webp" alt="Onboarding: hold Fn to talk" width="72%">
+</p>
+
+<sub>Practising <code>Fn</code> in onboarding. History, hotwords and statistics in the interface screenshots are demo data.</sub>
+
+## Install
+
+### Requirements
+
+- macOS 14 or later on an Apple Silicon Mac;
 - Microphone and Accessibility permissions;
-- Swift 5.9 or later only for developers building from source;
 - several gigabytes of free storage and unified memory for the local model and runtime.
 
-On first launch, a five-page illustrated guide walks you through choosing the interface language, preparing Flowtype, and practising holding `Fn` to talk. Clicking **Prepare Flowtype** there confirms the download: Flowtype requests Microphone and Accessibility permissions, automatically downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows downloaded bytes, smoothed transfer speed, estimated time remaining, and preparation progress. Fresh downloads prefer ModelScope, with resumable transfer and Hugging Face fallback. Accessibility must still be approved in System Settings; return to Flowtype and setup continues automatically. Once preparation succeeds, Home immediately reuses the verified Ready state without asking you to prepare Flowtype again. Model weights are not stored in this repository or bundled with the source archive.
+### Download and setup
 
-## Getting Started
+Download `Flowtype.dmg` only from the official [`v0.1.0-preview.8` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8), open it, and follow the arrow to drag `Flowtype.app` to Applications. You do not need Swift or a source checkout.
 
-Ordinary users do not need Swift or a source checkout. Download `Flowtype.dmg` only from the official [`v0.1.0-preview.8` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8), open it, and follow the arrow to drag `Flowtype.app` to Applications.
+On first launch, a five-page illustrated guide walks you through choosing the interface language, preparing Flowtype and practising holding `Fn` to talk. Clicking **Prepare Flowtype** confirms the download: Flowtype requests Microphone and Accessibility permissions, downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows downloaded bytes, smoothed transfer speed, estimated time remaining and preparation progress. Fresh downloads prefer ModelScope, with resumable transfer and a Hugging Face fallback. Accessibility must still be approved in System Settings; return to Flowtype and setup continues automatically. Once preparation succeeds, Home immediately reuses the verified Ready state without asking you to prepare Flowtype again. Model weights are not stored in this repository or bundled with the source archive.
 
 <a id="first-launch"></a>
 
-### Open Flowtype For The First Time
+### Open Flowtype for the first time
 
 This is an explicitly labelled **unnotarized Preview**. macOS will block the first double-click because it cannot verify the developer. That is expected for the current signature and does not mean you should disable macOS security protections. The screenshots use a Chinese macOS interface; the control locations are the same in other system languages.
 
@@ -92,15 +161,22 @@ This is an explicitly labelled **unnotarized Preview**. macOS will block the fir
 
 **3. Compare with Apple's official steps.** Apple's current instructions likewise require an initial launch attempt followed by System Settings → Privacy & Security → Security → Open/Open Anyway. The control is generally available for about one hour after the attempt. If it is missing, double-click Flowtype again and return to the settings page immediately.
 
+<details>
+<summary>Show Apple's official guide</summary>
+
 <a href="https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac">
   <img src="website/assets/first-launch-3-apple-guide.png" alt="Apple's official guide for opening a Mac app from an unknown developer" width="860">
 </a>
 
 *[View Apple's live official instructions](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac). The screenshot is a location aid; Apple may change the page or macOS wording over time.*
 
+</details>
+
 Use this override only for Flowtype obtained from this project's official Release. **Do not disable Gatekeeper or run quarantine-removal or Gatekeeper-disabling commands.**
 
-The following commands are only for developers who want to inspect or modify the source:
+## Build from source
+
+These commands are for developers who want to inspect or modify the source, and need Swift 5.9 or later:
 
 ```bash
 swift test
@@ -109,20 +185,6 @@ make build
 ```
 
 `make build` creates a locally ad-hoc-signed development bundle at `.build/Flowtype.app`; it is not an official distribution build.
-
-## Your Voice Stays On This Mac
-
-Flowtype does not rely on an “upload, then delete” promise for routine dictation. It keeps that path out of cloud ASR processing in the first place:
-
-- **Local transcription:** Qwen3-ASR runs on Apple Silicon through a session-token-protected helper bound only to `127.0.0.1`. Once the model is installed, routine dictation does not upload the recording.
-- **Temporary local audio, deleted after transcription:** each dictation uses a temporary WAV that is removed when the transcription task ends. With History enabled, only the three most recent recordings are retained locally for manual retry; newer recordings displace older ones, and clearing History also clears these retry recordings.
-- **History under your control:** transcript text is stored only in Flowtype History on this Mac. History is enabled by default with a 100-entry limit and can be disabled, resized, or cleared.
-- **On-device fallback:** Apple Speech runs only when on-device recognition is supported and sets `requiresOnDeviceRecognition`.
-- **Explicit network boundary:** initial model download or repair is a network operation. The website, source build, model download, and routine local transcription are separate data paths.
-
-Mainstream dictation products including Wispr Flow, Typeless, Qianwen IME, and Doubao IME send audio to cloud services in some or all reviewed transcription paths. Some provide encryption, immediate deletion, Privacy Mode, or zero-retention controls; those are meaningful privacy measures. Flowtype's distinction is avoiding the routine transcription upload, not alleging that another product uploads every keystroke. Local-capable products such as Shandianshuo are not cloud-only comparisons.
-
-See [Privacy & Local Data](docs/PRIVACY.md) for Flowtype's boundaries and [Local And Cloud Dictation Comparison](docs/PRIVACY-COMPARISON.md) for the dated, versioned evidence notes. Never attach real recordings, transcripts, credentials, or private diagnostics to an issue.
 
 ## Documentation
 
@@ -135,7 +197,7 @@ See [Privacy & Local Data](docs/PRIVACY.md) for Flowtype's boundaries and [Local
 - [Contributing](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
 
-The static product website lives in [`website/`](website/). It has no build step, analytics, cookies, external scripts, or runtime package dependencies. Its GitHub and DMG controls point to the official repository and Preview Release.
+The static product website lives in [`website/`](website/). It has no build step, analytics, cookies, external scripts or runtime package dependencies; its GitHub and DMG links point to the official repository and Preview Release. Never attach real recordings, transcripts, credentials or private diagnostics to an issue.
 
 ## License
 
