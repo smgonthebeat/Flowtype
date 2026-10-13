@@ -23,10 +23,8 @@
 
 Flowtype is a local-first macOS dictation app. Hold `Fn` and speak; release it, and Flowtype transcribes on this Mac and places the whole sentence at the cursor of the app you were using. It is built for the way people actually talk: Chinese mixed with English, plenty of technical terms, and even formulas read aloud.
 
-<!-- LAUNCH VIDEO: replace the placeholder below with the Flowtype Dawn launch video when it is ready. -->
-<p align="center">
-  <img src="website/assets/readme/video-en.webp" alt="Flowtype launch video coming soon" width="100%">
-</p>
+<!-- LAUNCH VIDEO: the Flowtype Dawn launch film (46 s), uploaded to GitHub so it plays inline. -->
+https://github.com/user-attachments/assets/c47dff55-9d5c-43d2-87d0-e889167f62b1
 
 ## How it works
 

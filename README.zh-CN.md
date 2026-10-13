@@ -23,10 +23,8 @@
 
 Flowtype 是一款 local-first 的 macOS 听写工具。按住 `Fn` 说话，松开后在这台 Mac 上完成转写，整句话直接出现在你正在用的 App 的光标处。它专门为真实的说话方式而做：中文夹着 English、满嘴技术术语，甚至直接念公式。
 
-<!-- LAUNCH VIDEO: replace the placeholder below with the Flowtype Dawn launch video when it is ready. -->
-<p align="center">
-  <img src="website/assets/readme/video-zh.webp" alt="Flowtype 发布短片即将上线" width="100%">
-</p>
+<!-- LAUNCH VIDEO: the Flowtype Dawn launch film (46 s), uploaded to GitHub so it plays inline. -->
+https://github.com/user-attachments/assets/a02efe18-7871-41bb-b640-e76a295055bf
 
 ## 怎么用
 

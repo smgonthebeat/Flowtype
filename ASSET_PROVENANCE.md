@@ -48,8 +48,15 @@ renders of the recording capsule and onboarding welcome picture, and text. The
 `stats` cards carry the project owner's real aggregate usage as of 2026-10-12
 (21,578 dictations, 63 hours 9 minutes dictated, 1,005,000 characters and words,
 251 hours 37 minutes estimated saved), which the owner chose to publish; no
-transcript content is shown. The `video` image is a placeholder for a launch
-video. No new generated imagery was added.
+transcript content is shown. No new generated imagery was added.
+
+The launch films linked near the top of both READMEs (English and Chinese, 46 s
+each) are hosted as GitHub attachments, not stored in this repository. They were
+rendered entirely in code by the project owner's motion-graphics pipeline (WebGL
+and Canvas2D in headless Chrome, a procedurally synthesized score, ffmpeg) from the
+same project-owned material: the Flowtype Dawn backdrop, app icon, interface
+screenshots and the real usage figures above. No stock footage, generated video,
+voice or third-party music is used.
 
 ## App Icon
 
