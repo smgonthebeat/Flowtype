@@ -21,7 +21,7 @@
 > [!NOTE]
 > 这是 Preview 版本。安装包使用 local development signature，**没有 Apple Developer ID，也未经过 Apple notarization**。macOS 会拦截第一次打开，需要你在「系统设置 → 隐私与安全性」里手动选择「仍要打开」，步骤见[首次打开指引](#first-launch)。
 
-Flowtype 是一款 local-first 的 macOS 听写工具。按住 `Fn` 说话，松开后在这台 Mac 上完成转写，整句话直接出现在你正在用的 App 的光标处。它专门为真实的说话方式而做：中文夹着 English、满嘴技术术语，甚至直接念公式。
+Flowtype 是一款 local-first 的 macOS 听写工具。按住 `Fn` 说话，松开后在这台 Mac 上完成转写，整句话直接出现在你正在用的 App 的光标处。它专门为真实的说话方式而做：中文夹着 English，甚至直接念公式。
 
 <!-- LAUNCH VIDEO: the Flowtype Dawn launch film (46 s), uploaded to GitHub so it plays inline. -->
 https://github.com/user-attachments/assets/a02efe18-7871-41bb-b640-e76a295055bf
@@ -48,13 +48,11 @@ https://github.com/user-attachments/assets/a02efe18-7871-41bb-b640-e76a295055bf
 
 <sub>打字时间是估算：中文按每分钟 55 字、英文按每分钟 35 词计算，再减去说话时间。中文按字计，英文按词计。</sub>
 
-## 中英混着说，技术词也认得
+## 中英混着说
 
-日常说话很少是纯中文或纯英文。比如这样一句：
+日常说话很少是纯中文或纯英文。Flowtype 用在本机运行的 Qwen3-ASR 识别中英混合语音，一句话里随时换语言，不用切换模式。
 
-> 帮我看一下这个 SwiftUI view，为什么 onAppear 会触发两次？
-
-Flowtype 用在本机运行的 Qwen3-ASR 识别中英混合语音。把你常用的产品名、人名和术语加进**词典**，这些热词会在识别时作为上下文交给本地模型，名字和大小写更容易一次就对。
+产品名、人名、专业词这类要按特定写法出现的词，直接说不一定能写成你想要的样子。把它们按你想要的写法加进**词典**，Flowtype 会在识别时把这些词作为上下文交给本地模型，写法和大小写就更容易照你的来。
 
 <p align="center">
   <img src="website/assets/readme/dictionary-zh.webp" alt="Flowtype 词典页面，列出 SwiftUI、Qwen3-ASR、PostgreSQL 等热词" width="100%">
@@ -195,7 +193,7 @@ make build
 - [Contributing](CONTRIBUTING.md)
 - [Security Policy](SECURITY.md)
 
-产品网站在 [`website/`](website/)。它没有 build step、analytics、cookies、external scripts 或 runtime package dependencies；GitHub 与 DMG 链接都指向官方仓库和 Preview Release。提交 issue 时不要附上真实录音、transcript、credential 或 private diagnostics。
+提交 issue 时不要附上真实录音、transcript、credential 或 private diagnostics。
 
 ## License
 

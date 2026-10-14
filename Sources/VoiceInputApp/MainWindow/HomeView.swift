@@ -455,26 +455,41 @@ private struct UsageMetricCard: View {
     let theme: AppTheme
     let illustration: Illustration
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var usesLightArtwork: Bool {
+        theme.usesLightCardArtwork(in: colorScheme)
+    }
+
+    /// Light themes use the Dawn artwork, whose colours run peach, rose, violet and blue across
+    /// the row; the glow and the artwork shadow follow that colour instead of the dark-theme tint.
+    private var cardTint: Color {
+        usesLightArtwork ? illustration.dawnTint : tint
+    }
+
+    /// The artwork fades out towards the top so the title and number stay clean. The Dawn cards
+    /// fade less (0.65 of the full fade, owner's pick in the HTML tuner, task 19).
+    private var topFadeStops: [Gradient.Stop] {
+        let fade: Double = usesLightArtwork ? 0.65 : 1
+        return [
+            .init(color: .black.opacity(1 - fade), location: 0),
+            .init(color: .black.opacity(1 - fade * 0.65), location: 0.24),
+            .init(color: .black, location: 0.58),
+            .init(color: .black.opacity(1 - fade * 0.14), location: 1)
+        ]
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            MetricCardSurface(tint: tint, theme: theme)
+            MetricCardSurface(tint: cardTint, theme: theme)
 
-            UsageCardIllustration(kind: illustration, tint: tint, theme: theme)
+            UsageCardIllustration(kind: illustration, tint: cardTint, theme: theme)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.trailing, -18)
-                .padding(.bottom, -18)
+                .padding(.trailing, -UsageArtworkPlacement.framePadding)
+                .padding(.bottom, -UsageArtworkPlacement.framePadding)
                 .opacity(0.92)
                 .mask(alignment: .bottom) {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0),
-                            .init(color: .black.opacity(0.35), location: 0.24),
-                            .init(color: .black, location: 0.58),
-                            .init(color: .black.opacity(0.86), location: 1)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                    LinearGradient(stops: topFadeStops, startPoint: .top, endPoint: .bottom)
                 }
 
             VStack(alignment: .leading, spacing: 7) {
@@ -532,20 +547,47 @@ private struct UsageMetricCard: View {
     }
 }
 
+/// A soft round glow: full strength in the middle, fading to clear at `radius`.
+struct MetricCardGlow: View {
+    static let radius: CGFloat = 150
+
+    let tint: Color
+    let opacity: Double
+
+    var body: some View {
+        RadialGradient(
+            stops: [
+                .init(color: tint.opacity(opacity), location: 0),
+                .init(color: tint.opacity(opacity * 0.6), location: 0.4),
+                .init(color: tint.opacity(0), location: 1)
+            ],
+            center: .center,
+            startRadius: 0,
+            endRadius: Self.radius
+        )
+        .frame(width: Self.radius * 2, height: Self.radius * 2)
+        // Keep the 190 pt layout footprint of the earlier blurred circle, so the offset still
+        // places the centre where it was.
+        .frame(width: 190, height: 190)
+    }
+}
+
 private struct MetricCardSurface: View {
     let tint: Color
     let theme: AppTheme
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         if theme.backdrop != nil {
-            // Opaque white, with only the faint tint glow in the bottom-trailing corner.
+            // Opaque white, with only the faint tint glow in the bottom-trailing corner (a little
+            // stronger behind the Dawn artwork: 0.20, owner's pick in the HTML tuner, task 19). The glow
+            // is a radial gradient rather than a blurred circle: the blurred circle rendered with a
+            // visible disc edge, and the gradient is what the HTML tuner draws.
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(theme.elevatedSurface)
                 .overlay(alignment: .bottomTrailing) {
-                    Circle()
-                        .fill(tint.opacity(0.10))
-                        .frame(width: 190, height: 190)
-                        .blur(radius: 46)
+                    MetricCardGlow(tint: tint, opacity: theme.usesLightCardArtwork(in: colorScheme) ? 0.20 : 0.10)
                         .offset(x: 76, y: 72)
                 }
         } else {
@@ -566,18 +608,15 @@ private struct MetricCardSurface: View {
                     endPoint: .bottomTrailing
                 )
             )
+            // Radial gradients, not blurred circles: a blurred circle leaves a visible disc edge,
+            // which showed once the shared artwork frame stopped covering it (task 19). The
+            // top-leading highlight keeps the centre of the earlier 168 pt circle.
             .overlay(alignment: .topLeading) {
-                Circle()
-                    .fill(.white.opacity(0.07))
-                    .frame(width: 168, height: 168)
-                    .blur(radius: 34)
-                    .offset(x: -88, y: -104)
+                MetricCardGlow(tint: .white, opacity: 0.07)
+                    .offset(x: -99, y: -115)
             }
             .overlay(alignment: .bottomTrailing) {
-                Circle()
-                    .fill(tint.opacity(0.10))
-                    .frame(width: 190, height: 190)
-                    .blur(radius: 46)
+                MetricCardGlow(tint: tint, opacity: 0.10)
                     .offset(x: 76, y: 72)
             }
     }
@@ -588,10 +627,10 @@ private struct UsageCardIllustration: View {
     let tint: Color
     let theme: AppTheme
 
-    /// The glass in the original artwork is baked in as dark pixels. Light custom themes get a
-    /// frosted-white version of the same artwork instead; every other theme keeps the original.
+    @Environment(\.colorScheme) private var colorScheme
+
     private var usesLightArtwork: Bool {
-        !theme.isDark && !theme.usesSystemMaterials
+        theme.usesLightCardArtwork(in: colorScheme)
     }
 
     var body: some View {
@@ -599,21 +638,37 @@ private struct UsageCardIllustration: View {
             named: kind.artworkResourceName + (usesLightArtwork ? "-light" : "")
         ) {
             GeometryReader { geometry in
-                let artworkSize = kind.artworkSize(in: geometry.size)
+                let placement = kind.placement(in: geometry.size)
 
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.high)
                     .antialiased(true)
                     .scaledToFit()
-                    .frame(width: artworkSize.width, height: artworkSize.height)
-                    .position(kind.artworkPosition(in: geometry.size, artworkSize: artworkSize))
+                    .frame(width: placement.size.width, height: placement.size.height)
+                    .mask {
+                        LinearGradient(stops: leftFadeStops, startPoint: .leading, endPoint: .trailing)
+                    }
+                    .position(placement.center)
                     .shadow(color: tint.opacity(0.16), radius: 18, x: 0, y: 8)
                     .shadow(color: .black.opacity(usesLightArtwork ? 0.10 : 0.28), radius: 16, x: 0, y: 10)
             }
         } else {
             fallbackArtwork
         }
+    }
+
+    /// Fades the left part of the artwork so its heavy colour reads at the bottom right, like the
+    /// microphone and document cards; only the Dawn waveform and clock need it (owner's pick in
+    /// the HTML tuner, task 19). Stops follow the tuner: 1 - fade at 0, 1 - fade / 2 at 30 %,
+    /// opaque from 62 %.
+    private var leftFadeStops: [Gradient.Stop] {
+        let fade = usesLightArtwork ? kind.dawnLeftFade : 0
+        return [
+            .init(color: .black.opacity(1 - fade), location: 0),
+            .init(color: .black.opacity(1 - fade * 0.5), location: 0.30),
+            .init(color: .black, location: 0.62)
+        ]
     }
 
     @ViewBuilder
@@ -654,87 +709,117 @@ private extension UsageMetricCard.Illustration {
         }
     }
 
-    var artworkAspectRatio: CGFloat {
+    // MARK: Layout
+
+    /// Pixel size of the artwork PNG (the dark original and its `-light` version share the canvas).
+    var artworkPixelSize: CGSize {
         switch self {
         case .dictation:
-            return 360 / 380
+            return CGSize(width: 360, height: 380)
         case .duration:
-            return 420 / 290
+            return CGSize(width: 420, height: 290)
         case .words:
-            return 380 / 370
+            return CGSize(width: 380, height: 370)
         case .savedTime:
-            return 390 / 360
+            return CGSize(width: 390, height: 360)
         }
     }
 
-    var preferredArtworkWidth: CGFloat {
+    /// Bounds of the opaque artwork inside its canvas (alpha > 50%, measured on the original), in
+    /// pixels, top-left origin. The canvases have different padding, so the layout works from
+    /// these, not the canvas.
+    var artworkContentPixelBounds: CGRect {
         switch self {
         case .dictation:
-            return 182
+            return CGRect(x: 17, y: 16, width: 327, height: 314)
         case .duration:
-            return 214
-        case .words, .savedTime:
-            return 188
-        }
-    }
-
-    var maxWidthRatio: CGFloat {
-        switch self {
-        case .dictation, .savedTime:
-            return 0.80
-        case .duration:
-            return 0.90
+            return CGRect(x: 20, y: 12, width: 383, height: 259)
         case .words:
-            return 0.78
+            return CGRect(x: 31, y: 15, width: 327, height: 328)
+        case .savedTime:
+            return CGRect(x: 26, y: 15, width: 341, height: 321)
         }
     }
 
-    var maxHeightRatio: CGFloat {
+    /// The four artworks share one frame in every theme: the same visual size (the square root of
+    /// the content area, so the wide waveform is not drawn bigger than the others) and the same
+    /// overhang past the trailing and bottom card edges.
+    func placement(in containerSize: CGSize) -> UsageArtworkPlacement {
+        UsageArtworkPlacement.shared(
+            in: containerSize,
+            pixelSize: artworkPixelSize,
+            contentPixelBounds: artworkContentPixelBounds
+        )
+    }
+
+    /// Dawn colour per card, in logo order: peach, rose, violet, sky blue. The light artwork is
+    /// recoloured with the same values (`docs/maintenance/artifacts/2026-10-14-home-cards-dawn/`).
+    /// Left fade of the Dawn artwork (see `UsageCardIllustration.leftFadeStops`).
+    var dawnLeftFade: Double {
+        switch self {
+        case .duration, .savedTime:
+            return 0.3
+        case .dictation, .words:
+            return 0
+        }
+    }
+
+    var dawnTint: Color {
         switch self {
         case .dictation:
-            return 1.04
+            return Color(hex: "#F09A73")
         case .duration:
-            return 0.84
-        case .words, .savedTime:
-            return 1.02
+            return Color(hex: "#E68AAE")
+        case .words:
+            return Color(hex: "#9C86E2")
+        case .savedTime:
+            return Color(hex: "#6CA4EA")
         }
     }
+}
 
-    var artworkInset: CGFloat {
-        switch self {
-        case .duration:
-            return 8
-        case .dictation, .words, .savedTime:
-            return 10
-        }
-    }
+struct UsageArtworkPlacement: Equatable {
+    /// The artwork frame reaches this far past the card's trailing and bottom edges.
+    static let framePadding: CGFloat = 18
 
-    var verticalBleed: CGFloat {
-        switch self {
-        case .duration:
-            return 12
-        case .dictation, .words, .savedTime:
-            return 18
-        }
-    }
+    // Measured from the card edges (owner's pick in the HTML tuner for Flowtype Dawn, then used
+    // for every theme, task 19): content size as a share of the card height, capped by a share of
+    // the card width in narrow windows; negative insets let the artwork run past the edge and be
+    // clipped by the card.
+    static let heightShare: CGFloat = 0.86
+    static let widthShare: CGFloat = 0.48
+    static let trailingInset: CGFloat = -6
+    static let bottomInset: CGFloat = -10
 
-    func artworkSize(in containerSize: CGSize) -> CGSize {
-        let maxWidth = min(preferredArtworkWidth, containerSize.width * maxWidthRatio)
-        let maxHeight = containerSize.height * maxHeightRatio
+    let size: CGSize
+    let center: CGPoint
 
-        let widthFromHeight = maxHeight * artworkAspectRatio
-        if widthFromHeight <= maxWidth {
-            return CGSize(width: widthFromHeight, height: maxHeight)
-        }
+    /// Places one artwork so that its opaque content (not its canvas) has the shared visual size
+    /// and position; see `UsageMetricCard.Illustration.placement(in:)`. `containerSize` is
+    /// the artwork frame, which extends `framePadding` past the card; the frame and the card share
+    /// their top-leading corner, so the result is in the same coordinates for both.
+    static func shared(in containerSize: CGSize, pixelSize: CGSize, contentPixelBounds content: CGRect) -> UsageArtworkPlacement {
+        let card = CGSize(width: containerSize.width - framePadding, height: containerSize.height - framePadding)
+        let visualSize = min(card.height * heightShare, card.width * widthShare)
+        let scale = visualSize / (content.width * content.height).squareRoot()
+        let size = CGSize(width: pixelSize.width * scale, height: pixelSize.height * scale)
 
-        return CGSize(width: maxWidth, height: maxWidth / artworkAspectRatio)
-    }
-
-    func artworkPosition(in containerSize: CGSize, artworkSize: CGSize) -> CGPoint {
-        CGPoint(
-            x: containerSize.width - artworkSize.width / 2 - artworkInset,
-            y: containerSize.height - artworkSize.height / 2 + verticalBleed
+        let contentMaxX = card.width - trailingInset
+        let contentMaxY = card.height - bottomInset
+        let origin = CGPoint(x: contentMaxX - content.maxX * scale, y: contentMaxY - content.maxY * scale)
+        return UsageArtworkPlacement(
+            size: size,
+            center: CGPoint(x: origin.x + size.width / 2, y: origin.y + size.height / 2)
         )
+    }
+}
+
+extension AppTheme {
+    /// Light themes use the Dawn `-light` artwork (with its colours and fades) on light cards; the
+    /// dark themes keep the original dark-glass artwork. The Apple theme follows the system
+    /// appearance, so it takes the Dawn artwork in light mode and the original in dark mode.
+    func usesLightCardArtwork(in colorScheme: ColorScheme) -> Bool {
+        usesSystemMaterials ? colorScheme == .light : !isDark
     }
 }
 

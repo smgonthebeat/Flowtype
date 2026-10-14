@@ -65,25 +65,9 @@ in Blender from the unchanged Flowtype glyph (`Resources/Flowtype-logo.svg`, see
 above), a frosted glass body and a soft colour field. Its look was matched by
 measurement to a reference image that the project owner created with an
 image-generation tool and selected; the reference image itself is not shipped.
-`website/assets/flowtype-app-icon.png` and `website/assets/favicon.png` are
-resized copies of the same 1024 px render. The earlier app icon, a white rounded
+`website/assets/flowtype-app-icon.png` is a resized copy of the same 1024 px
+render, used in the README images. The earlier app icon, a white rounded
 tile carrying the black glyph, was also generated using ChatGPT.
-
-The static website shows the app icon and includes
-`website/assets/flowtype-home-real-usage.png`, a macOS screenshot captured by
-the project owner from the Flowtype app. The owner explicitly selected its real
-aggregate usage figures (4,680 dictations, 15 hours 19 minutes dictated,
-246,000 characters, and 60 hours 37 minutes estimated saved) for publication as
-evidence of first-party use. Those usage cards remain unchanged from the source
-capture. The local transcript-history region is deliberately and heavily
-blurred before publication so its text cannot be read.
-
-A metadata audit found no high- or medium-risk image metadata, personal author,
-account, GPS, source URL, or local filesystem path. The published derivative
-has all ancillary PNG metadata removed and is locked by a SHA-256 contract
-test. The blur was applied deterministically to the transcript panel only; the
-entire area above that panel is pixel-identical to the source capture. No
-generated or substituted UI is present in the published screenshot.
 
 `website/assets/download-apple-silicon.svg` is a project-created static README
 download control. It contains only local vector shapes and text, has no script,
@@ -131,40 +115,6 @@ analytics, user data, or personal metadata.
 
 ## Promotional Motion Assets
 
-`website/assets/flowtype-workflow.gif` is a deterministic palette-optimized
-derivative of the owner-approved Flowtype launch animatic v3. The frozen source
-is a 37-second, 1920×1080, native-60fps H.264 render with SHA-256
-`dae857b5932ec40558d3556ecc68ad4a15c0af5f60347c249769196470434d23`.
-The README derivative is 960×540 at 25fps with a 160-color adaptive palette.
-It contains 925 frames, lasts 37.000 seconds, and is 11,987,401 bytes. Its
-reviewed SHA-256 is
-`74e04814e12652dc0244b1e99b9ebf6078f4c7017f8b918dec4351a1f26e3edf`.
-
-The opening uses `macbook-fn-extraction-concept-v1.png`, SHA-256
-`6716332d0ecbe0e12a57f6c59f01bf6a3702ec8033c42f97f6a6970b5942a7f4`.
-On 2026-07-26 the owner explicitly attested that they own or have the right to
-publish this asset and authorized its use in the Flowtype GitHub README. The
-remaining film is rendered from local, editable Flowtype animation and product
-UI sources. The public GIF contains no real transcript history, recording,
-account identifier, private local path, or user data.
-
-`website/assets/flowtype-workflow-quick.gif` preserves the earlier quick workflow
-preview as a separate second README asset. It is a deterministic 1200×675, 25fps
-derivative of the corrected 1920×1080, native-60fps silent master with SHA-256
-`1493ad58c200c33ba012dd60250129bd077af83ccde67fcf4580e4f31d6826c7`.
-It uses a fully synthetic recreation of
-the public Codex `New chat` empty state as an ordinary third-party text target,
-a synthetic demonstration sentence, and a Flowtype-branded closing frame that
-references the then-current local app icon extracted from `Resources/Flowtype.icns`.
-The complete icon preserves its white rounded tile and optically inset
-microphone-waveform-speech-bubble mark. The GIF does not embed a screenshot,
-real conversation, History text, Hotwords, recording, account identifier, or
-local filesystem path. The Codex name and product mark identify the demonstrated
-target app only; they do not imply an OpenAI integration, affiliation,
-sponsorship, or endorsement. The GIF is 250 frames, lasts 10.000 seconds, and is
-380,462 bytes. Its reviewed SHA-256 is
-`2d439697850f80fb031e6d5dce291267bd6aa8a83502fdbeb552bad34a04fd75`.
-
 The sound-on `Flowtype-GitHub-Promo.mp4` is published only as a GitHub Release
 asset and is intentionally excluded from the source projection. It is a
 10-second 1920×1080, native-60fps H.264/AAC rendering of the earlier reviewed
@@ -178,7 +128,7 @@ are stripped from the final container. The MP4 is 430,113 bytes. Its reviewed
 SHA-256 is
 `f971700db08fae1565f1741bddb3862c2fa05c504004747eb49547290fd392fb`.
 This historical Release asset is no longer linked from either README and was
-not changed, deleted, or used to derive the 37-second launch-film GIF.
+not changed or deleted.
 
 The motion-design workflow and deterministic seek-render approach were adapted
 from [Huashu Design](https://github.com/alchaincyf/huashu-design), distributed

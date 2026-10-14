@@ -25,8 +25,7 @@ Flowtype is local-first, not universally offline:
 
 - downloading or repairing a Qwen model contacts Hugging Face;
 - installing Python dependencies during a source build may contact package indexes;
-- opening external project links uses the user's browser;
-- the static website itself has no analytics, cookies, external scripts, or runtime package dependencies.
+- opening external project links uses the user's browser.
 
 The app asks for model-download consent before preparing a model. Model weights are not committed to this repository.
 
