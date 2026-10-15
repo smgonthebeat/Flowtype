@@ -126,6 +126,8 @@ private enum ReadinessFixture {
 
 private struct FixtureOptions {
     var hasHistory = true
+    /// History with failed, possibly truncated and recovered rows (QA of those row styles).
+    var historyShowsIssues = false
     var hasUsageStats = true
     var hasHotwords = true
     var largeModel: LargeModelFixture = .installed
@@ -181,7 +183,10 @@ private enum MainScreen: CaseIterable {
         case .homeEmpty:
             options.hasHistory = false
             options.hasUsageStats = false
-        case .homeNeedsAttention, .readinessNeedsAttention:
+        case .homeNeedsAttention:
+            options.readiness = .needsAttention
+            options.historyShowsIssues = true
+        case .readinessNeedsAttention:
             options.readiness = .needsAttention
         case .dictionaryEmpty:
             options.hasHotwords = false
@@ -204,7 +209,7 @@ private enum MainScreen: CaseIterable {
         case .homeNeedsAttention:
             return "Home with the prominent readiness card (Microphone permission missing, selected model not installed)."
         case .dictionary:
-            return "Dictionary with 30 mixed Chinese/English hotwords."
+            return "Dictionary with 30 hotwords: names, places and terms in several languages."
         case .dictionaryEmpty:
             return "Dictionary empty state: no hotwords."
         case .dictionaryNoResults:
@@ -1237,7 +1242,7 @@ private final class FixtureEnvironment {
             limit: 100
         )
         if options.hasHistory {
-            try historyStore.save(Self.historyItems())
+            try historyStore.save(Self.historyItems(language: variant.language, showsIssues: options.historyShowsIssues))
         }
 
         let usageStatsURL = directory.appendingPathComponent("usage-stats.json")
@@ -1337,7 +1342,7 @@ private final class FixtureEnvironment {
         return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day) ?? day
     }
 
-    private static func historyItems() -> [TranscriptHistoryItem] {
+    private static func historyItems(language: UILanguage, showsIssues: Bool) -> [TranscriptHistoryItem] {
         func item(
             _ text: String,
             daysAgo: Int,
@@ -1362,6 +1367,54 @@ private final class FixtureEnvironment {
                 status: status,
                 failureCategory: failure
             )
+        }
+
+        // The launch films open on Home and then explain spoken math, so the default history has math
+        // entries and no status rows: all English for the English interface, mixed Chinese-English
+        // for the Chinese one. The rows with issues are kept for the needs-attention snapshot.
+        if !showsIssues && language == .chinese {
+            return [
+                item("vlog 开头先放 highlight，再慢慢讲故事。", daysAgo: 0, 14, 32, app: "Final Cut Pro", duration: 3.4),
+                item("在最优点，偏导数 ∂f/∂x 等于零。", daysAgo: 0, 14, 18, app: "备忘录", duration: 3.9),
+                item(
+                    "帮我把这个 PR 的 description 改一下，重点写清楚 breaking change 和 migration 步骤。",
+                    daysAgo: 0, 13, 47, app: "GitHub", duration: 7.8
+                ),
+                item("回归模型是 E[Y | X] = β₀ + β₁x，记得报告 slope。", daysAgo: 0, 11, 5, app: "Overleaf", duration: 5.6),
+                item("根据贝叶斯公式，P(A | B) = P(B | A)·P(A)/P(B)。", daysAgo: 0, 10, 26, app: "Obsidian", duration: 4.8),
+                item("先把 hotfix 发出去，refactor 放到下个 sprint 再说。", daysAgo: 0, 9, 41, app: "Linear", duration: 4.6),
+                item("好的，明天十点见。", daysAgo: 1, 21, 16, app: "微信", duration: 1.8),
+                item(
+                    "明天上午十点和设计同步一下首页卡片的方案，顺便确认 dark mode 下的对比度。",
+                    daysAgo: 1, 18, 3, app: "日历", duration: 6.9
+                ),
+                item(
+                    "这个 bug 的 root cause 是 token 在 refresh 之后没有写回 Keychain。",
+                    daysAgo: 3, 16, 40, app: "GitHub", duration: 7.1
+                )
+            ]
+        }
+        if !showsIssues {
+            return [
+                item("Open the vlog with the highlight, then tell the story.", daysAgo: 0, 14, 32, app: "Final Cut Pro", duration: 3.6),
+                item("The partial derivative ∂f/∂x is zero at the optimum.", daysAgo: 0, 14, 18, app: "Notes", duration: 4.2),
+                item(
+                    "Update the PR description: list the breaking changes and the migration steps.",
+                    daysAgo: 0, 13, 47, app: "GitHub", duration: 5.9
+                ),
+                item("Fit the model E[Y | X] = β₀ + β₁x and report the slope.", daysAgo: 0, 11, 5, app: "Overleaf", duration: 5.1),
+                item("By Bayes, P(A | B) = P(B | A)·P(A)/P(B).", daysAgo: 0, 10, 26, app: "Obsidian", duration: 4.4),
+                item(
+                    "Let's ship the hotfix first, then circle back to the refactor next sprint.",
+                    daysAgo: 0, 9, 41, app: "Linear", duration: 5.2
+                ),
+                item("Sounds good, see you at ten tomorrow.", daysAgo: 1, 21, 16, app: "Slack", duration: 2.3),
+                item("Move the design sync to Thursday morning.", daysAgo: 1, 18, 3, app: "Calendar", duration: 2.8),
+                item(
+                    "The root cause is that the refreshed token never gets written back to the Keychain.",
+                    daysAgo: 3, 16, 40, app: "GitHub", duration: 6.2
+                )
+            ]
         }
 
         return [
@@ -1414,12 +1467,12 @@ private final class FixtureEnvironment {
     }
 
     private static let hotwords = [
-        "Claude Code", "SwiftUI", "Qwen3-ASR", "Flowtype", "Kubernetes", "PostgreSQL",
-        "TypeScript", "横纵分析", "贝叶斯推断", "Transformer", "LangChain", "向量数据库",
-        "RAG", "Hugging Face", "ModelScope", "Xcode", "AppKit", "Wispr Flow",
-        "Typeless", "微调", "提示词工程", "GitHub Actions", "OAuth 2.0", "gRPC",
-        "WebSocket", "Tailscale", "Obsidian", "麦肯锡", "费曼学习法",
-        "retrieval-augmented generation pipeline"
+        "Flowtype", "Obsidian", "Figma", "Notion", "Keynote", "Logic Pro",
+        "Siobhán", "François", "Nguyễn Minh", "Søren", "Zoë", "贝叶斯推断",
+        "费曼学习法", "横纵分析", "麦肯锡", "小红书", "Reykjavík", "Kraków",
+        "Shoreditch", "陆家嘴", "Québec", "EBITDA", "OKR", "GDPR",
+        "CRISPR", "p-value", "Q3 roadmap", "Lightroom", "Airbnb",
+        "Department of Statistical Science"
     ]
 
     /// Mirrors the ids, titles and details the app's readiness inspectors

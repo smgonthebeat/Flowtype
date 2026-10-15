@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="website/assets/readme/hero-en.webp" alt="Flowtype icon and tagline: Hold Fn. Speak. It lands at your cursor. Recognised on your Mac · Chinese + English · Spoken math · Free and open source" width="100%">
+  <img src="website/assets/readme/hero-en.webp" alt="Flowtype icon and tagline: Back to flow. Hold Fn, speak, and your words land at the cursor. Recognised on your Mac · 30+ languages · Spoken math · Free and open source" width="100%">
 </p>
 
 <p align="center">
@@ -21,10 +21,10 @@
 > [!NOTE]
 > This is a Preview. The DMG uses an ad-hoc local development signature: it is **not signed with an Apple Developer ID and not notarized by Apple**. macOS blocks the first launch until you choose Open Anyway in System Settings → Privacy & Security; see the [first-launch guide](#first-launch).
 
-Flowtype is a local-first macOS dictation app. Hold `Fn` and speak; release it, and Flowtype transcribes on this Mac and places the whole sentence at the cursor of the app you were using. It is built for the way people actually talk: Chinese mixed with English, and even formulas read aloud.
+Flowtype is a local-first macOS dictation app. Hold `Fn` and speak; release it, and Flowtype transcribes on this Mac and places the whole sentence at the cursor of the app you were using. It is built for the way people actually talk: switching languages mid-sentence, and even reading formulas aloud.
 
-<!-- LAUNCH VIDEO: the Flowtype Dawn launch film (46 s), uploaded to GitHub so it plays inline. -->
-https://github.com/user-attachments/assets/c47dff55-9d5c-43d2-87d0-e889167f62b1
+<!-- LAUNCH VIDEO: the Flowtype Dawn launch film (57 s), uploaded to GitHub so it plays inline. -->
+https://github.com/user-attachments/assets/09bc39c4-82a5-4478-8113-4ec3915bf8c1
 
 ## How it works
 
@@ -48,14 +48,14 @@ These are the author's own everyday numbers as of 2026-10-12: **21,578 dictation
 
 <sub>Typing time is estimated at 55 Chinese characters or 35 English words per minute, minus the speaking time. Chinese is counted by character, English by word.</sub>
 
-## Chinese and English in one breath
+## 30+ languages, mixed freely
 
-Real speech is rarely one language at a time. Flowtype recognises mixed Chinese and English with Qwen3-ASR running on your Mac, so you can switch languages mid-sentence without switching modes.
+Real speech is rarely one language at a time. Flowtype runs Qwen3-ASR on your Mac and never locks you into one language: the model works out what you are speaking, across 30+ languages and 22 Chinese dialects. Switch languages mid-sentence, for example English inside Chinese, without switching modes.
 
 Names and terms that must be written a particular way, such as a product name, a colleague's name or a word from your field, may not come out as you want on their own. Add each one to the **Dictionary** exactly as you want it written. Flowtype passes those entries to the local model as context, so they are much more likely to come out in your spelling and capitalisation.
 
 <p align="center">
-  <img src="website/assets/readme/dictionary-en.webp" alt="The Flowtype Dictionary page listing hotwords such as SwiftUI, Qwen3-ASR and PostgreSQL" width="100%">
+  <img src="website/assets/readme/dictionary-en.webp" alt="The Flowtype Dictionary page listing names, places and terms such as Siobhán, Kraków and 贝叶斯推断" width="100%">
 </p>
 
 ## Say it. Get the formula.

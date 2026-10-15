@@ -28,7 +28,6 @@ enum AppCopy {
         let settingsTitle: String
         let helpTitle: String
         let mainHeadline: String
-        let mainSubtitle: String
         let todayTitle: String
         let yesterdayTitle: String
         let olderTitle: String
@@ -960,7 +959,6 @@ enum AppCopy {
                 settingsTitle: "设置与存储",
                 helpTitle: "帮助",
                 mainHeadline: "回到心流 - Flowtype",
-                mainSubtitle: "本地优先的听写工具，适合提示词、笔记和中英文混合开发术语。",
                 todayTitle: "今天",
                 yesterdayTitle: "昨天",
                 olderTitle: "更早",
@@ -1173,7 +1171,6 @@ enum AppCopy {
                 settingsTitle: "Settings & Storage",
                 helpTitle: "Help",
                 mainHeadline: "Back to Flow - Flowtype",
-                mainSubtitle: "Local-first dictation for prompts, notes, and mixed Chinese-English developer terms.",
                 todayTitle: "Today",
                 yesterdayTitle: "Yesterday",
                 olderTitle: "Older",

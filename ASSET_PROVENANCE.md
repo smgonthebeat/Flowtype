@@ -50,13 +50,15 @@ renders of the recording capsule and onboarding welcome picture, and text. The
 251 hours 37 minutes estimated saved), which the owner chose to publish; no
 transcript content is shown. No new generated imagery was added.
 
-The launch films linked near the top of both READMEs (English and Chinese, 46 s
-each) are hosted as GitHub attachments, not stored in this repository. They were
-rendered entirely in code by the project owner's motion-graphics pipeline (WebGL
-and Canvas2D in headless Chrome, a procedurally synthesized score, ffmpeg) from the
-same project-owned material: the Flowtype Dawn backdrop, app icon, interface
-screenshots and the real usage figures above. No stock footage, generated video,
-voice or third-party music is used.
+The launch films linked near the top of both READMEs (English and Chinese, 57 s
+each) are hosted as GitHub attachments, not stored in this repository. Their
+picture was rendered entirely in code by the project owner's motion-graphics
+pipeline (WebGL and Canvas2D in headless Chrome, ffmpeg) from the same
+project-owned material: the Flowtype Dawn backdrop, app icon, interface
+screenshots and the real usage figures above. No stock footage, generated video or
+voice is used. The music is the opening of "Launch Impact", a track the project
+owner generated with Suno on a paid plan; it is used unedited and is not part of
+this repository or of its GPL-3.0 grant.
 
 ## App Icon
 

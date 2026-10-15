@@ -72,10 +72,6 @@ struct HomeView: View {
                     .lineLimit(2)
                     .foregroundStyle(theme.ink)
 
-                Text(copy.mainSubtitle)
-                    .scaledFont(.callout)
-                    .foregroundStyle(theme.secondaryInk)
-
                 if readinessPresentation.showsInlineStatus {
                     Label(
                         readinessInlineTitle(for: readinessPresentation, copy: copy),
