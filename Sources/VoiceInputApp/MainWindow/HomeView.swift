@@ -547,24 +547,41 @@ private struct UsageMetricCard: View {
 struct MetricCardGlow: View {
     static let radius: CGFloat = 150
 
+    enum Corner {
+        case topLeading
+        case bottomTrailing
+    }
+
     let tint: Color
     let opacity: Double
+    let corner: Corner
+    /// Distance of the glow's centre from that corner, inward (negative = outside the card).
+    let inset: CGSize
 
     var body: some View {
-        RadialGradient(
-            stops: [
-                .init(color: tint.opacity(opacity), location: 0),
-                .init(color: tint.opacity(opacity * 0.6), location: 0.4),
-                .init(color: tint.opacity(0), location: 1)
-            ],
-            center: .center,
-            startRadius: 0,
-            endRadius: Self.radius
-        )
-        .frame(width: Self.radius * 2, height: Self.radius * 2)
-        // Keep the 190 pt layout footprint of the earlier blurred circle, so the offset still
-        // places the centre where it was.
-        .frame(width: 190, height: 190)
+        // Fill the whole card and place the gradient's centre from the card's measured size.
+        // The earlier version drew a 300 pt gradient inside a 190 pt frame and offset it from a
+        // corner overlay; that overflow layout put the glow near the middle of the card on other
+        // macOS versions (seen on a downloaded Preview 10), so nothing here relies on overflow.
+        GeometryReader { geometry in
+            let size = geometry.size
+            let x = corner == .bottomTrailing ? size.width - inset.width : inset.width
+            let y = corner == .bottomTrailing ? size.height - inset.height : inset.height
+            RadialGradient(
+                stops: [
+                    .init(color: tint.opacity(opacity), location: 0),
+                    .init(color: tint.opacity(opacity * 0.6), location: 0.4),
+                    .init(color: tint.opacity(0), location: 1)
+                ],
+                center: UnitPoint(
+                    x: size.width > 0 ? x / size.width : 1,
+                    y: size.height > 0 ? y / size.height : 1
+                ),
+                startRadius: 0,
+                endRadius: Self.radius
+            )
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -582,9 +599,13 @@ private struct MetricCardSurface: View {
             // visible disc edge, and the gradient is what the HTML tuner draws.
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(theme.elevatedSurface)
-                .overlay(alignment: .bottomTrailing) {
-                    MetricCardGlow(tint: tint, opacity: theme.usesLightCardArtwork(in: colorScheme) ? 0.20 : 0.10)
-                        .offset(x: 76, y: 72)
+                .overlay {
+                    MetricCardGlow(
+                        tint: tint,
+                        opacity: theme.usesLightCardArtwork(in: colorScheme) ? 0.20 : 0.10,
+                        corner: .bottomTrailing,
+                        inset: CGSize(width: 19, height: 23)
+                    )
                 }
         } else {
             flatThemeSurface
@@ -607,13 +628,11 @@ private struct MetricCardSurface: View {
             // Radial gradients, not blurred circles: a blurred circle leaves a visible disc edge,
             // which showed once the shared artwork frame stopped covering it (task 19). The
             // top-leading highlight keeps the centre of the earlier 168 pt circle.
-            .overlay(alignment: .topLeading) {
-                MetricCardGlow(tint: .white, opacity: 0.07)
-                    .offset(x: -99, y: -115)
+            .overlay {
+                MetricCardGlow(tint: .white, opacity: 0.07, corner: .topLeading, inset: CGSize(width: -4, height: -20))
             }
-            .overlay(alignment: .bottomTrailing) {
-                MetricCardGlow(tint: tint, opacity: 0.10)
-                    .offset(x: 76, y: 72)
+            .overlay {
+                MetricCardGlow(tint: tint, opacity: 0.10, corner: .bottomTrailing, inset: CGSize(width: 19, height: 23))
             }
     }
 }

@@ -31,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.11` fixes the Home stat cards on some Macs: the soft glow
+  behind each card's illustration could drift to the middle of the card instead
+  of sitting in the bottom-right corner. Its position is now worked out from
+  the card's own size, so it lands in the same place on every macOS version.
+  Nothing else changes from Preview 10.
 - `v0.1.0-preview.10` gives the installer a Flowtype Dawn window: the same soft
   peach and sky light as the app, with a white glass arrow between Flowtype and
   Applications. The installer now comes in two languages with the same app
