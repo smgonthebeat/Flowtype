@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Public source, tests, deterministic bundle assembly, and a static product website.
+- Public source, tests, and deterministic bundle assembly.
 - Local Qwen3-ASR transcription with Apple Speech on-device fallback.
 - Chinese-English mixed dictation, terminology context, and spoken-math formatting.
 - Local History, retry recovery, model management, readiness checks, and diagnostics.
@@ -31,6 +31,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.9` refreshes Home: the four stat cards get new Flowtype Dawn
+  illustrations (a relit lightning badge, softer glass and a gentle glow),
+  placed in the same frame in every theme, and the Apple theme uses them in
+  light mode. The grey subtitle under the Home title is removed. Dictation
+  behaviour is unchanged from Preview 8. The static website has been removed
+  from the repository; the README is the project page.
 - `v0.1.0-preview.8` introduces Flowtype Dawn, a light appearance and the new
   default theme: a clean white window with soft peach and sky light in the
   corners, white cards with a faint violet shadow, a peach-to-lilac-to-sky

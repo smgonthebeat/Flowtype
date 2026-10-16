@@ -7,14 +7,14 @@
 </p>
 
 <p align="center">
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.8/Flowtype.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.9/Flowtype.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8"><code>v0.1.0-preview.8</code></a> ·
-  <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.8/Flowtype.dmg.sha256">Verify SHA-256</a> ·
+  <a href="https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.9"><code>v0.1.0-preview.9</code></a> ·
+  <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.9/Flowtype.dmg.sha256">Verify SHA-256</a> ·
   <a href="#first-launch">First-launch guide</a>
 </p>
 
@@ -124,7 +124,7 @@ See [Privacy & Local Data](docs/PRIVACY.md) for Flowtype's boundaries and [Local
 
 ### Download and setup
 
-Download `Flowtype.dmg` only from the official [`v0.1.0-preview.8` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.8), open it, and follow the arrow to drag `Flowtype.app` to Applications. You do not need Swift or a source checkout.
+Download `Flowtype.dmg` only from the official [`v0.1.0-preview.9` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.9), open it, and follow the arrow to drag `Flowtype.app` to Applications. You do not need Swift or a source checkout.
 
 On first launch, a five-page illustrated guide walks you through choosing the interface language, preparing Flowtype and practising holding `Fn` to talk. Clicking **Prepare Flowtype** confirms the download: Flowtype requests Microphone and Accessibility permissions, downloads the approximately 1.9 GB default Qwen3-ASR 0.6B model, and shows downloaded bytes, smoothed transfer speed, estimated time remaining and preparation progress. Fresh downloads prefer ModelScope, with resumable transfer and a Hugging Face fallback. Accessibility must still be approved in System Settings; return to Flowtype and setup continues automatically. Once preparation succeeds, Home immediately reuses the verified Ready state without asking you to prepare Flowtype again. Model weights are not stored in this repository or bundled with the source archive.
 
