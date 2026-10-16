@@ -1,24 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400" role="img" aria-labelledby="title description">
   <title id="title">Flowtype drag-to-Applications installer background</title>
-  <desc id="description">A light installer background with bilingual drag instructions and a centered right-pointing arrow.</desc>
+  <desc id="description">The Flowtype Dawn window light with a drag instruction and a glass arrow between the app and the Applications folder.</desc>
   <defs>
-    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#faf9f7"/>
-      <stop offset="0.55" stop-color="#f3f0ec"/>
-      <stop offset="1" stop-color="#ebe7e2"/>
-    </linearGradient>
-    <radialGradient id="warmGlow" cx="50%" cy="48%" r="55%">
-      <stop offset="0" stop-color="#ff9a71" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#ff9a71" stop-opacity="0"/>
+    <filter id="saturate"><feColorMatrix type="saturate" values="1.25"/></filter>
+    <radialGradient id="glow" cx="396.0" cy="184.0" r="224.4" gradientUnits="userSpaceOnUse"
+        gradientTransform="translate(396.0 184.0) scale(1 0.7130) translate(-396.0 -184.0)">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="dawn" gradientUnits="userSpaceOnUse" x1="309" y1="0" x2="351" y2="0">
+      <stop offset="0" stop-color="#F2B48F"/><stop offset=".5" stop-color="#B79BD6"/><stop offset="1" stop-color="#7FB2EC"/>
+    </linearGradient>
+    <filter id="pill" x="-50%" y="-80%" width="200%" height="260%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#6F5FA6" flood-opacity=".22"/>
+    </filter>
   </defs>
-  <rect width="660" height="400" fill="url(#surface)"/>
-  <rect width="660" height="400" fill="url(#warmGlow)"/>
-  <path d="M0 1H660" stroke="#25272d" stroke-opacity="0.08"/>
-  <text x="330" y="48" text-anchor="middle" fill="#202228" font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" font-size="23" font-weight="750">Drag Flowtype to Applications</text>
-  <text x="330" y="76" text-anchor="middle" fill="#666a73" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" font-size="15" font-weight="550">将 Flowtype 拖到 Applications 文件夹</text>
-  <circle cx="330" cy="170" r="53" fill="#ffffff" fill-opacity="0.42" stroke="#c9c3bd" stroke-opacity="0.45"/>
-  <path d="M300 170H354" stroke="#ff8068" stroke-width="8" stroke-linecap="round"/>
-  <path d="M340 154L360 170L340 186" fill="none" stroke="#ff8068" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="330" y="362" text-anchor="middle" fill="#686b72" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" font-size="12" font-weight="550">安装完成后，请从 Applications 文件夹打开 Flowtype</text>
+  <rect width="660" height="400" fill="#FBFBFB"/>
+  <g filter="url(#saturate)" opacity="0.7">
+    <image href="FlowtypeBackdrop-topLeading.png" x="0" y="0" width="312.2" height="277.6" preserveAspectRatio="none"/>
+    <image href="FlowtypeBackdrop-bottomTrailing.png" x="240.2" y="26.0" width="419.8" height="374.0" preserveAspectRatio="none"/>
+  </g>
+  <rect width="660" height="400" fill="url(#glow)"/>
+  <text x="330" y="56" text-anchor="middle" fill="#2F3034" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" font-size="24" font-weight="700">Drag Flowtype to Applications</text>
+  <rect x="288" y="148" width="84" height="44" rx="22" fill="#ffffff" fill-opacity=".86" stroke="#6F5FA6" stroke-opacity=".08" filter="url(#pill)"/>
+  <path d="M311 170H348" stroke="url(#dawn)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M339 160L351 170L339 180" fill="none" stroke="url(#dawn)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="330" y="362" text-anchor="middle" fill="#6B6E76" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif" font-size="13" font-weight="500">After installing, open Flowtype from your Applications folder.</text>
 </svg>

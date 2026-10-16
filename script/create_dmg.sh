@@ -4,9 +4,25 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_PATH="${1:-$PROJECT_ROOT/.build/Flowtype.app}"
 OUTPUT_DMG="${2:-$PROJECT_ROOT/.build/dist/Flowtype.dmg}"
-BACKGROUND_SOURCE="$APP_PATH/Contents/Resources/DMGBackground.tiff"
+# The installer window's language: en (default) or zh-CN. Both DMGs carry the same app; only the
+# window background and the volume name differ.
+INSTALLER_LANGUAGE="${3:-en}"
+case "$INSTALLER_LANGUAGE" in
+  en)
+    BACKGROUND_NAME="DMGBackground.tiff"
+    VOLUME_NAME="Flowtype Installer"
+    ;;
+  zh-CN)
+    BACKGROUND_NAME="DMGBackground-zh-CN.tiff"
+    VOLUME_NAME="Flowtype 安装器"
+    ;;
+  *)
+    echo "Unknown installer language: $INSTALLER_LANGUAGE (expected en or zh-CN)" >&2
+    exit 1
+    ;;
+esac
+BACKGROUND_SOURCE="$APP_PATH/Contents/Resources/$BACKGROUND_NAME"
 
-VOLUME_NAME="Flowtype Installer"
 ICON_SIZE="144"
 WINDOW_WIDTH="660"
 WINDOW_HEIGHT="435"
@@ -76,7 +92,8 @@ MOUNTED="true"
   "$APP_X" \
   "$APP_Y" \
   "$APPLICATIONS_X" \
-  "$APPLICATIONS_Y" <<'APPLESCRIPT'
+  "$APPLICATIONS_Y" \
+  "$BACKGROUND_NAME" <<'APPLESCRIPT'
 on run arguments
   set volumeName to item 1 of arguments
   set iconSizeValue to (item 2 of arguments) as integer
@@ -88,6 +105,7 @@ on run arguments
   set appY to (item 8 of arguments) as integer
   set applicationsX to (item 9 of arguments) as integer
   set applicationsY to (item 10 of arguments) as integer
+  set backgroundName to item 11 of arguments
 
   tell application "Finder"
     tell disk volumeName
@@ -99,7 +117,7 @@ on run arguments
         set pathbar visible to false
         set bounds to {windowLeft, windowTop, windowLeft + windowWidth, windowTop + windowHeight}
       end tell
-      set backgroundFile to file "Flowtype.app:Contents:Resources:DMGBackground.tiff"
+      set backgroundFile to file ("Flowtype.app:Contents:Resources:" & backgroundName)
       set viewOptions to icon view options of container window
       tell viewOptions
         set arrangement to not arranged

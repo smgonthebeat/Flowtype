@@ -131,7 +131,11 @@ class BundleAdapterTests(unittest.TestCase):
         logical_makefile = self._logical_lines(self.makefile)
 
         self.assertIn(
-            './script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)"',
+            './script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)" en',
+            logical_makefile,
+        )
+        self.assertIn(
+            './script/create_dmg.sh "$(APP_DIR)" "$(DMG_ZH_PATH)" zh-CN',
             logical_makefile,
         )
         for expected in (
@@ -141,7 +145,9 @@ class BundleAdapterTests(unittest.TestCase):
             'WINDOW_HEIGHT="435"',
             'set position of item "Flowtype.app"',
             'set position of item "Applications"',
-            'set backgroundFile to file "Flowtype.app:Contents:Resources:DMGBackground.tiff"',
+            'BACKGROUND_NAME="DMGBackground.tiff"',
+            'BACKGROUND_NAME="DMGBackground-zh-CN.tiff"',
+            'set backgroundFile to file ("Flowtype.app:Contents:Resources:" & backgroundName)',
             "set background picture to backgroundFile",
             'mv "$generatedItem" "$archivePath"',
             'hdiutil convert',
@@ -150,32 +156,33 @@ class BundleAdapterTests(unittest.TestCase):
             self.assertIn(expected, dmg_script)
         self.assertNotIn("rm -rf", dmg_script)
 
-        background = self.repo_root / "Resources/DMGBackground.png"
-        background_2x = self.repo_root / "Resources/DMGBackground@2x.png"
-        background_tiff = self.repo_root / "Resources/DMGBackground.tiff"
-        source = self.repo_root / "Resources/DMGBackground.svg"
-        self.assertTrue(background.is_file())
-        self.assertTrue(background_2x.is_file())
-        self.assertTrue(background_tiff.is_file())
-        self.assertTrue(source.is_file())
-        png = background.read_bytes()
-        png_2x = background_2x.read_bytes()
-        self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
-        self.assertEqual(png_2x[:8], b"\x89PNG\r\n\x1a\n")
-        self.assertEqual(struct.unpack(">II", png[16:24]), (660, 400))
-        self.assertEqual(struct.unpack(">II", png_2x[16:24]), (1320, 800))
-        self.assertEqual(
-            hashlib.sha256(png).hexdigest(),
-            "55c861a734b1456733e3545e334e2b1c82f5d6e4b6392fd7153e18dfde4c480c",
-        )
-        self.assertEqual(
-            hashlib.sha256(png_2x).hexdigest(),
-            "11b06ca9f82e2424ddb54aac5aca732c5588e04a5ddda4a75881ca690d9209a6",
-        )
-        self.assertEqual(
-            hashlib.sha256(background_tiff.read_bytes()).hexdigest(),
-            "e85a9753f3aa13f392a730444c58e24432ec60ee1ed846b028be4ea8ff0aa9ac",
-        )
+        # One Flowtype Dawn window background per installer language: SVG source, 1x and 2x PNG, and
+        # the combined TIFF Finder shows (built by public-release/marketing/dmg-background/build.py).
+        reviewed = {
+            "DMGBackground": (
+                "f7267a5e68bfc188049a535a0600a4813bb2a2a8fe55fe98cb9128234b2b59b7",
+                "7f3c1dd1d29db91af840cf74eb593f7951b5ad328817930620e16770f1e8c599",
+                "682bd66f1161006d7e233959678c45110c12ae47f5b4fda711ad2fe869ad25d7",
+            ),
+            "DMGBackground-zh-CN": (
+                "1348d00413c0776a915995eafbfa955b4fb7fd37034f9800ab248464988a067d",
+                "037a19beb1d1e7aeb0cab3637c56244316f5c07d4f12c46cf0e47e17bee8681c",
+                "2052e152946a0cc43d9a4bca98b0f6bc851e7fe219f63956f59a34616cc13efd",
+            ),
+        }
+        for name, (png_hash, png_2x_hash, tiff_hash) in reviewed.items():
+            source = self.repo_root / f"Resources/{name}.svg"
+            self.assertTrue(source.is_file(), name)
+            png = (self.repo_root / f"Resources/{name}.png").read_bytes()
+            png_2x = (self.repo_root / f"Resources/{name}@2x.png").read_bytes()
+            tiff = (self.repo_root / f"Resources/{name}.tiff").read_bytes()
+            self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n", name)
+            self.assertEqual(png_2x[:8], b"\x89PNG\r\n\x1a\n", name)
+            self.assertEqual(struct.unpack(">II", png[16:24]), (660, 400), name)
+            self.assertEqual(struct.unpack(">II", png_2x[16:24]), (1320, 800), name)
+            self.assertEqual(hashlib.sha256(png).hexdigest(), png_hash, name)
+            self.assertEqual(hashlib.sha256(png_2x).hexdigest(), png_2x_hash, name)
+            self.assertEqual(hashlib.sha256(tiff).hexdigest(), tiff_hash, name)
 
     def test_build_only_executes_compile_and_assembly_without_outer_actions(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

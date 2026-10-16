@@ -31,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.10` gives the installer a Flowtype Dawn window: the same soft
+  peach and sky light as the app, with a white glass arrow between Flowtype and
+  Applications. The installer now comes in two languages with the same app
+  inside: `Flowtype.dmg` shows English instructions and `Flowtype-zh-CN.dmg`
+  shows Chinese ones. App behaviour is unchanged from Preview 9.
 - `v0.1.0-preview.9` refreshes Home: the four stat cards get new Flowtype Dawn
   illustrations (a relit lightning badge, softer glass and a gentle glow),
   placed in the same frame in every theme, and the Apple theme uses them in

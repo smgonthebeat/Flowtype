@@ -13,10 +13,6 @@ using OpenAI's ChatGPT and then selected for use in Flowtype:
 - `Resources/Flowtype-button.svg`
 - `Resources/Flowtype-logo.svg`
 - `Resources/Flowtype-logo.png`
-- `Resources/DMGBackground.svg`
-- `Resources/DMGBackground.png`
-- `Resources/DMGBackground@2x.png`
-- `Resources/DMGBackground.tiff`
 - `Resources/HomeCardArtwork-mic.png`
 - `Resources/HomeCardArtwork-wave.png`
 - `Resources/HomeCardArtwork-docs.png`
@@ -109,11 +105,16 @@ are reproduced only as a dated documentary aid and linked back to Apple's live
 instructions. They are not offered under Flowtype's GPL license, and their use
 does not imply Apple affiliation, sponsorship, notarization, or endorsement.
 
-`Resources/DMGBackground.svg`, its exact 1×/2× rendered PNGs, and the combined
-multi-resolution TIFF provide the Finder background for the
-drag-to-Applications disk image. They contain only local project-created vector
-shapes and bilingual installation text, with no script, remote content,
-analytics, user data, or personal metadata.
+`Resources/DMGBackground.svg` (English) and `Resources/DMGBackground-zh-CN.svg`
+(Simplified Chinese), their exact 1×/2× rendered PNGs, and the combined
+multi-resolution TIFFs provide the Finder backgrounds of the two
+drag-to-Applications disk images (`Flowtype.dmg` and `Flowtype-zh-CN.dmg`).
+Since Preview 10 they draw the Flowtype Dawn window light from the two
+`FlowtypeBackdrop-*.png` corner images described above, plus project-created
+vector shapes (a glass arrow pill) and the installation text in one language.
+They contain no script, remote content, analytics, user data, or personal
+metadata. Earlier backgrounds, generated using ChatGPT, remain in the history
+of previous releases.
 
 ## Promotional Motion Assets
 

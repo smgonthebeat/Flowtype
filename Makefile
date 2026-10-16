@@ -4,6 +4,7 @@ APP_DIR := .build/$(APP_NAME).app
 DIST_DIR := .build/dist
 DMG_STAGING_DIR := .build/dmg-staging
 DMG_PATH := $(DIST_DIR)/$(APP_NAME).dmg
+DMG_ZH_PATH := $(DIST_DIR)/$(APP_NAME)-zh-CN.dmg
 UV_BINARY ?= $(shell command -v uv 2>/dev/null)
 UV_REALPATH := $(shell if [ -n "$(UV_BINARY)" ]; then python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$(UV_BINARY)"; fi)
 HELPER_VERSION ?= $(shell date -u +%Y.%m.%d)
@@ -51,8 +52,10 @@ install: build
 	ditto "$(APP_DIR)" "/Applications/$(APP_NAME).app"
 
 dmg: build
-	./script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)"
+	./script/create_dmg.sh "$(APP_DIR)" "$(DMG_PATH)" en
+	./script/create_dmg.sh "$(APP_DIR)" "$(DMG_ZH_PATH)" zh-CN
 	./script/verify_package.sh "$(APP_DIR)" "$(DMG_PATH)"
+	./script/verify_package.sh "$(APP_DIR)" "$(DMG_ZH_PATH)"
 
 verify-package:
 	./script/verify_package.sh "$(APP_DIR)" "$(DMG_PATH)"
