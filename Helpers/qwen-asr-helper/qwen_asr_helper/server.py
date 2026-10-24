@@ -44,10 +44,11 @@ MODELSCOPE_REVISIONS = {
 MODEL_ALLOW_PATTERNS = ["*.json", "*.safetensors", "*.txt", "*.model"]
 CHUNKED_TRANSCRIPTION_MIN_SECONDS = 12.0
 SILENCE_WINDOW_SECONDS = 0.1
-SILENCE_MERGE_SECONDS = 0.7
-SEGMENT_PADDING_SECONDS = 0.25
 MIN_SEGMENT_SECONDS = 0.35
-MAX_SEGMENT_SECONDS = 10.0
+# Pieces stay under the model's own 30 s split so each piece is decoded in one pass.
+MAX_SEGMENT_SECONDS = 25.0
+# Each cut is placed at the quietest window in the last CUT_SEARCH_SECONDS of a piece.
+CUT_SEARCH_SECONDS = 5.0
 SEGMENT_SPLIT_TOLERANCE_SECONDS = 0.001
 # The model cannot extract features from fewer than about 200 samples (12.5 ms at 16 kHz).
 MIN_PIECE_FRAMES = 400
@@ -650,15 +651,17 @@ def rms_int16(frames: bytes) -> float:
     return (sum(sample * sample for sample in samples) / len(samples)) ** 0.5
 
 
-def percentile(values: list[float], ratio: float) -> float:
-    if not values:
-        return 0.0
-    ordered = sorted(values)
-    index = min(len(ordered) - 1, max(0, int(round((len(ordered) - 1) * ratio))))
-    return ordered[index]
-
-
 def speech_segments_for_wav(path: str) -> list[AudioSegment]:
+    """Cover the whole recording with contiguous pieces of at most MAX_SEGMENT_SECONDS.
+
+    No audio is ever left out. The previous splitter kept only windows louder than three
+    times the 20th-percentile energy and dropped the rest; in continuous dictation that
+    percentile is quiet speech, not room noise, so most of the speech was discarded and long
+    dictations came back as fragments (2026-10-23). Cuts are placed at the quietest window
+    near the end of each piece so they fall in pauses where possible. A tail shorter than
+    MIN_SEGMENT_SECONDS is folded into the previous piece, so no piece is degenerate
+    (2026-10-08: a 0-sample piece failed the whole request as empty audio).
+    """
     try:
         with wave.open(path, "rb") as handle:
             frame_rate = handle.getframerate()
@@ -680,73 +683,35 @@ def speech_segments_for_wav(path: str) -> list[AudioSegment]:
     except (EOFError, wave.Error):
         return [AudioSegment(0.0, 0.0)]
 
-    if not rms_values:
-        return [AudioSegment(0.0, duration)]
-
-    noise_floor = percentile(rms_values, 0.2)
-    speech_level = percentile(rms_values, 0.9)
-    threshold = max(160.0, noise_floor * 3.0, speech_level * 0.18)
-
-    raw_segments: list[AudioSegment] = []
-    current_start: float | None = None
-    for start, rms in zip(window_starts, rms_values):
-        window_end = min(duration, start + SILENCE_WINDOW_SECONDS)
-        if rms >= threshold:
-            if current_start is None:
-                current_start = start
-        elif current_start is not None:
-            raw_segments.append(AudioSegment(current_start, start))
-            current_start = None
-    if current_start is not None:
-        raw_segments.append(AudioSegment(current_start, duration))
-
-    if not raw_segments:
-        return [AudioSegment(0.0, duration)]
-
-    merged: list[AudioSegment] = []
-    for segment in raw_segments:
-        if not merged or segment.start - merged[-1].end > SILENCE_MERGE_SECONDS:
-            merged.append(segment)
-        else:
-            merged[-1] = AudioSegment(merged[-1].start, segment.end)
-
-    padded = [
-        AudioSegment(
-            max(0.0, segment.start - SEGMENT_PADDING_SECONDS),
-            min(duration, segment.end + SEGMENT_PADDING_SECONDS),
-        )
-        for segment in merged
-        if segment.end - segment.start >= MIN_SEGMENT_SECONDS
-    ]
-    if not padded:
-        return [AudioSegment(0.0, duration)]
-
-    split_segments: list[AudioSegment] = []
-    for segment in padded:
-        split_segments.extend(split_long_segment(segment))
-
-    return split_segments or [AudioSegment(0.0, duration)]
-
-
-def split_long_segment(segment: AudioSegment) -> list[AudioSegment]:
-    """Cut a speech run into pieces of at most MAX_SEGMENT_SECONDS without a degenerate tail.
-
-    Float arithmetic can leave a run a hair longer than a multiple of MAX_SEGMENT_SECONDS
-    (for example 20.000000000000004 s), which used to produce a final 0-sample piece; the
-    model rejects that as empty audio and the whole dictation failed (2026-10-08). A tail
-    shorter than MIN_SEGMENT_SECONDS is folded into the previous piece instead.
-    """
     pieces: list[AudioSegment] = []
-    start = segment.start
-    while segment.end - start > MAX_SEGMENT_SECONDS + SEGMENT_SPLIT_TOLERANCE_SECONDS:
-        end = start + MAX_SEGMENT_SECONDS
-        pieces.append(AudioSegment(start, end))
-        start = end
-    if pieces and segment.end - start < MIN_SEGMENT_SECONDS:
-        pieces[-1] = AudioSegment(pieces[-1].start, segment.end)
+    start = 0.0
+    while duration - start > MAX_SEGMENT_SECONDS + SEGMENT_SPLIT_TOLERANCE_SECONDS:
+        cut = quietest_cut(
+            window_starts,
+            rms_values,
+            earliest=start + MAX_SEGMENT_SECONDS - CUT_SEARCH_SECONDS,
+            latest=start + MAX_SEGMENT_SECONDS,
+        )
+        pieces.append(AudioSegment(start, cut))
+        start = cut
+    if pieces and duration - start < MIN_SEGMENT_SECONDS:
+        pieces[-1] = AudioSegment(pieces[-1].start, duration)
     else:
-        pieces.append(AudioSegment(start, segment.end))
+        pieces.append(AudioSegment(start, duration))
     return pieces
+
+
+def quietest_cut(window_starts: list[float], rms_values: list[float], earliest: float, latest: float) -> float:
+    """Middle of the quietest whole window inside [earliest, latest]; latest when none fits."""
+    candidates = [
+        (rms, window_start)
+        for window_start, rms in zip(window_starts, rms_values)
+        if window_start >= earliest and window_start + SILENCE_WINDOW_SECONDS <= latest
+    ]
+    if not candidates:
+        return latest
+    _, window_start = min(candidates, key=lambda candidate: candidate[0])
+    return window_start + SILENCE_WINDOW_SECONDS / 2
 
 
 def write_wav_segment(source_path: str, segment: AudioSegment) -> str:

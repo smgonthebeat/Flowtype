@@ -384,35 +384,24 @@ final class QwenTranscriptionEngineTests: XCTestCase {
         XCTAssertEqual(result.effectiveStrategy, "full")
     }
 
-    func testUsesFullStrategyAtLongDictationThreshold() async throws {
-        let client = RecordingQwenClient(responses: ["threshold transcript"])
-        let engine = QwenTranscriptionEngine(
-            client: client,
-            modelID: "Qwen/Qwen3-ASR-0.6B",
-            recordingDuration: { _ in 60.0 }
-        )
+    // Approved behavior change (2026-10-23): recordings over 60 s no longer switch to chunked
+    // mode, whose splitter dropped most of a continuous dictation.
+    func testUsesFullStrategyForEveryLongDictationLength() async throws {
+        for duration in [60.0, 60.1, 107.5, 180.0] {
+            let client = RecordingQwenClient(responses: ["very long transcript"])
+            let engine = QwenTranscriptionEngine(
+                client: client,
+                modelID: "Qwen/Qwen3-ASR-0.6B",
+                recordingDuration: { _ in duration }
+            )
 
-        let result = try await engine.transcribe(fileURL: URL(fileURLWithPath: "/tmp/threshold.wav"), languageMode: .mixedChineseEnglish)
+            let result = try await engine.transcribe(fileURL: URL(fileURLWithPath: "/tmp/very-long.wav"), languageMode: .mixedChineseEnglish)
 
-        XCTAssertEqual(result.text, "threshold transcript")
-        XCTAssertEqual(client.strategies, [.full])
-        XCTAssertEqual(result.effectiveStrategy, "full")
-    }
-
-    func testUsesChunkedStrategyForVeryLongRecordings() async throws {
-        let client = RecordingQwenClient(responses: ["very long transcript"])
-        let engine = QwenTranscriptionEngine(
-            client: client,
-            modelID: "Qwen/Qwen3-ASR-0.6B",
-            recordingDuration: { _ in 60.1 }
-        )
-
-        let result = try await engine.transcribe(fileURL: URL(fileURLWithPath: "/tmp/very-long.wav"), languageMode: .mixedChineseEnglish)
-
-        XCTAssertEqual(result.text, "very long transcript")
-        XCTAssertEqual(client.strategies, [.chunked])
-        XCTAssertEqual(result.requestedStrategy, "full")
-        XCTAssertEqual(result.effectiveStrategy, "chunked")
+            XCTAssertEqual(result.text, "very long transcript")
+            XCTAssertEqual(client.strategies, [.full], "duration \(duration)")
+            XCTAssertEqual(result.requestedStrategy, "full")
+            XCTAssertEqual(result.effectiveStrategy, "full")
+        }
     }
 
     func testRequestedChunkedStrategyStillUsesChunkedForShortRecording() async throws {

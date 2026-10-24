@@ -36,6 +36,33 @@
       "strategy": "chunked",
       "iterations": 2,
       "text": "现在进行六十五秒 Flowtype chunked transcription regression test。每个片段之间保留短暂停顿，用来验证分段、拼接和 cache clearing 没有出现重复或遗漏。"
+    },
+    {
+      "id": "long_full_120s",
+      "voice": "Tingting",
+      "rate": 205,
+      "target_duration_seconds": 120,
+      "strategy": "full",
+      "iterations": 2,
+      "text": "现在进行长录音整段识别测试，Flowtype 应该把每一句话都完整转写出来，包括 Qwen three ASR、Apple Silicon 和数字一百八十秒，不能吞字，也不能重复。"
+    },
+    {
+      "id": "long_full_180s",
+      "voice": "Tingting",
+      "rate": 205,
+      "target_duration_seconds": 180,
+      "strategy": "full",
+      "iterations": 2,
+      "text": "现在进行长录音整段识别测试，Flowtype 应该把每一句话都完整转写出来，包括 Qwen three ASR、Apple Silicon 和数字一百八十秒，不能吞字，也不能重复。"
+    },
+    {
+      "id": "long_chunked_180s",
+      "voice": "Tingting",
+      "rate": 205,
+      "target_duration_seconds": 180,
+      "strategy": "chunked",
+      "iterations": 2,
+      "text": "现在进行长录音整段识别测试，Flowtype 应该把每一句话都完整转写出来，包括 Qwen three ASR、Apple Silicon 和数字一百八十秒，不能吞字，也不能重复。"
     }
   ]
 }

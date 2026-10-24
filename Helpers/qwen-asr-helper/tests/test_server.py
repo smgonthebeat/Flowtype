@@ -616,32 +616,24 @@ def test_http_preload_and_transcribe_use_same_mlx_worker_thread(monkeypatch, tmp
     assert created_thread_ids == transcribe_thread_ids
 
 
-def test_transcribe_long_wav_splits_on_silence(monkeypatch, tmp_path):
+def test_transcribe_long_wav_chunked_covers_every_sample(monkeypatch, tmp_path):
     wav_path = tmp_path / "long.wav"
-    write_test_wav(
-        wav_path,
-        [
-            (4.0, 1_000),
-            (1.2, 0),
-            (4.0, 1_000),
-            (4.0, 0),
-        ],
-    )
-    seen_durations = []
+    write_test_wav(wav_path, [(20.0, 1_000), (1.2, 0), (20.0, 1_000), (14.0, 0)])
+    seen_frames = []
 
     class FakeSession:
         def transcribe(self, path: str, **kwargs):
             with wave.open(path, "rb") as handle:
-                seen_durations.append(handle.getnframes() / handle.getframerate())
-            return SimpleNamespace(text=f"part{len(seen_durations)}")
+                seen_frames.append(handle.getnframes())
+            return SimpleNamespace(text=f"part{len(seen_frames)}")
 
     monkeypatch.setattr(server, "get_session", lambda model_id=None: FakeSession())
 
     text = server.transcribe_file(str(wav_path), "Qwen/Qwen3-ASR-0.6B", strategy="chunked")
 
-    assert text == "part1 part2"
-    assert len(seen_durations) == 2
-    assert all(duration < 5 for duration in seen_durations)
+    assert text == "part1 part2 part3"
+    assert sum(seen_frames) == int(55.2 * 16_000)
+    assert all(frames <= server.MAX_SEGMENT_SECONDS * 16_000 for frames in seen_frames)
 
 
 def test_transcribe_long_wav_defaults_to_full_file(monkeypatch, tmp_path):
@@ -843,9 +835,11 @@ def test_main_rejects_startup_without_authentication_token(monkeypatch):
         server.main()
 
 
-# 2026-10-08: a speech run a float hair longer than a multiple of MAX_SEGMENT_SECONDS used to
-# produce a 0-sample final piece; the model rejected it as empty audio and the whole long
-# dictation failed with HTTP 400 empty_audio.
+# 2026-10-08: a run a float hair longer than a multiple of the piece length used to produce a
+# 0-sample final piece; the model rejected it as empty audio and the whole dictation failed.
+# 2026-10-23: the splitter kept only windows above an energy threshold derived from the 20th
+# percentile; in continuous dictation that discarded most of the speech. Pieces must now cover
+# every sample of the recording.
 
 
 class RecordingChunkSession:
@@ -865,39 +859,69 @@ class RecordingChunkSession:
         return SimpleNamespace(text=f"piece{len(self.frame_counts)}")
 
 
-def window_run(start_window: int, length_windows: int) -> server.AudioSegment:
-    """A padded speech run exactly as speech_segments_for_wav computes it (0.1 s windows)."""
-    start = (start_window * 1600) / 16_000
-    end = ((start_window + length_windows) * 1600) / 16_000
-    return server.AudioSegment(start - server.SEGMENT_PADDING_SECONDS, end + server.SEGMENT_PADDING_SECONDS)
+def write_continuous_dictation_wav(path: Path, seconds: float) -> None:
+    """Continuous speech with no real pauses: mostly quiet syllables, a few louder ones.
+
+    Under the old splitter (threshold = max(160, p20 * 3, p90 * 0.18)) almost every window of
+    this layout fell below the threshold and was dropped.
+    """
+    parts = []
+    elapsed = 0.0
+    index = 0
+    while elapsed < seconds:
+        amplitude = 4_000 if index % 7 == 0 else 1_400 + (index % 3) * 150
+        parts.append((0.3, amplitude))
+        elapsed += 0.3
+        index += 1
+    write_test_wav(path, parts)
 
 
-def test_split_long_segment_has_no_degenerate_tail_at_any_float_boundary():
-    for length_windows in (95, 195, 295, 395, 595):
-        for start_window in range(3, 400):
-            run = window_run(start_window, length_windows)
-            pieces = server.split_long_segment(run)
-            assert pieces[0].start == run.start
-            assert pieces[-1].end == run.end
-            for left, right in zip(pieces, pieces[1:]):
-                assert left.end == right.start
-            for piece in pieces:
-                assert piece.end - piece.start >= server.MIN_SEGMENT_SECONDS
-                assert piece.end - piece.start <= server.MAX_SEGMENT_SECONDS + server.MIN_SEGMENT_SECONDS
+def assert_contiguous_cover(pieces, duration):
+    assert pieces[0].start == 0.0
+    assert pieces[-1].end == duration
+    for left, right in zip(pieces, pieces[1:]):
+        assert left.end == right.start
+    for piece in pieces:
+        assert piece.end - piece.start >= server.MIN_SEGMENT_SECONDS
+        assert piece.end - piece.start <= server.MAX_SEGMENT_SECONDS + server.MIN_SEGMENT_SECONDS
 
 
-def test_split_long_segment_reproduction_case_from_the_failure():
-    pieces = server.split_long_segment(window_run(21, 195))
-    assert [(round(p.start, 6), round(p.end, 6)) for p in pieces] == [(1.85, 11.85), (11.85, 21.85)]
+def test_continuous_dictation_keeps_every_sample(tmp_path):
+    path = tmp_path / "continuous.wav"
+    write_continuous_dictation_wav(path, 70.8)
+    duration = server.wav_duration_seconds(str(path))
+    session = RecordingChunkSession()
+
+    pieces = server.speech_segments_for_wav(str(path))
+    server.transcribe_file_in_chunks(str(path), session)
+
+    assert_contiguous_cover(pieces, duration)
+    assert sum(session.frame_counts) == round(duration * 16_000)
 
 
-def test_split_long_segment_folds_a_short_tail_and_keeps_a_real_one():
-    folded = server.split_long_segment(server.AudioSegment(0.0, 20.2))
-    assert [(p.start, p.end) for p in folded] == [(0.0, 10.0), (10.0, 20.2)]
-    kept = server.split_long_segment(server.AudioSegment(0.0, 20.5))
-    assert [(p.start, p.end) for p in kept] == [(0.0, 10.0), (10.0, 20.0), (20.0, 20.5)]
-    single = server.split_long_segment(server.AudioSegment(1.0, 4.0))
-    assert [(p.start, p.end) for p in single] == [(1.0, 4.0)]
+def test_pieces_cover_the_recording_at_every_length(tmp_path):
+    for seconds in (12.0, 24.9, 25.0, 25.2, 25.4, 50.0, 50.05, 70.7, 107.5, 180.0):
+        path = tmp_path / f"len-{seconds}.wav"
+        write_continuous_dictation_wav(path, seconds)
+        duration = server.wav_duration_seconds(str(path))
+        assert_contiguous_cover(server.speech_segments_for_wav(str(path)), duration)
+
+
+def test_cuts_land_in_a_pause_when_one_is_near(tmp_path):
+    path = tmp_path / "pause.wav"
+    write_test_wav(path, [(22.0, 3_000), (0.6, 0), (20.0, 3_000)])
+
+    pieces = server.speech_segments_for_wav(str(path))
+
+    assert len(pieces) == 2
+    assert 22.0 <= pieces[0].end <= 22.6
+
+
+def test_short_recording_is_one_piece(tmp_path):
+    path = tmp_path / "short.wav"
+    write_test_wav(path, [(11.9, 3_000)])
+
+    assert [(p.start, p.end) for p in server.speech_segments_for_wav(str(path))] == [(0.0, 11.9)]
 
 
 def test_chunked_transcription_of_the_failing_layout_succeeds(tmp_path):

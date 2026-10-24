@@ -31,6 +31,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.12` stops long dictations losing words. Recordings over
+  60 seconds, and every History retry, went through a splitter that kept only
+  the louder parts of the audio; when you spoke continuously it dropped most of
+  the speech and the text came back as fragments. Dictation of any length is
+  now transcribed in one pass, so nothing is cut out, and the History retry
+  covers every second of the recording. Measured on a 180-second recording
+  with the 0.6B model: about 9.5 seconds to transcribe, with the same memory
+  use as before.
 - `v0.1.0-preview.11` fixes the Home stat cards on some Macs: the soft glow
   behind each card's illustration could drift to the middle of the card instead
   of sitting in the bottom-right corner. Its position is now worked out from

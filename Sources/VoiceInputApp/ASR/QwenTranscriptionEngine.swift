@@ -1,9 +1,6 @@
 import Foundation
 
 final class QwenTranscriptionEngine: TranscriptionEngine {
-    // Keep ordinary long dictation in full mode through this duration; only longer recordings are chunked.
-    private static let longDictationFullThreshold: TimeInterval = 60
-
     private let client: QwenTranscriptionClient
     private let modelID: String
     private let context: QwenPromptContext
@@ -29,7 +26,10 @@ final class QwenTranscriptionEngine: TranscriptionEngine {
 
     func transcribe(fileURL: URL, languageMode: LanguageMode) async throws -> TranscriptionResult {
         let duration = recordingDuration(fileURL)
-        let effectiveStrategy = effectiveStrategy(forRecordingDuration: duration)
+        // Dictation of every length is decoded in full: the model splits long audio itself
+        // without dropping any of it. Recordings over 60 s used to switch to chunked mode,
+        // whose splitter discarded most of a continuous dictation (2026-10-23).
+        let effectiveStrategy = strategy
         let decodeStartedAt = Date()
         let text = try await client.transcribe(
             wavURL: fileURL,
@@ -75,15 +75,6 @@ final class QwenTranscriptionEngine: TranscriptionEngine {
         }
         onDecodeTiming?(Self.milliseconds(since: decodeStartedAt))
         return result(text: text, effectiveStrategy: effectiveStrategy)
-    }
-
-    private func effectiveStrategy(forRecordingDuration duration: TimeInterval?) -> QwenTranscriptionStrategy {
-        guard strategy == .full,
-              let duration,
-              duration > Self.longDictationFullThreshold else {
-            return strategy
-        }
-        return .chunked
     }
 
     private func containsContextLeak(
