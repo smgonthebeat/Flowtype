@@ -30,6 +30,10 @@ enum NumericNormalizer {
 
         var decisions = ChineseNumericRecognizers.recognize(context)
         decisions.merge(EnglishNumericRecognizer.recognize(context))
+        // An identifier's number is decided once, by the designator rule (S one -> S 1).
+        let designators = DesignatorRecognizer.recognize(context)
+        decisions.removeOverlapping(designators.proposals.map(\.range))
+        decisions.merge(designators)
         let result = NumericArbiter.resolve(numericText, decisions: decisions, protected: protectedRanges)
 
         let output = NumericText(result.text)

@@ -350,8 +350,8 @@
 {"text": "这个版本叫 V 5。", "options": {"filler": true}, "expected": "这个版本叫 V5。", "kind": "must-change", "clause": "C6", "note": "C6 open question", "source": "corpus-baseline#349 M18"}
 {"text": "这个版本叫 V five。", "options": {"filler": true}, "expected": "这个版本叫 V5。", "kind": "must-change", "clause": "C6", "note": "C6 open question", "source": "corpus-baseline#350 M18"}
 {"text": "Try V six.", "options": {"filler": true}, "expected": "Try V6.", "kind": "must-change", "clause": "C6", "note": "C6 open question", "source": "corpus-baseline#351 M18"}
-{"text": "The M four chip is fast.", "options": {"filler": true}, "expected": "The M 4 chip is fast.", "kind": "must-keep", "clause": "C6", "note": "4.3 designator join needs end, punctuation or a non-measure Han character after the number.", "source": "corpus-baseline#352 M18"}
-{"text": "We are a B two B company.", "options": {"filler": true}, "expected": "We are a B 2 B company.", "kind": "must-keep", "clause": "C6", "note": "4.3 designator join; 'B 2 B' has a following word, so no join.", "source": "corpus-baseline#353 M18"}
+{"text": "The M four chip is fast.", "options": {"filler": true}, "expected": "The M4 chip is fast.", "kind": "must-change", "clause": "C6-identifier", "note": "2026-10-25 (D85): a capital letter + number is one identifier and joins in any context except a counted noun.", "source": "corpus-baseline#352 M18"}
+{"text": "We are a B two B company.", "options": {"filler": true}, "expected": "We are a B2B company.", "kind": "must-change", "clause": "C6-identifier", "note": "2026-10-25 (D85): B 2 B / B 2 C / P 2 P ('2' read as 'to') are written together.", "source": "corpus-baseline#353 M18"}
 {"text": "这个V five好用吗？", "options": {"filler": true}, "expected": "这个V5好用吗？", "kind": "must-change", "clause": "C8", "note": "", "source": "corpus-baseline#354 M16+M18"}
 {"text": "他说“final V two”就行", "options": {"filler": true}, "expected": "他说“final V2”就行", "kind": "must-change", "clause": "C8", "note": "", "source": "corpus-baseline#355 M16+M18"}
 {"text": "We need Python three point twelve for this.", "options": {"filler": true}, "expected": "We need Python 3.12 for this.", "kind": "must-change", "clause": "C7", "note": "", "source": "corpus-baseline#356 M15"}
@@ -1180,3 +1180,29 @@
 {"text": "十三月一号", "options": {"filler": true}, "expected": "十三月一号", "kind": "must-keep", "clause": "4.1-month-day", "note": "Owner decision 2026-10-03: month + day without a year", "source": "owner-2026-10-03"}
 {"text": "十月一二号见", "options": {"filler": true}, "expected": "十月一二号见", "kind": "must-keep", "clause": "4.1-month-day", "note": "Owner decision 2026-10-03: month + day without a year", "source": "owner-2026-10-03"}
 {"text": "二零二六年的十月二号", "options": {"filler": true}, "expected": "2026年10月2号", "kind": "must-change", "clause": "4.1-month-day", "note": "Owner decision 2026-10-03: month + day without a year", "source": "owner-2026-10-03"}
+{"text": "所以这个 S one S two S five to S nine。", "options": {"filler": true}, "expected": "所以这个 S1 S2 S5 to S9。", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "所以这个 S one, S two, S five to S nine.", "options": {"filler": true}, "expected": "所以这个 S1, S2, S5 to S9.", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "F one.", "options": {"filler": true}, "expected": "F1.", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "F one。", "options": {"filler": true}, "expected": "F1。", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "再开始 G one。然后", "options": {"filler": true}, "expected": "再开始 G1。然后", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "这个F one内部版V四、V四现在都改的怎么样了", "options": {"filler": true}, "expected": "这个F1内部版V4、V4现在都改的怎么样了", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "F two 内部版", "options": {"filler": true}, "expected": "F2 内部版", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "这是 A one 方案", "options": {"filler": true}, "expected": "这是 A1 方案", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "A one.", "options": {"filler": true}, "expected": "A1.", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "H zero and H one", "options": {"filler": true}, "expected": "H0 and H1", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "第 F one 题", "options": {"filler": true}, "expected": "第 F1 题", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "问题 Q two 和 Q three", "options": {"filler": true}, "expected": "问题 Q2 和 Q3", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "P one P two P three", "options": {"filler": true}, "expected": "P1 P2 P3", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "S一、S二", "options": {"filler": true}, "expected": "S1、S2", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "B two C platform", "options": {"filler": true}, "expected": "B2C platform", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "plan B one time", "options": {"filler": true}, "expected": "plan B one time", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "plan B three times", "options": {"filler": true}, "expected": "plan B 3 times", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "A five minute walk", "options": {"filler": true}, "expected": "A 5 minute walk", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "A four year plan", "options": {"filler": true}, "expected": "A 4 year plan", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "C two students", "options": {"filler": true}, "expected": "C 2 students", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "方案B一定可以", "options": {"filler": true}, "expected": "方案B一定可以", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "B一样", "options": {"filler": true}, "expected": "B一样", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "B三次", "options": {"filler": true}, "expected": "B三次", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "I one day", "options": {"filler": true}, "expected": "I one day", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "G P T five", "options": {"filler": true}, "expected": "GPT 5", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "Exercise three Q two H.", "options": {"filler": true}, "expected": "Exercise 3 Q2 H.", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}

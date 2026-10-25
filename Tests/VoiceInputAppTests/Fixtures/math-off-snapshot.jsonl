@@ -1672,7 +1672,7 @@
 {"input": "这个版本叫 V five。", "knownTerms": [], "numericAcademic": "这个版本叫 V5。", "all": "这个版本叫 V5。"}
 {"input": "Try V six.", "knownTerms": [], "numericAcademic": "Try V6.", "all": "Try V6."}
 {"input": "The M four chip is fast.", "knownTerms": [], "numericAcademic": "The M4 chip is fast.", "all": "The M4 chip is fast."}
-{"input": "We are a B two B company.", "knownTerms": [], "numericAcademic": "We are a B 2 B company.", "all": "We are a B 2 B company."}
+{"input": "We are a B two B company.", "knownTerms": [], "numericAcademic": "We are a B2B company.", "all": "We are a B2B company."}
 {"input": "这个V five好用吗？", "knownTerms": [], "numericAcademic": "这个V5好用吗？", "all": "这个V5好用吗？"}
 {"input": "他说“final V two”就行", "knownTerms": [], "numericAcademic": "他说“final V2”就行", "all": "他说“final V2”就行"}
 {"input": "We need Python three point twelve for this.", "knownTerms": [], "numericAcademic": "We need Python 3.12 for this.", "all": "We need Python 3.12 for this."}

@@ -33,6 +33,12 @@ struct NumericDecisions {
         abstentions.append(NumericAbstention(range: range, ruleID: rule, reason: reason))
     }
 
+    /// Drops every decision that overlaps one of `ranges` (spans another recogniser has claimed).
+    mutating func removeOverlapping(_ ranges: [Range<Int>]) {
+        proposals.removeAll { proposal in ranges.contains { $0.overlaps(proposal.range) } }
+        abstentions.removeAll { abstention in ranges.contains { $0.overlaps(abstention.range) } }
+    }
+
     mutating func merge(_ other: NumericDecisions) {
         proposals += other.proposals
         abstentions += other.abstentions

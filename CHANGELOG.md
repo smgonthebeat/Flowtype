@@ -31,6 +31,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.13` writes a letter spoken with a number as one label.
+  "S one, S two, S five to S nine" used to come out as "S one, S2, S 5 to
+  S9": the word "one" was kept, and the space was removed only before
+  punctuation. Smart number formatting now writes S1, S2, S5 to S9, F1, A1,
+  H0 and V4 the same way everywhere. A number that counts what follows is
+  left as before ("plan B 3 times", "vitamin C 500 mg"), and B2B / B2C /
+  P2P are written together.
 - `v0.1.0-preview.12` stops long dictations losing words. Recordings over
   60 seconds, and every History retry, went through a splitter that kept only
   the louder parts of the audio; when you spoke continuously it dropped most of

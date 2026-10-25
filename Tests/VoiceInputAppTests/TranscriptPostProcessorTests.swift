@@ -216,7 +216,8 @@ final class TranscriptPostProcessorTests: XCTestCase {
                 if academicReferenceEnabled {
                     academicExpected = "Exercise 3 Q2(h)."
                 } else if smartNumericEnabled {
-                    academicExpected = "Exercise 3 Q 2 H."
+                    // 2026-10-25 (D85): a capital letter + number is one identifier, so Q 2 joins.
+                    academicExpected = "Exercise 3 Q2 H."
                 } else {
                     academicExpected = "Exercise three Q two H."
                 }
@@ -730,7 +731,8 @@ final class TranscriptPostProcessorTests: XCTestCase {
                 fillerOnStageOutput: nil,
                 expectedFinal: { smart, academic, _, _ in
                     if academic { return "Exercise 3 Q2(h)." }
-                    return smart ? "Exercise 3 Q 2 H." : "Exercise three Q two H."
+                    // 2026-10-25 (D85): a capital letter + number is one identifier, so Q 2 joins.
+                    return smart ? "Exercise 3 Q2 H." : "Exercise three Q two H."
                 }
             ),
             CapabilityCase(
