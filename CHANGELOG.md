@@ -31,6 +31,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.14` fixes codes spoken in English that came out with Chinese
+  digits. The small 0.6B model sometimes writes "C zero three nine" as
+  "C零三九"; Flowtype now writes the digits after a letter as "C039", and
+  course or product codes as one word: "COMP零零零八" and "COMP zero zero zero
+  eight" both become "COMP0008". Only numbers that start with 0 are joined to
+  a multi-letter prefix, so "GPT 5" and "ISO 9001" stay as they are.
 - `v0.1.0-preview.13` writes a letter spoken with a number as one label.
   "S one, S two, S five to S nine" used to come out as "S one, S2, S 5 to
   S9": the word "one" was kept, and the space was removed only before

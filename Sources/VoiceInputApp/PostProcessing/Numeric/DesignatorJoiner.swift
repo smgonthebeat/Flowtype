@@ -36,6 +36,16 @@ enum DesignatorRule {
         return true
     }
 
+    /// Two to five capitals standing alone (COMP, MATH, STAT): the prefix of a course or product code.
+    static func isCodePrefix(_ range: Range<Int>, in text: NumericText) -> Bool {
+        guard (2...5).contains(range.count),
+              range.allSatisfy({ CharClass.isASCIIUppercase(text[$0]) }) else { return false }
+        if let left = text.at(range.lowerBound - 1), CharClass.isASCIIWordChar(left) || "'’.-/".contains(left) {
+            return false
+        }
+        return !(text.at(range.upperBound).map(CharClass.isASCIIWordChar) ?? false)
+    }
+
     /// The number ending at `numberEnd` counts the noun or measure word that follows it.
     static func countsFollowingNoun(letter: Int, numberEnd: Int, value: Int?, in text: NumericText) -> Bool {
         var offset = numberEnd
@@ -69,28 +79,37 @@ enum DesignatorRule {
 }
 
 /// Converts the number of an identifier in the numeric stage, including a lone one/zero
-/// (F one -> F 1) and a Chinese digit attached to the letter (V四、 -> V4、). Its spans take
-/// precedence over every other numeric decision; `DesignatorJoiner` then removes the space.
+/// (F one -> F 1) and Chinese digits attached to the letter (V四、 -> V4、, C零三九 -> C039,
+/// COMP零零零八 -> COMP0008). Its spans take precedence over every other numeric decision;
+/// `DesignatorJoiner` then removes the space.
 enum DesignatorRecognizer {
     static func recognize(_ context: NumericContext) -> NumericDecisions {
         var decisions = NumericDecisions()
         let text = context.text
         let all = EnglishNumericRecognizer.tokens(context)
         for (index, token) in all.enumerated() {
-            guard token.isWord, token.range.count == 1, token.standalone,
-                  DesignatorRule.isDesignatorLetter(at: token.range.lowerBound, in: text) else { continue }
+            guard token.isWord, token.standalone else { continue }
             let letter = token.range.lowerBound
-            if let digit = text.at(token.range.upperBound).flatMap({ CharClass.chineseDigits[$0] }),
-               CharClass.isChineseRunDigit(text[token.range.upperBound]) {
-                let range = token.range.upperBound..<(token.range.upperBound + 1)
-                guard !(text.at(range.upperBound).map(CharClass.isChineseNumeral) ?? false),
-                      !context.isProtected(letter..<range.upperBound), !context.crossesWord(range),
-                      !DesignatorRule.countsFollowingNoun(letter: letter, numberEnd: range.upperBound, value: digit, in: text)
+            let isLetter = token.range.count == 1 && DesignatorRule.isDesignatorLetter(at: letter, in: text)
+            let isCode = DesignatorRule.isCodePrefix(token.range, in: text)
+            guard isLetter || isCode else { continue }
+            if let run = chineseDigitRun(from: token.range.upperBound, in: text) {
+                // 0.6B sometimes writes English-spoken digits as Chinese numerals (2026-10-25).
+                let digits = String(text.slice(run).map { Character(String(CharClass.chineseDigits[$0]!)) })
+                // A multi-letter prefix needs a code-shaped number: GPT四 stays, COMP零零零八 converts.
+                if isCode, !(digits.count >= 2 && digits.hasPrefix("0")) { continue }
+                guard !(text.at(run.upperBound).map(CharClass.isChineseNumeral) ?? false),
+                      !context.isProtected(letter..<run.upperBound), !context.crossesWord(run),
+                      !DesignatorRule.countsFollowingNoun(letter: letter, numberEnd: run.upperBound,
+                                                          value: Int(digits), in: text)
                 else { continue }
-                decisions.propose(range, String(digit), rule: "numeric.designator",
+                // C零七二C零三九: keep the next code apart once both are digits.
+                let separator = text.at(run.upperBound).map(CharClass.isASCIILetter) == true ? " " : ""
+                decisions.propose(run, digits + separator, rule: "numeric.designator",
                                   evidence: "capital letter + Chinese digit identifier", specificity: 1)
                 continue
             }
+            guard isLetter else { continue }
             var words: [String] = []
             var cursor = index + 1
             while cursor < all.count, all[cursor].isWord, all[cursor].standalone,
@@ -116,6 +135,13 @@ enum DesignatorRecognizer {
         }
         return decisions
     }
+
+    /// Chinese digits read one by one (零〇幺一…九, no 两 or 十) directly after `offset`.
+    static func chineseDigitRun(from offset: Int, in text: NumericText) -> Range<Int>? {
+        var end = offset
+        while let c = text.at(end), CharClass.isChineseRunDigit(c) { end += 1 }
+        return end > offset ? offset..<end : nil
+    }
 }
 
 /// Joins a designator letter and its number (S 5 -> S5, B 2 B -> B2B). It runs after number
@@ -137,7 +163,7 @@ enum DesignatorJoiner {
             var end = letter + 2
             while end < numericText.count, CharClass.isASCIIDigit(numericText[end]) { end += 1 }
             let integerDigits = end - (letter + 2)
-            guard integerDigits <= 3 else { continue }
+            guard integerDigits <= 3 || first == "0" && integerDigits <= 6 else { continue }
             let value = Int(numericText.slice((letter + 2)..<end))
             if numericText.at(end) == ".", let next = numericText.at(end + 1), CharClass.isASCIIDigit(next) {
                 end += 1
@@ -168,6 +194,28 @@ enum DesignatorJoiner {
                 before: numericText.slice(range),
                 after: after,
                 reason: "capital letter + number identifier",
+                confidence: .high
+            ))
+        }
+        // COMP 0008 -> COMP0008: a code number starts with 0, so it is never a quantity (GPT 5, ISO 9001 stay).
+        for space in 2..<numericText.count where numericText[space] == " " {
+            var start = space
+            while start > 0, CharClass.isASCIIUppercase(numericText[start - 1]) { start -= 1 }
+            guard DesignatorRule.isCodePrefix(start..<space, in: numericText),
+                  numericText.at(space + 1) == "0" else { continue }
+            var end = space + 1
+            while end < numericText.count, CharClass.isASCIIDigit(numericText[end]) { end += 1 }
+            let range = start..<end
+            guard (2...6).contains(end - space - 1), !(numericText.at(end).map(CharClass.isASCIIWordChar) ?? false),
+                  !(numericText.at(end) == "." && numericText.at(end + 1).map(CharClass.isASCIIDigit) == true),
+                  !protected.contains(where: { $0.overlaps(range) }) else { continue }
+            spaces.append(space)
+            events.append(PostProcessingEvent(
+                ruleID: "numeric.code-join",
+                rangeDescription: "chars:\(range.lowerBound)..<\(range.upperBound)",
+                before: numericText.slice(range),
+                after: numericText.slice(start..<space) + numericText.slice((space + 1)..<end),
+                reason: "capital code prefix + number starting with 0",
                 confidence: .high
             ))
         }

@@ -8,7 +8,8 @@ final class TranscriptPostProcessorTests: XCTestCase {
             knownTerms: ["DEMO1001"]
         )
 
-        XCTAssertEqual(processed, "今天讲 DEMO零零一")
+        // 2026-10-25 (D86): capitals + Chinese digits starting with 零 are a code and convert (COMP零零零八 -> COMP0008).
+        XCTAssertEqual(processed, "今天讲 DEMO001")
     }
 
     func testAppliesNumericAndFillerProcessing() {
@@ -185,7 +186,8 @@ final class TranscriptPostProcessorTests: XCTestCase {
             options: options
         )
 
-        XCTAssertEqual(processed, "今天讲 DEMO零零一")
+        // 2026-10-25 (D86): capitals + Chinese digits starting with 零 are a code and convert (COMP零零零八 -> COMP0008).
+        XCTAssertEqual(processed, "今天讲 DEMO001")
     }
 
     func testCanDisableSmartNumericFormatting() {

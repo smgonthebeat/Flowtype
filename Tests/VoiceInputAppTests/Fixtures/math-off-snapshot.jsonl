@@ -1819,7 +1819,7 @@
 {"input": "B to B.", "knownTerms": [], "numericAcademic": "B to B.", "all": "B to B."}
 {"input": "这个函数五六行。", "knownTerms": [], "numericAcademic": "这个函数五六行。", "all": "这个函数五六行。"}
 {"input": "这个代码，五六行。", "knownTerms": [], "numericAcademic": "这个代码，五六行。", "all": "这个代码，五六行。"}
-{"input": "今天讲 DEMO零零一", "knownTerms": ["DEMO1001"], "numericAcademic": "今天讲 DEMO零零一", "all": "今天讲 DEMO零零一"}
+{"input": "今天讲 DEMO零零一", "knownTerms": ["DEMO1001"], "numericAcademic": "今天讲 DEMO001", "all": "今天讲 DEMO001"}
 {"input": "I'm testing Flowtype punctuation right now.This is not formal.I do not want.An exclamation mark here! 我没有想加感叹号！", "knownTerms": [], "numericAcademic": "I'm testing Flowtype punctuation right now. This is not formal. I do not want. An exclamation mark here. 我没有想加感叹号。", "all": "I'm testing Flowtype punctuation right now. This is not formal. I do not want. An exclamation mark here. 我没有想加感叹号。"}
 {"input": "Open flowtype.app.Then compare e.g.This case with U.S.A.Today.", "knownTerms": [], "numericAcademic": "Open flowtype.app. Then compare e.g. This case with U.S.A.Today.", "all": "Open flowtype.app. Then compare e.g. This case with U.S.A.Today."}
 {"input": "问一问", "knownTerms": [], "numericAcademic": "问一问", "all": "问一问"}
@@ -2667,6 +2667,6 @@
 {"input": "https://example.com/um/呃", "knownTerms": [], "numericAcademic": "https://example.com/um/呃", "all": "https://example.com/um/呃"}
 {"input": "/Users/demo/嗯/notes.txt", "knownTerms": [], "numericAcademic": "/Users/demo/嗯/notes.txt", "all": "/Users/demo/嗯/notes.txt"}
 {"input": "someone.um@example.com", "knownTerms": [], "numericAcademic": "someone.um@example.com", "all": "someone.um@example.com"}
-{"input": "今天讲 DEMO零零一", "knownTerms": [], "numericAcademic": "今天讲 DEMO零零一", "all": "今天讲 DEMO零零一"}
+{"input": "今天讲 DEMO零零一", "knownTerms": [], "numericAcademic": "今天讲 DEMO001", "all": "今天讲 DEMO001"}
 {"input": "今天我们用 api 做 asr 后处理", "knownTerms": [], "numericAcademic": "今天我们用 api 做 asr 后处理", "all": "今天我们用 api 做 asr 后处理"}
 {"input": "请看 B cell 的定义", "knownTerms": [], "numericAcademic": "请看 B cell 的定义", "all": "请看 B cell 的定义"}

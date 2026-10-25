@@ -504,7 +504,7 @@
 {"text": "B to B.", "options": {"filler": true}, "expected": "B to B.", "kind": "must-keep", "clause": "C1", "note": "", "source": "corpus-baseline#503"}
 {"text": "这个函数五六行。", "options": {"filler": true}, "expected": "这个函数五六行。", "kind": "must-keep", "clause": "C1", "note": "", "source": "corpus-baseline#504"}
 {"text": "这个代码，五六行。", "options": {"filler": true}, "expected": "这个代码，五六行。", "kind": "must-keep", "clause": "C1", "note": "", "source": "corpus-baseline#505"}
-{"text": "今天讲 DEMO零零一", "options": {"filler": true, "knownTerms": ["DEMO1001"]}, "expected": "今天讲 DEMO零零一", "kind": "must-keep", "clause": "C5", "note": "", "source": "corpus-baseline#506"}
+{"text": "今天讲 DEMO零零一", "options": {"filler": true, "knownTerms": ["DEMO1001"]}, "expected": "今天讲 DEMO001", "kind": "must-change", "clause": "C6-identifier", "note": "2026-10-25 (D86): capitals + 零-led Chinese digits are a code; not the DEMO1001 hotword.", "source": "corpus-baseline#506"}
 {"text": "I'm testing Flowtype punctuation right now.This is not formal.I do not want.An exclamation mark here! 我没有想加感叹号！", "options": {"filler": true}, "expected": "I'm testing Flowtype punctuation right now. This is not formal. I do not want. An exclamation mark here. 我没有想加感叹号。", "kind": "must-keep", "clause": "C7", "note": "deliberate punctuation preference (maintenance record 2026-05-17)", "source": "corpus-baseline#507"}
 {"text": "Open flowtype.app.Then compare e.g.This case with U.S.A.Today.", "options": {"filler": true}, "expected": "Open flowtype.app. Then compare e.g. This case with U.S.A.Today.", "kind": "must-keep", "clause": "C7", "note": "", "source": "corpus-baseline#508"}
 {"text": "问一问", "options": {"filler": true}, "expected": "问一问", "kind": "must-change", "clause": "4.1-ordinary", "note": "", "source": "fix-design"}
@@ -1206,3 +1206,20 @@
 {"text": "I one day", "options": {"filler": true}, "expected": "I one day", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
 {"text": "G P T five", "options": {"filler": true}, "expected": "GPT 5", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
 {"text": "Exercise three Q two H.", "options": {"filler": true}, "expected": "Exercise 3 Q2 H.", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "C零三九。", "options": {"filler": true}, "expected": "C039。", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "C零七二C零三九。", "options": {"filler": true}, "expected": "C072 C039。", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "C零七二 C零三九。", "options": {"filler": true}, "expected": "C072 C039。", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "C zero seven two C zero three nine.", "options": {"filler": true}, "expected": "C072 C039.", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "owner-history-2026-10-25"}
+{"text": "COMP零零零八的作业", "options": {"filler": true}, "expected": "COMP0008的作业", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "COMP zero zero zero eight", "options": {"filler": true}, "expected": "COMP0008", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "MATH zero zero five zero 考试", "options": {"filler": true}, "expected": "MATH0050 考试", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "STAT零零零二和COMP零零零八", "options": {"filler": true}, "expected": "STAT0002和COMP0008", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "我在B二零一上课", "options": {"filler": true}, "expected": "我在B201上课", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "C〇三九", "options": {"filler": true}, "expected": "C039", "kind": "must-change", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "GPT四", "options": {"filler": true}, "expected": "GPT四", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "GPT 5", "options": {"filler": true}, "expected": "GPT 5", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "ISO 9001", "options": {"filler": true}, "expected": "ISO 9001", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "COVID 19", "options": {"filler": true}, "expected": "COVID 19", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "C三个", "options": {"filler": true}, "expected": "C三个", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "B两个", "options": {"filler": true}, "expected": "B两个", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}
+{"text": "A十二", "options": {"filler": true}, "expected": "A十二", "kind": "must-keep", "clause": "C6-identifier", "note": "", "source": "fix-design-2026-10-25"}

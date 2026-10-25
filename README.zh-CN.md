@@ -7,14 +7,14 @@
 </p>
 
 <p align="center">
-<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.13/Flowtype-zh-CN.dmg">
+<a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.14/Flowtype-zh-CN.dmg">
   <img src="website/assets/download-apple-silicon.svg" alt="Download Flowtype for Apple Silicon" width="420">
 </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.13"><code>v0.1.0-preview.13</code></a> ·
-  <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.13/Flowtype-zh-CN.dmg.sha256">校验 SHA-256</a> ·
+  <a href="https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.14"><code>v0.1.0-preview.14</code></a> ·
+  <a href="https://github.com/smgonthebeat/Flowtype/releases/download/v0.1.0-preview.14/Flowtype-zh-CN.dmg.sha256">校验 SHA-256</a> ·
   <a href="#first-launch">首次打开指引</a>
 </p>
 
@@ -124,7 +124,7 @@ Wispr Flow、Typeless、千问输入法和豆包输入法等主流语音输入�
 
 ### 下载与准备
 
-只从官方 [`v0.1.0-preview.13` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.13) 下载 `Flowtype-zh-CN.dmg`（安装窗口是中文；英文版是 `Flowtype.dmg`，里面的 app 完全相同），打开后按窗口里的箭头把 `Flowtype.app` 拖进 Applications。普通用户不需要安装 Swift，也不需要自己编译。
+只从官方 [`v0.1.0-preview.14` Release](https://github.com/smgonthebeat/Flowtype/releases/tag/v0.1.0-preview.14) 下载 `Flowtype-zh-CN.dmg`（安装窗口是中文；英文版是 `Flowtype.dmg`，里面的 app 完全相同），打开后按窗口里的箭头把 `Flowtype.app` 拖进 Applications。普通用户不需要安装 Swift，也不需要自己编译。
 
 第一次打开时，五页图解引导会带你选择界面语言、完成准备、练习按住 `Fn` 说话。点击「一键准备 Flowtype」就是确认本次下载：Flowtype 会请求 Microphone 与 Accessibility 权限，自动下载约 1.9 GB 的默认 Qwen3-ASR 0.6B 模型，并实时显示已下载大小、平滑网速、预计剩余时间与准备进度。新下载优先使用 ModelScope，保留 Hugging Face 备用和断点续传。Accessibility 需要你在系统设置里确认，回到 Flowtype 后流程会自动继续。准备完成后，主页会立即沿用已验证的 Ready 状态，不需要再次点击准备。模型权重不在本仓库里，也不在源码压缩包里。
 

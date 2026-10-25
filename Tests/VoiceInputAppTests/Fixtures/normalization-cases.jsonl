@@ -1,5 +1,5 @@
 {"id":"T04","input":"I need four, five, ten, twelve, thirteen, fourteen, fifty examples.","expected":"I need 4, 5, 10, 12, 13, 14, 50 examples.","tags":["english_number","positive"]}
-{"id":"T05","input":"今天讲 DEMO零零一","expected":"今天讲 DEMO零零一","tags":["course_code","negative"]}
+{"id":"T05","input":"今天讲 DEMO零零一","expected":"今天讲 DEMO001","tags":["course_code"]}
 {"id":"T06","input":"今天我们用 api 做 asr 后处理","expected":"今天我们用 api 做 asr 后处理","tags":["mixed_script","negative"]}
 {"id":"T07","input":"B and C are variables","expected":"B and C are variables","tags":["negative","subpart_block"]}
 {"id":"T08","input":"I like sheet music","expected":"I like sheet music","tags":["negative","sheet_block"]}

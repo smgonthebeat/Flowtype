@@ -51,7 +51,8 @@ final class NumericFormattingEntryTests: XCTestCase {
         )
         XCTAssertEqual(
             NormalizationPipeline.normalize("我在说 DEMO零零一 和 TEST零四四"),
-            "我在说 DEMO零零一 和 TEST零四四"
+            // 2026-10-25 (D86): no course-code list, but capitals + 零-led Chinese digits are a code.
+            "我在说 DEMO001 和 TEST044"
         )
     }
 
