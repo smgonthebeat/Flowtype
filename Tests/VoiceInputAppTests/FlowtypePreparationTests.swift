@@ -240,6 +240,33 @@ final class FlowtypePreparationTests: XCTestCase {
         XCTAssertEqual(result.outcome, .failed(.finalVerificationFailed))
     }
 
+    // 2026-11-03: a stuck helper must surface as helperUnresponsive, so dictation can restart it.
+    func testStuckHelperDuringModelPreparationFailsAsHelperUnresponsive() async {
+        let driver = PreparationDriverFake(evidences: [.qwenReadyForMachineWork, .qwenFullyReady])
+        driver.prepareSelectedModelError = .helperUnresponsive
+        let module = FlowtypePreparation(driver: driver)
+
+        do {
+            let _: String = try await module.withPreparedRuntime(for: .qwen06B) { _ in "unreachable" }
+            XCTFail("expected helperUnresponsive")
+        } catch {
+            XCTAssertEqual(error as? PreparationFailure, .helperUnresponsive)
+            XCTAssertTrue(QwenFallbackPolicy.isHelperUnresponsive(error))
+        }
+    }
+
+    func testStuckHelperAtFinalVerificationFailsAsHelperUnresponsive() async {
+        var stuck = PreparationEvidence.qwenFullyReady
+        stuck.helperUnresponsive = true
+        let driver = PreparationDriverFake(evidences: [.qwenReadyForMachineWork, stuck])
+        let module = FlowtypePreparation(driver: driver)
+
+        let session = await module.begin(PreparationRequest(intent: .dictationPreflight, configuration: .qwen06B))
+        let result = await session.result.value
+
+        XCTAssertEqual(result.outcome, .failed(.helperUnresponsive))
+    }
+
     func testRuntimeMutationWaitsForActiveDictationReservation() async throws {
         let driver = PreparationDriverFake(
             evidences: [.qwenReadyForMachineWork, .qwenFullyReady, .qwenReadyForMachineWork, .qwenFullyReady]
@@ -515,6 +542,7 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
     private var _recordConsentCount = 0
     private var _repairSelectedModelStorageCount = 0
     private var _transferProgress: DownloadTransferSnapshot?
+    private var _prepareSelectedModelError: PreparationFailure?
     private var _machineEvents: [String] = []
     private var _lifecycleEvents: [String] = []
 
@@ -535,6 +563,10 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
     var transferProgress: DownloadTransferSnapshot? {
         get { queue.sync { _transferProgress } }
         set { queue.sync { _transferProgress = newValue } }
+    }
+    var prepareSelectedModelError: PreparationFailure? {
+        get { queue.sync { _prepareSelectedModelError } }
+        set { queue.sync { _prepareSelectedModelError = newValue } }
     }
     var machineEvents: [String] { queue.sync { _machineEvents } }
     var lifecycleEvents: [String] { queue.sync { _lifecycleEvents } }
@@ -597,6 +629,9 @@ private final class PreparationDriverFake: FlowtypePreparationDriving {
             _lifecycleEvents.append("model")
         }
         await machineStarted.open()
+        if let error = queue.sync(execute: { _prepareSelectedModelError }) {
+            throw error
+        }
         if queue.sync(execute: { _suspendMachinePreparation }) {
             await machineResume.wait()
         }

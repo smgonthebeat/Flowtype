@@ -142,6 +142,8 @@ protocol QwenTranscriptionClient {
 
 final class QwenHelperClient: QwenTranscriptionClient {
     private static let transcriptionTimeout: TimeInterval = 120
+    /// A status answer takes 1–5 ms, also while a model decodes; a helper that needs longer is stuck.
+    static let statusTimeout: TimeInterval = 5
 
     let baseURL: URL
     private let authToken: String?
@@ -159,7 +161,7 @@ final class QwenHelperClient: QwenTranscriptionClient {
     }
 
     func health() async throws -> QwenHealth {
-        try await get(path: "/health")
+        try await get(path: "/health", timeout: Self.statusTimeout)
     }
 
     func modelStatus() async throws -> QwenModelStatus {
@@ -167,7 +169,11 @@ final class QwenHelperClient: QwenTranscriptionClient {
     }
 
     func modelStatus(modelID: String) async throws -> QwenModelStatus {
-        try await get(path: "/models/status", queryItems: [URLQueryItem(name: "model_id", value: modelID)])
+        try await get(
+            path: "/models/status",
+            queryItems: [URLQueryItem(name: "model_id", value: modelID)],
+            timeout: Self.statusTimeout
+        )
     }
 
     func downloadModel() async throws -> QwenModelStatus {
@@ -177,6 +183,8 @@ final class QwenHelperClient: QwenTranscriptionClient {
     func downloadModel(modelID: String) async throws -> QwenModelStatus {
         var request = URLRequest(url: url(path: "/models/download", queryItems: [URLQueryItem(name: "model_id", value: modelID)]))
         request.httpMethod = "POST"
+        // The helper only starts the download or load in the background and answers at once.
+        request.timeoutInterval = Self.statusTimeout
         applyAuth(to: &request)
         return try await send(request)
     }
@@ -205,9 +213,16 @@ final class QwenHelperClient: QwenTranscriptionClient {
         return transcript.text
     }
 
-    private func get<T: Decodable>(path: String, queryItems: [URLQueryItem] = []) async throws -> T {
+    private func get<T: Decodable>(
+        path: String,
+        queryItems: [URLQueryItem] = [],
+        timeout: TimeInterval? = nil
+    ) async throws -> T {
         var request = URLRequest(url: url(path: path, queryItems: queryItems))
         request.httpMethod = "GET"
+        if let timeout {
+            request.timeoutInterval = timeout
+        }
         applyAuth(to: &request)
         return try await send(request)
     }

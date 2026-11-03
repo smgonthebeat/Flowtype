@@ -943,7 +943,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
         previewID: UUID,
         strategy: QwenTranscriptionStrategy = .full,
         selectedEngine: TranscriptionEngineKind? = nil,
-        preparedConfiguration: PreparationConfiguration? = nil
+        preparedConfiguration: PreparationConfiguration? = nil,
+        isRetryAfterHelperRestart: Bool = false
     ) async throws -> TranscriptionResult {
         switch selectedEngine ?? settingsStore.engine {
         case .qwenLocal:
@@ -967,7 +968,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     await performDeferredHelperStopIfNeeded()
                     return result
                 } catch {
+                    // A stuck helper is stopped here; then a fresh one is started for one retry of this
+                    // recording. It is detected either in preparation (PreparationFailure) or in the
+                    // status probe just before transcription (QwenReadinessError).
+                    let helperUnresponsive = QwenFallbackPolicy.isHelperUnresponsive(error)
+                    let willRetry = helperUnresponsive && !isRetryAfterHelperRestart
+                    if helperUnresponsive {
+                        helperStopRequestedAfterTranscription = true
+                    }
+                    if willRetry, recordingPreviewID == previewID {
+                        capsule.update(.transcribing(capsuleCopy.capsuleRestartingHelper))
+                    }
                     await performDeferredHelperStopIfNeeded()
+                    if willRetry {
+                        AppLogger.asr.error("Qwen helper unresponsive; restarted it and retrying once")
+                        return try await transcribe(
+                            url: url,
+                            previewID: previewID,
+                            strategy: strategy,
+                            selectedEngine: .qwenLocal,
+                            isRetryAfterHelperRestart: true
+                        )
+                    }
                     throw error
                 }
             }
@@ -994,7 +1016,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                 if recordingPreviewID == previewID {
                     capsule.update(.transcribing(capsuleCopy.capsulePreparingModel))
                 }
-                modelStatusBefore = try? await client.modelStatus(modelID: runModel.modelID)
+                do {
+                    modelStatusBefore = try await client.modelStatus(modelID: runModel.modelID)
+                } catch let error as URLError where error.code == .timedOut {
+                    throw QwenReadinessError(kind: .helperUnresponsive)
+                } catch {
+                    modelStatusBefore = nil
+                }
                 if let status = modelStatusBefore,
                    status.installed,
                    !status.loaded,
@@ -1003,10 +1031,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
                     _ = try? await client.downloadModel(modelID: runModel.modelID)
                 }
                 let readinessGate = QwenModelReadinessGate(statusProvider: client)
-                let gateResult = try await readinessGate.waitForReady(
-                    model: runModel,
-                    budget: qwenModelLoadBudget(for: runModel)
-                )
+                let gateResult: QwenReadinessGateResult
+                do {
+                    gateResult = try await readinessGate.waitForReady(
+                        model: runModel,
+                        budget: qwenModelLoadBudget(for: runModel)
+                    )
+                } catch let error as URLError where error.code == .timedOut {
+                    throw QwenReadinessError(kind: .helperUnresponsive)
+                }
                 statusProbeMilliseconds = gateResult.waitedMilliseconds
                 if let failureKind = gateResult.failureKind {
                     throw QwenReadinessError(kind: failureKind)
@@ -1394,7 +1427,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
 
     private func shouldStopHelperAfterQwenFailure(_ kind: QwenFailureKind) -> Bool {
         switch kind {
-        case .helperRuntimeMissing, .helperRuntimeDamaged, .helperStartFailed:
+        case .helperRuntimeMissing, .helperRuntimeDamaged, .helperStartFailed, .helperUnresponsive:
             return true
         case .modelNotInstalled,
              .modelLoading,
@@ -2399,6 +2432,7 @@ extension AppDelegate: FlowtypePreparationDriving {
         }
 
         var helperHealthy = false
+        var helperUnresponsive = false
         var selectedStatus: QwenModelStatus?
         if live, configuration.engine == .qwenLocal, let modelID = configuration.modelID {
             do {
@@ -2412,6 +2446,9 @@ extension AppDelegate: FlowtypePreparationDriving {
                     includeSpeechRecognition: false,
                     includePerformanceDetails: false
                 )
+            } catch let error as URLError where error.code == .timedOut {
+                helperHealthy = false
+                helperUnresponsive = true
             } catch {
                 helperHealthy = false
             }
@@ -2455,7 +2492,8 @@ extension AppDelegate: FlowtypePreparationDriving {
             missingPermissions: missingPermissions,
             selectedModelInstalled: selectedManager?.isModelInstalled ?? false,
             selectedModelLoaded: selectedStatus?.loaded == true && selectedStatus?.modelId == configuration.modelID,
-            helperHealthy: helperHealthy
+            helperHealthy: helperHealthy,
+            helperUnresponsive: helperUnresponsive
         )
     }
 
@@ -2542,10 +2580,10 @@ extension AppDelegate: FlowtypePreparationDriving {
         await progress(.startingHelper, nil, nil)
         let endpoint = try await startHelperIfNeeded()
         let client = QwenHelperClient(baseURL: endpoint.baseURL, authToken: endpoint.authToken)
-        var status = try await client.modelStatus(modelID: modelID)
+        var status = try await Self.answeringHelper { try await client.modelStatus(modelID: modelID) }
         let wasInstalled = status.installed
         if !status.loaded {
-            status = try await client.downloadModel(modelID: modelID)
+            status = try await Self.answeringHelper { try await client.downloadModel(modelID: modelID) }
         }
 
         let deadline = Date().addingTimeInterval(wasInstalled ? 120 : 1_800)
@@ -2565,7 +2603,7 @@ extension AppDelegate: FlowtypePreparationDriving {
                 throw PreparationFailure.modelPreparationFailed("model_preparation_timed_out")
             }
             try await Task.sleep(nanoseconds: 500_000_000)
-            status = try await client.modelStatus(modelID: modelID)
+            status = try await Self.answeringHelper { try await client.modelStatus(modelID: modelID) }
         }
 
         guard status.modelId == modelID else {
@@ -2580,6 +2618,18 @@ extension AppDelegate: FlowtypePreparationDriving {
             bootID: endpoint.bootID,
             verifiedAt: Date()
         )
+    }
+}
+
+extension AppDelegate {
+    /// A helper call that times out means the helper is stuck, not that the model is slow: status
+    /// answers take milliseconds even while a model loads or decodes (2026-11-03).
+    fileprivate static func answeringHelper<T>(_ call: () async throws -> T) async throws -> T {
+        do {
+            return try await call()
+        } catch let error as URLError where error.code == .timedOut {
+            throw PreparationFailure.helperUnresponsive
+        }
     }
 }
 

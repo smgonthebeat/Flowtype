@@ -991,7 +991,9 @@ def main() -> None:
     if not os.environ.get("VOICEINPUT_HELPER_TOKEN"):
         raise RuntimeError("VOICEINPUT_HELPER_TOKEN must be set before starting the helper")
     port = int(os.environ.get("VOICEINPUT_HELPER_PORT", "8765"))
-    uvicorn.run(app, host="127.0.0.1", port=port)
+    # No per-request access log: the app polls status every few seconds and the log is only for
+    # startup, warnings and errors (2026-11-03).
+    uvicorn.run(app, host="127.0.0.1", port=port, access_log=False)
 
 
 if __name__ == "__main__":

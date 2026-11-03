@@ -71,6 +71,10 @@ enum UserFacingErrorMessage {
             return chinese
                 ? "你切换了模型，之前的准备已经取消。"
                 : "You switched models, so the earlier setup was cancelled."
+        case .helperUnresponsive:
+            return chinese
+                ? "识别助手没有响应，已经重启。请再试一次。"
+                : "The speech engine stopped responding and was restarted. Try again."
         case let .modelPreparationFailed(code):
             switch code {
             case "network_unavailable":

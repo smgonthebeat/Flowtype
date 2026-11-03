@@ -7,6 +7,7 @@ struct DiagnosticsTextBuilder {
     private let timingProvider: @Sendable () -> TranscriptionTimingSample?
     private let processProvider: @Sendable () -> [ProcessRSSSnapshot]
     private let provenanceProvider: @Sendable () -> TranscriptionProvenance?
+    private let helperLogProvider: @Sendable () -> [String]?
 
     init(
         applicationSupportRoot: URL? = nil,
@@ -16,7 +17,8 @@ struct DiagnosticsTextBuilder {
         processProvider: @escaping @Sendable () -> [ProcessRSSSnapshot] = {
             ProcessRSSSnapshot.flowtypeRelatedProcesses()
         },
-        provenanceProvider: (@Sendable () -> TranscriptionProvenance?)? = nil
+        provenanceProvider: (@Sendable () -> TranscriptionProvenance?)? = nil,
+        helperLogProvider: (@Sendable () -> [String]?)? = nil
     ) {
         let root = applicationSupportRoot ?? ((try? ApplicationSupport.directory(fileManager: fileManager)) ??
             fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -31,6 +33,9 @@ struct DiagnosticsTextBuilder {
         self.provenanceProvider = provenanceProvider ?? {
             try? TranscriptionProvenanceStore(applicationSupportRoot: root).loadRecent().first
         }
+        self.helperLogProvider = helperLogProvider ?? {
+            HelperLog.tail(applicationSupportRoot: root)
+        }
     }
 
     func makeDiagnosticsText(report: ReadinessReport) async -> String {
@@ -39,7 +44,8 @@ struct DiagnosticsTextBuilder {
                 report: report,
                 timing: timingProvider(),
                 processes: processProvider(),
-                provenance: provenanceProvider()
+                provenance: provenanceProvider(),
+                helperLogTail: helperLogProvider()
             )
         }.value
     }

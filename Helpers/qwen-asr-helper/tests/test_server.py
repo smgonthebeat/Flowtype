@@ -828,6 +828,18 @@ def test_authentication_fails_closed_when_token_is_not_configured(monkeypatch):
     assert response.json()["detail"] == "Helper authentication is not configured"
 
 
+def test_main_starts_without_per_request_access_log(monkeypatch):
+    # 2026-11-03: one access-log line per status poll filled an undrained stdout pipe and froze the helper.
+    captured = {}
+    monkeypatch.setenv("VOICEINPUT_HELPER_TOKEN", "token")
+    monkeypatch.setenv("VOICEINPUT_HELPER_PORT", "9123")
+    monkeypatch.setattr(server.uvicorn, "run", lambda app, **kwargs: captured.update(kwargs))
+
+    server.main()
+
+    assert captured == {"host": "127.0.0.1", "port": 9123, "access_log": False}
+
+
 def test_main_rejects_startup_without_authentication_token(monkeypatch):
     monkeypatch.delenv("VOICEINPUT_HELPER_TOKEN")
 

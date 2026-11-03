@@ -5,6 +5,8 @@ enum QwenFailureKind: String, Codable, Equatable {
     case helperRuntimeMissing
     case helperRuntimeDamaged
     case helperStartFailed
+    /// The helper is running but did not answer a status request in time (2026-11-03).
+    case helperUnresponsive
     case modelLoading
     case helperBusy
     case modelLoadTimedOut
@@ -22,6 +24,14 @@ struct QwenReadinessError: Error, Equatable {
 }
 
 struct QwenFallbackPolicy {
+    /// A helper that stopped answering, detected before transcription or during preparation.
+    static func isHelperUnresponsive(_ error: any Error) -> Bool {
+        if let failure = error as? PreparationFailure {
+            return failure == .helperUnresponsive
+        }
+        return (error as? QwenReadinessError)?.kind == .helperUnresponsive
+    }
+
     func shouldFallback(for kind: QwenFailureKind) -> Bool {
         switch kind {
         case .helperRuntimeMissing,
@@ -34,6 +44,7 @@ struct QwenFallbackPolicy {
              .contextLeakDetected:
             return true
         case .modelNotInstalled,
+             .helperUnresponsive,
              .modelLoading,
              .helperBusy,
              .emptyAudio,

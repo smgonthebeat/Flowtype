@@ -16,7 +16,8 @@ struct DiagnosticsExporter {
         report: ReadinessReport,
         timing: TranscriptionTimingSample?,
         processes: [ProcessRSSSnapshot],
-        provenance: TranscriptionProvenance? = nil
+        provenance: TranscriptionProvenance? = nil,
+        helperLogTail: [String]? = nil
     ) -> String {
         let hardware = hardwareProvider()
         var lines: [String] = [
@@ -49,6 +50,7 @@ struct DiagnosticsExporter {
 
         appendTimingSection(to: &lines, timing: timing)
         appendLatestTranscriptionSection(to: &lines, provenance: provenance)
+        appendHelperLogSection(to: &lines, tail: helperLogTail)
 
         return lines.joined(separator: "\n")
     }
@@ -75,6 +77,18 @@ struct DiagnosticsExporter {
         appendLatestTranscriptionSection(to: &lines, provenance: provenance)
 
         return lines.joined(separator: "\n")
+    }
+
+    private func appendHelperLogSection(to lines: inout [String], tail: [String]?) {
+        lines.append("")
+        lines.append("Helper Log (last \(HelperLog.tailLineCount) lines):")
+        guard let tail, !tail.isEmpty else {
+            lines.append("- no helper log")
+            return
+        }
+        for line in tail {
+            lines.append("  \(sanitize(line))")
+        }
     }
 
     private func appendTimingSection(to lines: inout [String], timing: TranscriptionTimingSample?) {

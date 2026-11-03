@@ -31,6 +31,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.15` fixes dictation getting stuck on "Preparing model…"
+  about ten minutes after switching models. The speech engine's output was
+  no longer being read after a switch, so it eventually stopped responding.
+  Its output now goes to a log file (`Logs/helper.log`, also included in
+  diagnostics), and if the engine ever stops responding, Flowtype notices
+  within about five seconds, restarts it and retries your dictation once.
 - `v0.1.0-preview.14` fixes codes spoken in English that came out with Chinese
   digits. The small 0.6B model sometimes writes "C zero three nine" as
   "C零三九"; Flowtype now writes the digits after a letter as "C039", and

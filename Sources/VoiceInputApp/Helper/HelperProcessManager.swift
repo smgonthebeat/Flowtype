@@ -9,22 +9,28 @@ final class HelperProcessManager {
     }
 
     private var process: Process?
-    private var outputPipe: Pipe?
-    private var errorPipe: Pipe?
     private var endpoint: HelperEndpoint?
     private var launchedModelID: String?
     private let lifecycleLock = NSLock()
     private let currentModelManager: () -> ModelManager
     private let currentModelID: () -> String
     private let runtimeManager: HelperRuntimeManager
+    /// Test seam: launches this command instead of the bundled uv helper.
+    private let launchCommandOverride: (() throws -> (executableURL: URL, arguments: [String]))?
 
     init(modelManager: ModelManager = ModelManager(), runtimeManager: HelperRuntimeManager? = nil) {
         self.currentModelManager = { modelManager }
         self.currentModelID = { modelManager.model.id }
         self.runtimeManager = runtimeManager ?? HelperRuntimeManager(applicationSupportRoot: modelManager.applicationSupportRoot)
+        self.launchCommandOverride = nil
     }
 
-    init(settingsStore: SettingsStore, applicationSupportRoot: URL? = nil, runtimeManager: HelperRuntimeManager? = nil) {
+    init(
+        settingsStore: SettingsStore,
+        applicationSupportRoot: URL? = nil,
+        runtimeManager: HelperRuntimeManager? = nil,
+        launchCommandOverride: (() throws -> (executableURL: URL, arguments: [String]))? = nil
+    ) {
         self.currentModelManager = {
             ModelManager(
                 model: VoiceInputModel.model(for: settingsStore.selectedModelID),
@@ -35,6 +41,7 @@ final class HelperProcessManager {
             VoiceInputModel.model(for: settingsStore.selectedModelID).id
         }
         self.runtimeManager = runtimeManager ?? HelperRuntimeManager(applicationSupportRoot: applicationSupportRoot)
+        self.launchCommandOverride = launchCommandOverride
     }
 
     func startIfNeeded() throws -> HelperEndpoint {
@@ -50,8 +57,14 @@ final class HelperProcessManager {
             stopLocked()
         }
 
-        let helperDir = try resolveHelperDirectory()
-        terminateResidualHelpers(at: helperDir)
+        let launchCommand: (executableURL: URL, arguments: [String])
+        if let launchCommandOverride {
+            launchCommand = try launchCommandOverride()
+        } else {
+            let helperDir = try resolveHelperDirectory()
+            terminateResidualHelpers(at: helperDir)
+            launchCommand = try resolveUVLaunchCommand(helperDir: helperDir)
+        }
         let port = try reserveLocalPort()
         let endpoint = HelperEndpoint(
             baseURL: URL(string: "http://127.0.0.1:\(port)")!,
@@ -60,26 +73,23 @@ final class HelperProcessManager {
         )
 
         let process = Process()
-        let launchCommand = try resolveUVLaunchCommand(helperDir: helperDir)
         process.executableURL = launchCommand.executableURL
         process.arguments = launchCommand.arguments
         process.environment = launchEnvironment(port: port, authToken: endpoint.authToken)
 
-        let outputPipe = drainedPipe()
-        let errorPipe = drainedPipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-        process.terminationHandler = { [weak self] _ in
-            self?.clearPipesFromTerminationHandler()
-        }
+        // The helper's output goes to a log file, never a pipe: a pipe nobody drains blocks the
+        // helper once its buffer is full (2026-11-03, the helper froze ~10 min after a model switch).
+        let logHandle = HelperLog.handleForNewLaunch(
+            applicationSupportRoot: currentModelManager().applicationSupportRoot
+        )
+        process.standardOutput = logHandle
+        process.standardError = logHandle
 
         do {
             try process.run()
             self.process = process
             self.endpoint = endpoint
             self.launchedModelID = currentModelID()
-            self.outputPipe = outputPipe
-            self.errorPipe = errorPipe
             try waitUntilHealthy(endpoint: endpoint, timeout: 180)
             return endpoint
         } catch {
@@ -118,14 +128,12 @@ final class HelperProcessManager {
         guard let process else { return }
         guard process.isRunning else {
             self.process = nil
-            clearPipes()
             return
         }
 
         let semaphore = DispatchSemaphore(value: 0)
-        process.terminationHandler = { [weak self] _ in
+        process.terminationHandler = { _ in
             semaphore.signal()
-            self?.clearPipesFromTerminationHandler()
         }
         process.terminate()
         if semaphore.wait(timeout: .now() + 2) == .timedOut {
@@ -138,7 +146,6 @@ final class HelperProcessManager {
         self.process = nil
         endpoint = nil
         launchedModelID = nil
-        clearPipes()
     }
 
     private func terminateResidualHelpers(at helperDir: URL) {
@@ -245,28 +252,6 @@ final class HelperProcessManager {
         return environment
     }
 
-    private func drainedPipe() -> Pipe {
-        let pipe = Pipe()
-        pipe.fileHandleForReading.readabilityHandler = { handle in
-            _ = handle.availableData
-        }
-        return pipe
-    }
-
-    private func clearPipes() {
-        outputPipe?.fileHandleForReading.readabilityHandler = nil
-        errorPipe?.fileHandleForReading.readabilityHandler = nil
-        outputPipe = nil
-        errorPipe = nil
-    }
-
-    private func clearPipesFromTerminationHandler() {
-        lifecycleLock.lock()
-        defer { lifecycleLock.unlock() }
-
-        clearPipes()
-    }
-
     private func waitUntilHealthy(endpoint: HelperEndpoint, timeout: TimeInterval) throws {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
@@ -335,6 +320,61 @@ final class HelperProcessManager {
         }
 
         return UInt16(bigEndian: boundAddress.sin_port)
+    }
+}
+
+/// The helper's stdout and stderr: `Logs/helper.log`, with the previous launch kept as
+/// `helper.previous.log`. A file never blocks the helper, whatever the app is doing.
+enum HelperLog {
+    static let tailLineCount = 40
+
+    static func directory(applicationSupportRoot: URL) -> URL {
+        applicationSupportRoot.appendingPathComponent("Logs", isDirectory: true)
+    }
+
+    static func currentURL(applicationSupportRoot: URL) -> URL {
+        directory(applicationSupportRoot: applicationSupportRoot).appendingPathComponent("helper.log")
+    }
+
+    static func previousURL(applicationSupportRoot: URL) -> URL {
+        directory(applicationSupportRoot: applicationSupportRoot).appendingPathComponent("helper.previous.log")
+    }
+
+    /// Starts a new log for a helper launch. Falls back to /dev/null, never to a pipe.
+    static func handleForNewLaunch(applicationSupportRoot: URL, fileManager: FileManager = .default) -> FileHandle {
+        let current = currentURL(applicationSupportRoot: applicationSupportRoot)
+        let previous = previousURL(applicationSupportRoot: applicationSupportRoot)
+        do {
+            try fileManager.createDirectory(
+                at: directory(applicationSupportRoot: applicationSupportRoot),
+                withIntermediateDirectories: true
+            )
+            if fileManager.fileExists(atPath: current.path) {
+                if fileManager.fileExists(atPath: previous.path) {
+                    try fileManager.removeItem(at: previous)
+                }
+                try fileManager.moveItem(at: current, to: previous)
+            }
+            guard fileManager.createFile(atPath: current.path, contents: nil) else {
+                return FileHandle.nullDevice
+            }
+            return try FileHandle(forWritingTo: current)
+        } catch {
+            return FileHandle.nullDevice
+        }
+    }
+
+    /// The last lines of the current helper log, for diagnostics.
+    static func tail(applicationSupportRoot: URL, lineCount: Int = tailLineCount) -> [String]? {
+        guard let data = try? Data(contentsOf: currentURL(applicationSupportRoot: applicationSupportRoot)) else {
+            return nil
+        }
+        let text = String(decoding: data.suffix(64 * 1024), as: UTF8.self)
+        let lines = text
+            .replacingOccurrences(of: "\r", with: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .map(String.init)
+        return Array(lines.suffix(lineCount))
     }
 }
 

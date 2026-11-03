@@ -163,6 +163,7 @@ enum AppCopy {
         let capsuleRecordingUnavailable: String
         let capsuleTranscriptionFailed: String
         let capsuleUsingAppleSpeech: String
+        let capsuleRestartingHelper: String
         let capsuleCopiedPressToPaste: String
         let capsuleNoSpeechDetected: String
         let capsuleHoldFnHint: String
@@ -1094,6 +1095,7 @@ enum AppCopy {
                 capsuleRecordingUnavailable: "无法开始录音",
                 capsuleTranscriptionFailed: "转写失败",
                 capsuleUsingAppleSpeech: "改用 Apple Speech",
+                capsuleRestartingHelper: "识别助手没有响应，正在重启…",
                 capsuleCopiedPressToPaste: "已复制，可按 ⌘V 粘贴",
                 capsuleNoSpeechDetected: "没有检测到语音",
                 capsuleHoldFnHint: "按住 Fn 说话，说完再松开",
@@ -1306,6 +1308,7 @@ enum AppCopy {
                 capsuleRecordingUnavailable: "Recording unavailable",
                 capsuleTranscriptionFailed: "Transcription failed",
                 capsuleUsingAppleSpeech: "Using Apple Speech",
+                capsuleRestartingHelper: "Speech engine not responding, restarting…",
                 capsuleCopiedPressToPaste: "Copied. Press ⌘V to paste",
                 capsuleNoSpeechDetected: "No speech detected",
                 capsuleHoldFnHint: "Hold Fn while you talk, then release",

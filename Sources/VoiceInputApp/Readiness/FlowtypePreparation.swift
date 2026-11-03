@@ -104,6 +104,8 @@ enum PreparationFailure: Error, Equatable {
     case modelPreparationFailed(String)
     case finalVerificationFailed
     case superseded
+    /// The helper is running but did not answer within `QwenHelperClient.statusTimeout` (2026-11-03).
+    case helperUnresponsive
 }
 
 extension PreparationFailure: LocalizedError {
@@ -119,6 +121,8 @@ extension PreparationFailure: LocalizedError {
             return "Flowtype could not verify that the selected runtime is ready."
         case .superseded:
             return "Preparation was superseded by a newer engine or model selection."
+        case .helperUnresponsive:
+            return "Flowtype's speech engine is not responding."
         }
     }
 }
@@ -131,6 +135,7 @@ struct PreparationEvidence {
     let selectedModelInstalled: Bool
     let selectedModelLoaded: Bool
     let helperHealthy: Bool
+    var helperUnresponsive = false
 }
 
 struct PreparedRuntimeIdentity: Equatable {
@@ -444,6 +449,9 @@ actor FlowtypePreparation {
         let finalEvidence = await driver.inspect(configuration: configuration, live: true)
         guard isCurrent(configuration) else {
             return failed(.superseded, report: finalEvidence.report, runID: runID, configuration: configuration)
+        }
+        if finalEvidence.helperUnresponsive {
+            return failed(.helperUnresponsive, report: finalEvidence.report, runID: runID, configuration: configuration)
         }
         guard finalEvidence.missingPermissions.isEmpty,
               configuration.engine == .appleSpeech ||

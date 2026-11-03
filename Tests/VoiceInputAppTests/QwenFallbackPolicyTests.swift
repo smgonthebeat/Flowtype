@@ -12,6 +12,18 @@ final class QwenFallbackPolicyTests: XCTestCase {
         XCTAssertFalse(policy.shouldFallback(for: .cancelled))
     }
 
+    func testUnresponsiveHelperIsRestartedNotSentToAppleSpeech() {
+        let policy = QwenFallbackPolicy()
+
+        XCTAssertEqual(policy.classify(QwenReadinessError(kind: .helperUnresponsive)), .helperUnresponsive)
+        XCTAssertFalse(policy.shouldFallback(for: .helperUnresponsive))
+        XCTAssertTrue(QwenFallbackPolicy.isHelperUnresponsive(PreparationFailure.helperUnresponsive))
+        XCTAssertTrue(QwenFallbackPolicy.isHelperUnresponsive(QwenReadinessError(kind: .helperUnresponsive)))
+        XCTAssertFalse(QwenFallbackPolicy.isHelperUnresponsive(PreparationFailure.finalVerificationFailed))
+        XCTAssertFalse(QwenFallbackPolicy.isHelperUnresponsive(QwenReadinessError(kind: .modelLoadTimedOut)))
+        XCTAssertFalse(QwenFallbackPolicy.isHelperUnresponsive(URLError(.timedOut)))
+    }
+
     func testTypedTimeoutsAndFatalRuntimeCanFallback() {
         let policy = QwenFallbackPolicy()
 

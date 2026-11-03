@@ -232,6 +232,27 @@ final class QwenHelperClientTests: XCTestCase {
         }
     }
 
+    func testStatusRequestsGiveUpAfterFiveSeconds() async throws {
+        // 2026-11-03: a stuck helper held the status probe for URLSession's default 60 s.
+        QwenHelperClientTestURLProtocol.handler = { request in
+            XCTAssertEqual(request.timeoutInterval, 5)
+            let data = Data(#"{"installed":true,"loaded":true,"model_id":"Qwen/Qwen3-ASR-0.6B"}"#.utf8)
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, data)
+        }
+        defer { QwenHelperClientTestURLProtocol.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [QwenHelperClientTestURLProtocol.self]
+        let client = QwenHelperClient(
+            baseURL: URL(string: "http://127.0.0.1:8765")!,
+            session: URLSession(configuration: configuration)
+        )
+
+        let status = try await client.modelStatus(modelID: "Qwen/Qwen3-ASR-0.6B")
+
+        XCTAssertTrue(status.loaded)
+    }
+
     func testTranscribeIncludesContextFormField() async throws {
         let audioURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
