@@ -32,52 +32,73 @@ protocol PasteShortcutPosting: AnyObject {
 
 final class PasteShortcutPoster: PasteShortcutPosting {
     typealias EventSink = (_ processIdentifier: pid_t, _ event: CGEvent) -> Void
-    typealias EventPairFactory = () -> (keyDown: CGEvent, keyUp: CGEvent)?
+    typealias ShortcutEventFactory = () -> [CGEvent]?
 
     private enum Constants {
+        static let commandKey: CGKeyCode = 0x37
         static let vKey: CGKeyCode = 0x09
+        // NX_DEVICELCMDKEYMASK: a physical left Command key sets this alongside .maskCommand.
+        static let leftCommandDevice = CGEventFlags(rawValue: 0x0000_0008)
+        static let commandHeld: CGEventFlags = [.maskCommand, leftCommandDevice]
     }
 
     private let eventSink: EventSink
-    private let eventPairFactory: EventPairFactory
+    private let shortcutEventFactory: ShortcutEventFactory
 
     init(eventSink: @escaping EventSink) {
         self.eventSink = eventSink
-        self.eventPairFactory = Self.makeCommandVEventPair
+        self.shortcutEventFactory = Self.makeCommandVShortcutEvents
     }
 
     init(
         eventSink: @escaping EventSink,
-        eventPairFactory: @escaping EventPairFactory
+        shortcutEventFactory: @escaping ShortcutEventFactory
     ) {
         self.eventSink = eventSink
-        self.eventPairFactory = eventPairFactory
+        self.shortcutEventFactory = shortcutEventFactory
     }
 
     func postCommandV(to processIdentifier: pid_t) -> Bool {
-        guard let pair = eventPairFactory() else { return false }
-        eventSink(processIdentifier, pair.keyDown)
-        eventSink(processIdentifier, pair.keyUp)
+        guard let events = shortcutEventFactory(), !events.isEmpty else { return false }
+        events.forEach { eventSink(processIdentifier, $0) }
         return true
     }
 
-    private static func makeCommandVEventPair() -> (keyDown: CGEvent, keyUp: CGEvent)? {
+    // Mirror a physical Command-V, including the Command press and release.
+    // Mac Catalyst apps track held keys themselves; AppKit can swallow the
+    // Command-modified V key-up, so without the Command release they treat
+    // the shortcut as still held and auto-repeat the paste.
+    private static func makeCommandVShortcutEvents() -> [CGEvent]? {
         guard let source = CGEventSource(stateID: .combinedSessionState),
-              let keyDown = CGEvent(
+              let commandDown = CGEvent(
+                  keyboardEventSource: source,
+                  virtualKey: Constants.commandKey,
+                  keyDown: true
+              ),
+              let vDown = CGEvent(
                   keyboardEventSource: source,
                   virtualKey: Constants.vKey,
                   keyDown: true
               ),
-              let keyUp = CGEvent(
+              let vUp = CGEvent(
                   keyboardEventSource: source,
                   virtualKey: Constants.vKey,
+                  keyDown: false
+              ),
+              let commandUp = CGEvent(
+                  keyboardEventSource: source,
+                  virtualKey: Constants.commandKey,
                   keyDown: false
               ) else {
             return nil
         }
 
-        keyDown.flags = .maskCommand
-        keyUp.flags = .maskCommand
-        return (keyDown, keyUp)
+        commandDown.type = .flagsChanged
+        commandDown.flags = Constants.commandHeld
+        vDown.flags = Constants.commandHeld
+        vUp.flags = Constants.commandHeld
+        commandUp.type = .flagsChanged
+        commandUp.flags = []
+        return [commandDown, vDown, vUp, commandUp]
     }
 }

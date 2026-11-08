@@ -31,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Preview Release
 
 - The public GitHub repository and hosted CI are live.
+- `v0.1.0-preview.16` fixes a single dictation being pasted over and over in
+  some apps, such as WhatsApp. Flowtype's simulated Command-V never released
+  the Command key, so apps built with Mac Catalyst treated the shortcut as
+  still held and kept repeating the paste until you pressed another key.
+  Flowtype now sends the full key sequence a real keyboard does.
 - `v0.1.0-preview.15` fixes dictation getting stuck on "Preparing model…"
   about ten minutes after switching models. The speech engine's output was
   no longer being read after a switch, so it eventually stopped responding.
